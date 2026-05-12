@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    test();
+    print('Started build method for MyApp');
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -67,6 +67,10 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       _counter++;
     });
+    final Iterable<({double earthRotationAngle, double trueAnomaly})> yearTrueAnomalies = getYearTrueAnomalies();
+    final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(yearTrueAnomalies);
+
+    print(yearSolarElevationAngles.take(192).toList());
   }
 
   @override
