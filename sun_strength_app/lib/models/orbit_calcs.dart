@@ -45,7 +45,9 @@ final double tMeanAnomalyAtEpoch =
     lMean - lPeri; // Mean anomaly at epoch in radians
 const double rEarth = 6371; // Earth's radius in km
 const double yearLength = 365.242190402;
-const double h1 = 0.048006; // Elevation to use for now
+// const double h1 = 0.048006; // Elevation to use for now
+const double h1 = 0;
+final num maxRelativeSolarStrengthAtEquator = pow(0.7,pow(1, 0.678));
 
 // void main() {
 //   getChartData();
@@ -67,7 +69,7 @@ Iterable<({double earthRotationAngle, double trueAnomaly})> getYearTrueAnomalies
   final tz.TZDateTime date0 = tz.TZDateTime(localTZ, yearInput, 1, 1, 0, 0, 0);
   final int nDays = date0
       .copyWith(year: date0.year + 1)
-      .difference(date0J2000)
+      .difference(date0)
       .inDays;
   final initialOffsetHours = date0.difference(date0J2000).inHours;
 
@@ -146,9 +148,13 @@ Iterable<double> getYearSolarElevationAngles(Iterable<({double earthRotationAngl
   return output;
 }
 
-// Iterable<double> getYearSolarStrengthsLocalRelative(Iterable<double> yearSolarElevationAngles) {
-
-// }
+Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal(Iterable<double> yearSolarElevationAngles) {
+// maxRelativeSolarStrengthAtEquator
+  final Iterable<double> yearAirMass = yearSolarElevationAngles.map((elev) => elev <= 0 ? 0 : 1 / (cos(pi/2 - elev) + 0.50572*pow(96.07995 - degrees(pi/2 - elev),-1.6364)));
+  final Iterable<double> yearSolarStrengthsLocal = yearAirMass.map((aM) => h1/7.1 + ((1-h1/7.1)*pow(0.7,pow(aM,0.678))));
+  final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearSolarStrengthsLocal.map((strength) => strength / maxRelativeSolarStrengthAtEquator);
+  return yearSolarStrengthsLocalRelativeToGlobal;
+}
 
 // This is super dangerous because I am creating a loop that will NEVER end if no root is found.  I am intententionally letting this go here and intend to protect against this with at a higher level somehow.  Since this is going to run SO MUCH, I want to keep this is light as possible.
 // Performance improvement would be to code the function and prime function right in instead of passing them.
