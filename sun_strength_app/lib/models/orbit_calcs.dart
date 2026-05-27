@@ -145,14 +145,18 @@ Iterable<double> getYearSolarElevationAngles(Iterable<({double earthRotationAngl
     return output;
   });
   
-  return output;
+  return output.map((e) => max(0,e));
 }
 
-Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal(Iterable<double> yearSolarElevationAngles) {
+Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal({required Iterable<double> yearSolarElevationAngles, required double k, required double h}) {
 // maxRelativeSolarStrengthAtEquator
-  final Iterable<double> yearAirMass = yearSolarElevationAngles.map((elev) => elev <= 0 ? 0 : 1 / (cos(pi/2 - elev) + 0.50572*pow(96.07995 - degrees(pi/2 - elev),-1.6364)));
-  final Iterable<double> yearSolarStrengthsLocal = yearAirMass.map((aM) => h1/7.1 + ((1-h1/7.1)*pow(0.7,pow(aM,0.678))));
-  final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearSolarStrengthsLocal.map((strength) => strength / maxRelativeSolarStrengthAtEquator);
+  final Iterable<double> yearAirMassSeaLevel = yearSolarElevationAngles.map((elevAngle) => elevAngle <= 0 ? 38 : 1 / (cos(pi/2 - elevAngle) + 0.50572*pow(96.07995 - degrees(pi/2 - elevAngle),-1.6364)));
+  final Iterable<double> yearLocalSolarStrengthFactors = yearAirMassSeaLevel.map((aM) => aM >= 38 ? 0 : exp(-k * aM * exp(-h/8.5)));
+  final double globalMax = exp(-k);
+  final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearLocalSolarStrengthFactors.map((factor) => factor / globalMax);
+  
+  // final Iterable<double> yearSolarStrengthsLocal = yearAirMass.map((aM) => h1/7.1 + ((1-h1/7.1)*pow(0.7,pow(aM,0.678))));
+  // final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearSolarStrengthsLocal.map((strength) => strength / maxRelativeSolarStrengthAtEquator);
   return yearSolarStrengthsLocalRelativeToGlobal;
 }
 
