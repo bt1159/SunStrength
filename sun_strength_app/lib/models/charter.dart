@@ -4,7 +4,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'orbit_calcs.dart';
 
+/// {@template HeatMap}
+/// Widget that holds either a blank Widget or the 2D array of the heat map.  Since the function that creates
+/// the heat map is async, when it loads, it replaces the child of this widget.  That way, this widget remains
+/// unaffected.
+/// {@endtemplate}
 class HeatMap extends StatefulWidget {
+
+  /// {@macro HeatMap}
   const HeatMap({super.key});
 
   @override
@@ -102,27 +109,48 @@ class _HeatMapState extends State<HeatMap> {
   Widget build(BuildContext context) {
     final bottomWidget = _heatmapImage == null
         ? Text('No Image')
-        : Expanded(
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: HeatMapPainter(_heatmapImage),
-            ),
-          );
+        : SizedBox(
+          height: 300,
+          width: 600,
+          child: CustomPaint(
+            painter: HeatMapPainter(_heatmapImage),
+          ),
+        );
     return Column(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ElevatedButton(
-          onPressed: setBytesAndTriggerImageCreation,
-          child: Text('Reset Image'),
+        Text(
+          'Phoenixville, PA, USA',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        bottomWidget,
-        SizedBox(
-          width: 400,
-          height: 400,
-          child: ColoredBox(color: Colors.brown),
+        Table(
+          // Tightly control the column widths
+          columnWidths: const {
+            0: FixedColumnWidth(60.0), // Fixed width for Y-Axis
+            1: FlexColumnWidth(), // Chart & X-Axis dynamically fill the rest
+          },
+          defaultVerticalAlignment: TableCellVerticalAlignment.fill,
+          children: [
+            TableRow(
+              children: [
+                // 1. Y-AXIS
+                ColoredBox(color: Colors.green),
+                // 2. CHART BODY (Height is locked to the Y-axis row height)
+                bottomWidget,
+              ],
+            ),
+            TableRow(
+              children: [
+                // 3. EMPTY CORNER SPACER
+                const SizedBox(),
+                // 4. X-AXIS (Width is locked perfectly to the chart body above it)
+                SizedBox(height: 100,
+                  child: ColoredBox(color: Colors.blue)),
+              ],
+            ),
+          ],
         ),
+
+        Text('Scale here'),
       ],
     );
   }
@@ -175,8 +203,10 @@ Future<ui.Image> generateSunMap({
     int targetByteIndex = (yImage * 365 + x) * 4;
 
     pixelBuffer[targetByteIndex] = (min(1, 3 * strength) * 255).toInt(); // R
-    pixelBuffer[targetByteIndex + 1] = (min(1,max(0, 3 * strength - 1)) * 255).toInt(); // G
-    pixelBuffer[targetByteIndex + 2] = (max(0, 3 * strength - 2) * 255).toInt(); // B
+    pixelBuffer[targetByteIndex + 1] = (min(1, max(0, 3 * strength - 1)) * 255)
+        .toInt(); // G
+    pixelBuffer[targetByteIndex + 2] = (max(0, 3 * strength - 2) * 255)
+        .toInt(); // B
     pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
 
     yMath++;
@@ -200,4 +230,21 @@ Future<ui.Image> generateSunMap({
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
   return frame.image;
+}
+
+class YAxis extends StatelessWidget {
+  const YAxis({super.key, required this.verticalBuffer});
+
+  final double verticalBuffer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        SizedBox(height: verticalBuffer),
+        SizedBox(height: verticalBuffer),
+      ],
+    );
+  }
 }

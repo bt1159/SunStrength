@@ -14,16 +14,18 @@ class MyApp extends StatelessWidget {
     print('Started build method for MyApp');
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark, // <-- This does the heavy lifting
+        ),
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      themeMode: ThemeMode.dark,
+      home: MyHomePage(title: 'UV strength'),
     );
   }
 }
-
-
-
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key, required this.title});
