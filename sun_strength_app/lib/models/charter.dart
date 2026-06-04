@@ -3,22 +3,95 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'orbit_calcs.dart';
+import 'package:sun_strength_app/chart_widget.dart';
+
+class HeatMap extends StatelessWidget {
+  const HeatMap({super.key});
+
+  Future<ui.Image> createImage() async {
+    final Iterable<({double earthRotationAngle, double trueAnomaly})>
+    yearTrueAnomalies = getYearTrueAnomalies();
+    print(yearTrueAnomalies.first);
+    final Iterable<double> yearSolarElevationAngles =
+        getYearSolarElevationAngles(yearTrueAnomalies);
+    print(
+      'yearSolarElevationAngles, first 96: ${yearSolarElevationAngles.take(96).toList()}',
+    );
+    final Iterable<double> yearSolarStrengthsLocalRelative =
+        getYearSolarStrengthsLocalRelativeToGlobal(
+          h: 0,
+          //k: 0.8,
+          k: 2,
+          yearSolarElevationAngles: yearSolarElevationAngles,
+        );
+    print(
+      'getYearSolarStrengthsLocalRelativeToGlobal.first: ${yearSolarStrengthsLocalRelative.first}',
+    );
+    print(
+      'getYearSolarStrengthsLocalRelativeToGlobal.length: ${yearSolarStrengthsLocalRelative.length}',
+    );
+    final int pixelH = 96;
+    final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
+        .toInt();
+    print('pixelW: $pixelW');
+
+    final Future<ui.Image> img = generateSunMap(
+      chronologicalSunStrength: yearSolarStrengthsLocalRelative,
+      width: pixelW,
+    );
+    return img;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ui.Image>(
+      future: createImage(),
+      builder: (BuildContext context, AsyncSnapshot<ui.Image> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print('snapshot.connectionState == ConnectionState.waiting');
+          return const Center(
+            child: CircularProgressIndicator(), // Your spinner
+          );
+        }
+        if (snapshot.hasError) {
+          print('snapshot.hasError');
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (snapshot.hasData) {
+          print('snapshot.hasData');
+
+          
+        return PublicChartRenderObjectWidget(
+            chartArrayWidget: CustomPaint(
+              painter: HeatMapPainter(snapshot.data),
+            ),
+            nXAxisTicks: 4,
+            nYAxisTicks: 5,
+          );
+        }
+
+          print('proceeding to final option after the other three snapshot cases');
+        // Fallback case (should rarely be reached)
+          return const Center(child: Text('No Image'));
+      },
+    );
+  }
+}
 
 /// {@template HeatMap}
 /// Widget that holds either a blank Widget or the 2D array of the heat map.  Since the function that creates
 /// the heat map is async, when it loads, it replaces the child of this widget.  That way, this widget remains
 /// unaffected.
 /// {@endtemplate}
-class HeatMap extends StatefulWidget {
-
+class HeatMapArchive extends StatefulWidget {
   /// {@macro HeatMap}
-  const HeatMap({super.key});
+  const HeatMapArchive({super.key});
 
   @override
-  State<HeatMap> createState() => _HeatMapState();
+  State<HeatMapArchive> createState() => _HeatMapArchiveState();
 }
 
-class _HeatMapState extends State<HeatMap> {
+class _HeatMapArchiveState extends State<HeatMapArchive> {
   ui.Image? _heatmapImage;
 
   Future<void> setBytesAndTriggerImageCreation() async {
@@ -52,36 +125,6 @@ class _HeatMapState extends State<HeatMap> {
         .toInt();
     print('pixelW: $pixelW');
 
-    // // Example: 12 pixels (3 rows X 4 columns X 4 Bytes per pixel)
-    // final Uint8List rgbaList = Uint8List(
-    //   yearSolarStrengthsLocalRelative.length * 4,
-    // );
-
-    // for (int i = 0; i < rgbaList.length; i = i + 4) {
-    //   rgbaList[i] =
-    //       yearSolarStrengthsLocalRelative.elementAt((i ~/ 4).toInt()) > 0.5
-    //       ? 0
-    //       : 255;
-    //   rgbaList[i + 1] = 0;
-    //   rgbaList[i + 2] =
-    //       yearSolarStrengthsLocalRelative.elementAt((i ~/ 4).toInt()) <= 0.5
-    //       ? 0
-    //       : 255;
-    //   rgbaList[i + 3] = 255;
-    // }
-
-    // ui.decodeImageFromPixels(
-    //   rgbaList,
-    //   pixelW,
-    //   pixelH,
-    //   ui.PixelFormat.rgba8888,
-    //   (img) {
-    //     setState(() {
-    //       _heatmapImage = img;
-    //     });
-    //   },
-    // );
-
     final ui.Image img = await generateSunMap(
       chronologicalSunStrength: yearSolarStrengthsLocalRelative,
       width: pixelW,
@@ -109,50 +152,50 @@ class _HeatMapState extends State<HeatMap> {
   Widget build(BuildContext context) {
     final bottomWidget = _heatmapImage == null
         ? Text('No Image')
-        : SizedBox(
-          height: 300,
-          width: 600,
-          child: CustomPaint(
-            painter: HeatMapPainter(_heatmapImage),
-          ),
-        );
-    return Column(
-      children: [
-        Text(
-          'Phoenixville, PA, USA',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        Table(
-          // Tightly control the column widths
-          columnWidths: const {
-            0: FixedColumnWidth(60.0), // Fixed width for Y-Axis
-            1: FlexColumnWidth(), // Chart & X-Axis dynamically fill the rest
-          },
-          defaultVerticalAlignment: TableCellVerticalAlignment.fill,
-          children: [
-            TableRow(
-              children: [
-                // 1. Y-AXIS
-                ColoredBox(color: Colors.green),
-                // 2. CHART BODY (Height is locked to the Y-axis row height)
-                bottomWidget,
-              ],
+        : PublicChartRenderObjectWidget(
+            chartArrayWidget: CustomPaint(
+              painter: HeatMapPainter(_heatmapImage),
             ),
-            TableRow(
-              children: [
-                // 3. EMPTY CORNER SPACER
-                const SizedBox(),
-                // 4. X-AXIS (Width is locked perfectly to the chart body above it)
-                SizedBox(height: 100,
-                  child: ColoredBox(color: Colors.blue)),
-              ],
-            ),
-          ],
-        ),
+            nXAxisTicks: 4,
+            nYAxisTicks: 5,
+          );
+    return bottomWidget;
+    // Column(
+    //   children: [
+    //     Text(
+    //       'Phoenixville, PA, USA',
+    //       style: Theme.of(context).textTheme.titleLarge,
+    //     ),
+    //     Table(
+    //       // Tightly control the column widths
+    //       columnWidths: const {
+    //         0: FixedColumnWidth(60.0), // Fixed width for Y-Axis
+    //         1: FlexColumnWidth(), // Chart & X-Axis dynamically fill the rest
+    //       },
+    //       defaultVerticalAlignment: TableCellVerticalAlignment.fill,
+    //       children: [
+    //         TableRow(
+    //           children: [
+    //             // 1. Y-AXIS
+    //             ColoredBox(color: Colors.green),
+    //             // 2. CHART BODY (Height is locked to the Y-axis row height)
+    //             bottomWidget,
+    //           ],
+    //         ),
+    //         TableRow(
+    //           children: [
+    //             // 3. EMPTY CORNER SPACER
+    //             const SizedBox(),
+    //             // 4. X-AXIS (Width is locked perfectly to the chart body above it)
+    //             SizedBox(height: 100, child: ColoredBox(color: Colors.blue)),
+    //           ],
+    //         ),
+    //       ],
+    //     ),
 
-        Text('Scale here'),
-      ],
-    );
+    //     Text('Scale here'),
+    //   ],
+    // );
   }
 }
 

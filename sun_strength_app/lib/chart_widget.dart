@@ -1,8 +1,10 @@
+import 'dart:core';
 import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 // import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/rendering.dart';
+import 'package:sun_strength_app/models/charter.dart';
 
 // enum ChartSlot { chartArray, yAxisColumn, xAxisRow }
 
@@ -12,19 +14,19 @@ import 'package:flutter/rendering.dart';
 class PublicChartRenderObjectWidget extends StatelessWidget {
   const PublicChartRenderObjectWidget({
     super.key,
-    required this.chartArray,
+    required this.chartArrayWidget,
     required this.nXAxisTicks,
     required this.nYAxisTicks,
   });
 
-  final Widget chartArray;
+  final Widget chartArrayWidget;
   final int nXAxisTicks;
   final int nYAxisTicks;
 
   @override
   Widget build(BuildContext context) {
     return _ChartRenderObjectWidget(
-      chartArray: chartArray,
+      chartArrayWidget: chartArrayWidget,
       nXAxisTicks: nXAxisTicks,
       nYAxisTicks: nYAxisTicks,
     );
@@ -41,12 +43,12 @@ class _ChartRenderObjectWidget
     extends SlottedMultiChildRenderObjectWidget<ChartSlot, RenderBox> {
   /// {@macro PrivateChartRenderObjectWidget}
   const _ChartRenderObjectWidget({
-    required this.chartArray,
+    required this.chartArrayWidget,
     required this.nXAxisTicks,
     required this.nYAxisTicks,
   });
 
-  final Widget chartArray;
+  final Widget chartArrayWidget;
   final int nXAxisTicks;
   final int nYAxisTicks;
 
@@ -67,7 +69,7 @@ class _ChartRenderObjectWidget
 
   @override
   Widget childForSlot(ChartSlot slot) {
-    if (slot == ChartSlot.chartArray) return chartArray;
+    if (slot == ChartSlot.chartArray) return chartArrayWidget;
 
     // Return a text widget for the specific index
     if (slot.id == 'yAxisLabel') {
@@ -242,12 +244,22 @@ class _ChartRenderObject extends RenderBox
     return childrenHitTestBool;
   }
 
+  /// Consider added efficiency by calculating the maxes of the axis once and then storing them.  Then,
+  /// before using, check [markNeedsLayout] tag thing.
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
-    double maxYAxisLabelWidth = _yAxisLabels.map((e) => e?.getDryLayout(constraints).width ?? 0).toList().max.toDouble();
-    double maxXAxisLabelHeight = _xAxisLabels.map((e) => e?.getDryLayout(constraints).height ?? 0).toList().max.toDouble();
+    double maxYAxisLabelWidth = _yAxisLabels
+        .map((e) => e?.getDryLayout(constraints).width ?? 0)
+        .toList()
+        .max
+        .toDouble();
+    double maxXAxisLabelHeight = _xAxisLabels
+        .map((e) => e?.getDryLayout(constraints).height ?? 0)
+        .toList()
+        .max
+        .toDouble();
     // fold(0, (previousValue, element) => max(previousValue, element),);
-    Size chartSize = _chartArray?.getDryLayout(constraints) ?? Size(0,0);
+    Size chartSize = _chartArray?.getDryLayout(constraints) ?? Size(0, 0);
     Size drySize = Size(
       maxYAxisLabelWidth + chartSize.width,
       maxXAxisLabelHeight + chartSize.height,
@@ -257,6 +269,67 @@ class _ChartRenderObject extends RenderBox
 
   @override
   void performLayout() {
+    double maxYAxisLabelWidth = _yAxisLabels
+        .map((e) => e?.getDryLayout(constraints).width ?? 0)
+        .toList()
+        .max
+        .toDouble();
+    final double heatMapHeight = 300;
+
+    // For now, I am going to make the Y axis values NOT centered correctly vertically.  I'll tweak that later.
+    _yAxisLabels.toList().reversed.forEachIndexed((index, child) {
+      if (child == null) return;
+      child.layout(constraints.loosen(), parentUsesSize: true);
+      final BoxParentData childParentData = child.parentData as BoxParentData;
+      if (index == _yAxisLabelCount) {
+        childParentData.offset = Offset(
+          maxYAxisLabelWidth,
+          index * heatMapHeight / _yAxisLabelCount - child.size.height,
+        );
+      } else {
+        childParentData.offset = Offset(
+          maxYAxisLabelWidth,
+          index * heatMapHeight / _yAxisLabelCount,
+        );
+      }
+    });
+
+    if (_chartArray != null) {
+      _chartArray!.layout(
+        BoxConstraints.tightFor(
+          width: min(600, constraints.maxWidth - maxYAxisLabelWidth),
+          height: heatMapHeight,
+        ),
+        parentUsesSize: true,
+      );
+      final BoxParentData childParentData =
+          _chartArray!.parentData as BoxParentData;
+      childParentData.offset = Offset(maxYAxisLabelWidth, 0);
+    }
+
+    final double heatMapWidth = _chartArray?.size.width ?? 0;
+
+    double maxXAxisLabelHeight = 0;
+    _xAxisLabels.forEachIndexed((index, child) {
+      if (child == null) return;
+      child.layout(constraints.loosen(), parentUsesSize: true);
+      final BoxParentData childParentData = child.parentData as BoxParentData;
+      double idealHOffset =
+          (index + 0.5) * (heatMapWidth / 12) - child.size.width / 2;
+      if (child.size.width / 2 > idealHOffset) {
+        idealHOffset = child.size.width / 2;
+      }
+      if (heatMapWidth - idealHOffset < child.size.width / 2) {
+        idealHOffset = heatMapWidth - child.size.width / 2;
+      }
+      childParentData.offset = Offset(maxYAxisLabelWidth, idealHOffset);
+      maxXAxisLabelHeight = max(maxXAxisLabelHeight, child.size.height);
+    });
+    size = Size(
+      maxYAxisLabelWidth + heatMapWidth,
+      heatMapHeight + maxXAxisLabelHeight,
+    );
+
     // // Check for updated text in epTitle and podTitle values BEFORE rerunning
     // // needed recalcs
     // if (reCalcFindEpTitle1RendP()?.text.toString() != epTitleCachedText) {
@@ -360,26 +433,9 @@ class _ChartRenderObject extends RenderBox
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    // cachedDoNotPaintList = doNotPaintList;
-    // cachedPaintList = paintList;
-    // if (cachedPaintList != null) {
-    //   cachedPaintListChildren = paintListChildren(cachedPaintList!);
-    // }
+    super.paint(context, offset);
 
-    // final Color animatedColor =
-    //     Color.lerp(miniBackgroundColor, fullBackgroundColor, animationValue)!;
-    // context.canvas.drawRect(offset & size, Paint()..color = animatedColor);
-
-    // if (cachedPaintList != null) {
-    //   for (final PlayerSlot slot in cachedPaintList!) {
-    //     final RenderBox? child = childForSlot(slot);
-    //     if (child != null) {
-    //       final BoxParentData childParentData =
-    //           child.parentData as BoxParentData;
-    //       context.paintChild(child, childParentData.offset + offset);
-    //     }
-    //   }
-    // }
+    // FUTURE ME: Add background grids, borders, or dividers here!
   }
 }
 
