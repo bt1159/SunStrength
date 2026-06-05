@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'models/charter.dart';
+import 'screens/chart_page.dart';
 
 void main() {
   runApp(const MyApp());

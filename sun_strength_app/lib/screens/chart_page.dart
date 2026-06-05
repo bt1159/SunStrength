@@ -2,8 +2,8 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'orbit_calcs.dart';
-import 'package:sun_strength_app/chart_widget.dart';
+import '../models/orbit_calcs.dart';
+import 'package:sun_strength_app/screens/chart_widget.dart';
 
 class HeatMap extends StatelessWidget {
   const HeatMap({super.key});

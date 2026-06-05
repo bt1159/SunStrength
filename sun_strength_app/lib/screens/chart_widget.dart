@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 // import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/rendering.dart';
 
-// enum ChartSlot { chartArray, yAxisColumn, xAxisRow }
 
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that just constains the a [_ChartRenderObjectWidget].
 /// {@endtemplate}
 class PublicChartRenderObjectWidget extends StatelessWidget {
+  /// {@macro PublicChartRenderObjectWidget}
   const PublicChartRenderObjectWidget({
     super.key,
     required this.chartArrayWidget,
@@ -37,10 +37,14 @@ class PublicChartRenderObjectWidget extends StatelessWidget {
 }
 
 /// {@template PrivateChartRenderObjectWidget}
-/// Widget that holds the entire solar strength chart, including all the components
+/// Widget that holds the solar strength chart including the 2D array and also the axis labels, gridlines, etc.
 ///
-/// This is a custom widget creats an element, [_ChartRenderObjectElement], and
+/// This is custom widget creats an element, [_ChartRenderObjectElement], and
 /// a render object, [_ChartRenderObject].
+/// 
+/// [chartArrayWidget] is the Widget that contains just the 2D bit array.  [nXAxisBuckets] and [nYAxisBuckets]
+/// are the number of buckets that the x and y axes are split into.  Note that there will be the same number of
+/// x axis labels as buckets but the y axis will have one more label than bucket.
 /// {@endtemplate}
 class _ChartRenderObjectWidget
     extends SlottedMultiChildRenderObjectWidget<ChartSlot, RenderBox> {
@@ -114,8 +118,8 @@ class _ChartRenderObjectWidget
     BuildContext context,
     covariant _ChartRenderObject renderObject,
   ) {
-    renderObject.xAxisLabelCount = nXAxisBuckets;
-    renderObject.yAxisLabelCount = nYAxisBuckets;
+    renderObject.nXAxisBuckets = nXAxisBuckets;
+    renderObject.nYAxisBuckets = nYAxisBuckets;
   }
 
   @override
@@ -134,6 +138,12 @@ class _ChartRenderObjectElement
   }
 }
 
+/// A custom [RenderBox] that is tied to a [_ChartRenderObjectWidget].
+/// 
+/// This RenderBox is the entire reason for this dart file.  It makes it possible to 
+/// compute the layouts for the various chart elements in parallel, making it much easier,
+/// or even possible, to make the y axis labels line up correctly with the data, for instance.
+/// Same with the x axis labels, and so on.
 class _ChartRenderObject extends RenderBox
     with
         SlottedContainerRenderObjectMixin<ChartSlot, RenderBox>,
@@ -147,13 +157,17 @@ class _ChartRenderObject extends RenderBox
   int _nXAxisBuckets;
   int _nYAxisBuckets;
 
-  set xAxisLabelCount(int value) {
+/// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when 
+/// it needs to change the value for [nXAxisBuckets]
+  set nXAxisBuckets(int value) {
     if (_nXAxisBuckets == value) return;
     _nXAxisBuckets = value;
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
   }
 
-  set yAxisLabelCount(int value) {
+/// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when 
+/// it needs to change the value for [nYAxisBuckets]
+  set nYAxisBuckets(int value) {
     if (_nYAxisBuckets == value) return;
     _nYAxisBuckets = value;
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
