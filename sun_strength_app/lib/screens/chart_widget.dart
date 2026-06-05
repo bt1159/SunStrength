@@ -25,9 +25,6 @@ class PublicChartRenderObjectWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print(
-      'about to build PublicChartRenderObjectWidget with nXAxisTicks: $nXAxisBuckets, nYAxisTicks: $nYAxisBuckets',
-    );
     return _ChartRenderObjectWidget(
       chartArrayWidget: chartArrayWidget,
       nXAxisBuckets: nXAxisBuckets,
@@ -241,7 +238,6 @@ class _ChartRenderObject extends RenderBox
 
   @override
   void performLayout() {
-    print('starting performLayout');
     double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
@@ -252,7 +248,7 @@ class _ChartRenderObject extends RenderBox
 
     // For now, I am going to make the Y axis values NOT centered correctly vertically.  I'll tweak that later.
     _yAxisLabels.toList().reversed.forEachIndexed((index, child) {
-      print('starting the next each in _yAxisLabels');
+      
       if (child == null) return;
       child.layout(constraints.loosen(), parentUsesSize: true);
       final BoxParentData childParentData = child.parentData as BoxParentData;
@@ -267,9 +263,6 @@ class _ChartRenderObject extends RenderBox
           index * heatMapHeight / _nYAxisBuckets,
         );
       }
-      print(
-        'finished this each in _yAxisLabels, index: $index, size: ${child.size}, offset: ${childParentData.offset}',
-      );
     });
 
     if (_chartArray != null) {
@@ -284,16 +277,12 @@ class _ChartRenderObject extends RenderBox
           _chartArray!.parentData as BoxParentData;
       childParentData.offset = Offset(maxYAxisLabelWidth, 0);
 
-      print(
-        'finished _chartArry, size: ${_chartArray?.size}, offset: ${childParentData.offset}',
-      );
     }
 
     final double heatMapWidth = _chartArray?.size.width ?? 0;
 
     double maxXAxisLabelHeight = 0;
     _xAxisLabels.forEachIndexed((index, child) {
-      print('starting the next each in _xAxisLabels');
       if (child == null) return;
       child.layout(constraints.loosen(), parentUsesSize: true);
       final BoxParentData childParentData = child.parentData as BoxParentData;
@@ -311,21 +300,16 @@ class _ChartRenderObject extends RenderBox
         heatMapHeight,
       );
       maxXAxisLabelHeight = max(maxXAxisLabelHeight, child.size.height);
-      print(
-        'finished this each in _xAxisLabels, index: $index, size: ${child.size}, offset: ${childParentData.offset}',
-      );
     });
     size = Size(
       maxYAxisLabelWidth + heatMapWidth,
       heatMapHeight + maxXAxisLabelHeight,
     );
 
-    print('finished performLayout(), size: $size');
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    print('starting paint');
 
     // Loop through all non-null children active in your slots
     for (final RenderBox child in children) {
@@ -336,7 +320,6 @@ class _ChartRenderObject extends RenderBox
     }
 
     // FUTURE ME: Add background grids, borders, or dividers here!
-    print('done paint');
   }
 }
 

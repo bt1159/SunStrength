@@ -47,7 +47,7 @@ const double rEarth = 6371; // Earth's radius in km
 const double yearLength = 365.242190402;
 // const double h1 = 0.048006; // Elevation to use for now
 const double h1 = 0;
-final num maxRelativeSolarStrengthAtEquator = pow(0.7,pow(1, 0.678));
+final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 
 // void main() {
 //   getChartData();
@@ -57,7 +57,23 @@ final double longInput = -71.3833058055504;
 final double p1 = radians(latInput);
 final double l1 = radians(longInput);
 
-Iterable<({double earthRotationAngle, double trueAnomaly})> getYearTrueAnomalies({
+Iterable<double> masterFunctionSolarStrengthArray({required double k, required double h}) {
+  final Iterable<({double earthRotationAngle, double trueAnomaly})>
+  yearTrueAnomalies = getYearTrueAnomalies();
+  final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(
+    yearTrueAnomalies,
+  );
+  final Iterable<double> yearSolarStrengthsLocalRelative =
+      getYearSolarStrengthsLocalRelativeToGlobal(
+        h: h,
+        k: k,
+        yearSolarElevationAngles: yearSolarElevationAngles,
+      );
+  return yearSolarStrengthsLocalRelative;
+}
+
+Iterable<({double earthRotationAngle, double trueAnomaly})>
+getYearTrueAnomalies({
   int yearInput = 2026,
   String tZoneInput = "America/New_York",
 }) {
@@ -77,17 +93,20 @@ Iterable<({double earthRotationAngle, double trueAnomaly})> getYearTrueAnomalies
     nDays * 24 * 4,
     (i) => initialOffsetHours + i / 4,
   ); // List of offsets in hours from J2000 for each 15-minute interval of the year
-  
+
   print('timeStampBeforeMean: ${tz.TZDateTime.now(tz.UTC)}');
-  final Iterable<({double earthRotationAngle, double meanAnomaly})> yearMeanAnomalies =
-      yearJ2000OffsetsHours.map(
-        (offset) => (
-          earthRotationAngle: (2 * pi * (0.779057273264 + 1.00273781191135 * (offset / 24)) - pi / 2).remainder(2 * pi),
-          meanAnomaly:
-              (tMeanAnomalyAtEpoch + (2 * pi) * (offset / (yearLength * 24)))
-                  .remainder(2 * pi),
-        ),
-      );
+  final Iterable<({double earthRotationAngle, double meanAnomaly})>
+  yearMeanAnomalies = yearJ2000OffsetsHours.map(
+    (offset) => (
+      earthRotationAngle:
+          (2 * pi * (0.779057273264 + 1.00273781191135 * (offset / 24)) -
+                  pi / 2)
+              .remainder(2 * pi),
+      meanAnomaly:
+          (tMeanAnomalyAtEpoch + (2 * pi) * (offset / (yearLength * 24)))
+              .remainder(2 * pi),
+    ),
+  );
   double rootFunc(double guess, double meanAnomaly) =>
       guess - eccen * sin(guess) - meanAnomaly;
   double rootPrimeFunc(double guess, double meanAnomaly) =>
@@ -106,55 +125,74 @@ Iterable<({double earthRotationAngle, double trueAnomaly})> getYearTrueAnomalies
   );
 
   print('timeStampBeforeTrue: ${tz.TZDateTime.now(tz.UTC)}');
-  final Iterable<({double earthRotationAngle, double trueAnomaly})> yearTrueAnomalies =
-      yearEccentricAnomalies.map(
-        (anomaly) => (
-          earthRotationAngle: anomaly.earthRotationAngle,
-          trueAnomaly:
-              2 * atan(sqrt(rA / rP) * tan(anomaly.eccentricAnomaly / 2)),
-        ),
-      );
+  final Iterable<({double earthRotationAngle, double trueAnomaly})>
+  yearTrueAnomalies = yearEccentricAnomalies.map(
+    (anomaly) => (
+      earthRotationAngle: anomaly.earthRotationAngle,
+      trueAnomaly: 2 * atan(sqrt(rA / rP) * tan(anomaly.eccentricAnomaly / 2)),
+    ),
+  );
 
   return yearTrueAnomalies;
 }
 
-Iterable<double> getYearSolarElevationAngles(Iterable<({double earthRotationAngle, double trueAnomaly})> inputData) {
-  final Iterable<double> output = inputData.map((({double earthRotationAngle, double trueAnomaly}) inputDataPoint) {
-    final double orbitalRadius = 2 * rA * rP / (rA * (1 + cos(inputDataPoint.trueAnomaly)) + rP * (1 - cos(inputDataPoint.trueAnomaly)));
-    final double intermediateTerm = orbitalRadius * (
-      (
-        sin(lPeri) * cos(inputDataPoint.trueAnomaly) + 
-        cos(lPeri) * sin(inputDataPoint.trueAnomaly)
-      ) *
-      (
-        cos(p1) * cos(tilt) * cos(inputDataPoint.earthRotationAngle + l1) + 
-        sin(p1) * sin(tilt)
-      ) + 
-      (
-        -cos(lPeri) * cos(inputDataPoint.trueAnomaly) + 
-        sin(lPeri) * sin(inputDataPoint.trueAnomaly)
-      ) *
-      (
-        cos(p1) * sin(inputDataPoint.earthRotationAngle + l1)
-      )
-    );
+Iterable<double> getYearSolarElevationAngles(
+  Iterable<({double earthRotationAngle, double trueAnomaly})> inputData,
+) {
+  final Iterable<double> output = inputData.map((
+    ({double earthRotationAngle, double trueAnomaly}) inputDataPoint,
+  ) {
+    final double orbitalRadius =
+        2 *
+        rA *
+        rP /
+        (rA * (1 + cos(inputDataPoint.trueAnomaly)) +
+            rP * (1 - cos(inputDataPoint.trueAnomaly)));
+    final double intermediateTerm =
+        orbitalRadius *
+        ((sin(lPeri) * cos(inputDataPoint.trueAnomaly) +
+                    cos(lPeri) * sin(inputDataPoint.trueAnomaly)) *
+                (cos(p1) *
+                        cos(tilt) *
+                        cos(inputDataPoint.earthRotationAngle + l1) +
+                    sin(p1) * sin(tilt)) +
+            (-cos(lPeri) * cos(inputDataPoint.trueAnomaly) +
+                    sin(lPeri) * sin(inputDataPoint.trueAnomaly)) *
+                (cos(p1) * sin(inputDataPoint.earthRotationAngle + l1)));
     final double output = -asin(
-      (rEarth + intermediateTerm) / 
-      sqrt(pow(rEarth, 2) + pow(orbitalRadius, 2) + 2 * rEarth * intermediateTerm)
+      (rEarth + intermediateTerm) /
+          sqrt(
+            pow(rEarth, 2) +
+                pow(orbitalRadius, 2) +
+                2 * rEarth * intermediateTerm,
+          ),
     );
     return output;
   });
-  
-  return output.map((e) => max(0,e));
+
+  return output.map((e) => max(0, e));
 }
 
-Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal({required Iterable<double> yearSolarElevationAngles, required double k, required double h}) {
-// maxRelativeSolarStrengthAtEquator
-  final Iterable<double> yearAirMassSeaLevel = yearSolarElevationAngles.map((elevAngle) => elevAngle <= 0 ? 38 : 1 / (cos(pi/2 - elevAngle) + 0.50572*pow(96.07995 - degrees(pi/2 - elevAngle),-1.6364)));
-  final Iterable<double> yearLocalSolarStrengthFactors = yearAirMassSeaLevel.map((aM) => aM >= 38 ? 0 : exp(-k * aM * exp(-h/8.5)));
+Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal({
+  required Iterable<double> yearSolarElevationAngles,
+  required double k,
+  required double h,
+}) {
+  // maxRelativeSolarStrengthAtEquator
+  final Iterable<double> yearAirMassSeaLevel = yearSolarElevationAngles.map(
+    (elevAngle) => elevAngle <= 0
+        ? 38
+        : 1 /
+              (cos(pi / 2 - elevAngle) +
+                  0.50572 *
+                      pow(96.07995 - degrees(pi / 2 - elevAngle), -1.6364)),
+  );
+  final Iterable<double> yearLocalSolarStrengthFactors = yearAirMassSeaLevel
+      .map((aM) => aM >= 38 ? 0 : exp(-k * aM * exp(-h / 8.5)));
   final double globalMax = exp(-k);
-  final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearLocalSolarStrengthFactors.map((factor) => factor / globalMax);
-  
+  final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal =
+      yearLocalSolarStrengthFactors.map((factor) => factor / globalMax);
+
   // final Iterable<double> yearSolarStrengthsLocal = yearAirMass.map((aM) => h1/7.1 + ((1-h1/7.1)*pow(0.7,pow(aM,0.678))));
   // final Iterable<double> yearSolarStrengthsLocalRelativeToGlobal = yearSolarStrengthsLocal.map((strength) => strength / maxRelativeSolarStrengthAtEquator);
   return yearSolarStrengthsLocalRelativeToGlobal;

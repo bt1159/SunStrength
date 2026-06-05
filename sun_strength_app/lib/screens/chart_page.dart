@@ -5,35 +5,29 @@ import 'package:flutter/material.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
 
-class HeatMap extends StatelessWidget {
+class HeatMap extends StatefulWidget {
   const HeatMap({super.key});
 
-  Future<ui.Image> createImage() async {
-    final Iterable<({double earthRotationAngle, double trueAnomaly})>
-    yearTrueAnomalies = getYearTrueAnomalies();
-    print(yearTrueAnomalies.first);
-    final Iterable<double> yearSolarElevationAngles =
-        getYearSolarElevationAngles(yearTrueAnomalies);
-    print(
-      'yearSolarElevationAngles, first 96: ${yearSolarElevationAngles.take(96).toList()}',
-    );
+  @override
+  State<HeatMap> createState() => _HeatMapState();
+}
+
+class _HeatMapState extends State<HeatMap> {
+  double _currentK = 2;
+  late Future<ui.Image> _chartImageFuture;
+
+  /// The function that actually creates the 2D array of solar strength bytes.
+  ///
+  /// Note: k is the value that determines what wavelength of sunlight you are looking at:
+  /// Visible: 0.22 <= k <= 0.36
+  /// UV-A: 0.36 <= k <= 0.92
+  /// UV-C: 2.3 <= k <= 4.6
+  Future<ui.Image> createImage(double k) async {
     final Iterable<double> yearSolarStrengthsLocalRelative =
-        getYearSolarStrengthsLocalRelativeToGlobal(
-          h: 0,
-          //k: 0.8,
-          k: 2,
-          yearSolarElevationAngles: yearSolarElevationAngles,
-        );
-    print(
-      'getYearSolarStrengthsLocalRelativeToGlobal.first: ${yearSolarStrengthsLocalRelative.first}',
-    );
-    print(
-      'getYearSolarStrengthsLocalRelativeToGlobal.length: ${yearSolarStrengthsLocalRelative.length}',
-    );
+        masterFunctionSolarStrengthArray(h: 0, k: k);
     final int pixelH = 96;
     final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
         .toInt();
-    print('pixelW: $pixelW');
 
     final Future<ui.Image> img = generateSunMap(
       chronologicalSunStrength: yearSolarStrengthsLocalRelative,
@@ -43,124 +37,73 @@ class HeatMap extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ui.Image>(
-      future: createImage(),
-      builder: (BuildContext context, AsyncSnapshot<ui.Image> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          print('snapshot.connectionState == ConnectionState.waiting');
-          return const Center(
-            child: CircularProgressIndicator(), // Your spinner
-          );
-        }
-        if (snapshot.hasError) {
-          print('snapshot.hasError');
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        if (snapshot.hasData) {
-          print('snapshot.hasData');
-    
-          return PublicChartRenderObjectWidget(
-            chartArrayWidget: CustomPaint(
-              painter: HeatMapPainter(snapshot.data),
-            ),
-            nXAxisBuckets: 4,
-            nYAxisBuckets: 4,
-          );
-        }
-    
-        print(
-          'proceeding to final option after the other three snapshot cases',
-        );
-        // Fallback case (should rarely be reached)
-        return const Center(child: Text('No Image'));
-      },
-    );
+  void initState() {
+    super.initState();
+    _chartImageFuture = createImage(_currentK);
   }
-}
 
-/// {@template HeatMap}
-/// Widget that holds either a blank Widget or the 2D array of the heat map.  Since the function that creates
-/// the heat map is async, when it loads, it replaces the child of this widget.  That way, this widget remains
-/// unaffected.
-/// {@endtemplate}
-class HeatMapArchive extends StatefulWidget {
-  /// {@macro HeatMap}
-  const HeatMapArchive({super.key});
-
-  @override
-  State<HeatMapArchive> createState() => _HeatMapArchiveState();
-}
-
-class _HeatMapArchiveState extends State<HeatMapArchive> {
-  ui.Image? _heatmapImage;
-
-  Future<void> setBytesAndTriggerImageCreation() async {
-    final Iterable<({double earthRotationAngle, double trueAnomaly})>
-    yearTrueAnomalies = getYearTrueAnomalies();
-    print(yearTrueAnomalies.first);
-    final Iterable<double> yearSolarElevationAngles =
-        getYearSolarElevationAngles(yearTrueAnomalies);
-    print(
-      'yearSolarElevationAngles, first 96: ${yearSolarElevationAngles.take(96).toList()}',
-    );
-    final Iterable<double> yearSolarStrengthsLocalRelative =
-        getYearSolarStrengthsLocalRelativeToGlobal(
-          h: 0,
-          //k: 0.8,
-          k: 2,
-          yearSolarElevationAngles: yearSolarElevationAngles,
-        );
-    // final int listLength = yearSolarStrengthsLocalRelative.length;
-    // final Iterable<double> tempOutput = yearSolarStrengthsLocalRelative
-    //     .skip((listLength / 2).toInt())
-    //     .take(96 * 10);
-    print(
-      'getYearSolarStrengthsLocalRelativeToGlobal.first: ${yearSolarStrengthsLocalRelative.first}',
-    );
-    print(
-      'getYearSolarStrengthsLocalRelativeToGlobal.length: ${yearSolarStrengthsLocalRelative.length}',
-    );
-    final int pixelH = 96;
-    final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
-        .toInt();
-    print('pixelW: $pixelW');
-
-    final ui.Image img = await generateSunMap(
-      chronologicalSunStrength: yearSolarStrengthsLocalRelative,
-      width: pixelW,
-    );
+  void _updateParameter(double newValue) {
     setState(() {
-      _heatmapImage = img;
+      _currentK = newValue;
+      // Explicitly trigger a re-run ONLY when the button is tapped!
+      _chartImageFuture = createImage(_currentK);
     });
   }
 
   @override
-  void dispose() {
-    _heatmapImage?.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies(); // Always call super first
-
-    // Example: Reacting to a change in Theme or Provider
-    setBytesAndTriggerImageCreation();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bottomWidget = _heatmapImage == null
-        ? Text('No Image')
-        : PublicChartRenderObjectWidget(
-            chartArrayWidget: CustomPaint(
-              painter: HeatMapPainter(_heatmapImage),
+    return Column(
+      children: [
+        FutureBuilder<ui.Image>(
+          future: _chartImageFuture,
+          builder: (BuildContext context, AsyncSnapshot<ui.Image> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              print('snapshot.connectionState == ConnectionState.waiting');
+              return const Center(
+                child: CircularProgressIndicator(), // Your spinner
+              );
+            }
+            if (snapshot.hasError) {
+              print('snapshot.hasError');
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (snapshot.hasData) {
+              print('snapshot.hasData');
+
+              return PublicChartRenderObjectWidget(
+                chartArrayWidget: CustomPaint(
+                  painter: HeatMapPainter(snapshot.data),
+                ),
+                nXAxisBuckets: 4,
+                nYAxisBuckets: 4,
+              );
+            }
+
+            print(
+              'proceeding to final option after the other three snapshot cases',
+            );
+            // Fallback case (should rarely be reached)
+            return const Center(child: Text('No Image'));
+          },
+        ),
+        Row(
+          children: [
+            ElevatedButton(
+              onPressed: () => _updateParameter(0.3),
+              child: Text('Switch to visible light'),
             ),
-            nXAxisBuckets: 4,
-            nYAxisBuckets: 4,
-          );
-    return bottomWidget;
+            ElevatedButton(
+              onPressed: () => _updateParameter(0.64),
+              child: Text('Switch to UV-A'),
+            ),
+            ElevatedButton(
+              onPressed: () => _updateParameter(2),
+              child: Text('Switch to UV-B'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
@@ -175,19 +118,20 @@ class HeatMapPainter extends CustomPainter {
     if (image != null) {
       // 1. Define the full bounds of the raw source image pixels
       final Rect src = Rect.fromLTWH(
-        0, 
-        0, 
-        image!.width.toDouble(), 
+        0,
+        0,
+        image!.width.toDouble(),
         image!.height.toDouble(),
       );
-      
+
       // 2. Define the full layout bounds allocated to your CustomPaint (600x300)
       final Rect dst = Rect.fromLTWH(0, 0, size.width, size.height);
-      
-      // 3. Create a paint object. 
+
+      // 3. Create a paint object.
       // Optional: Set filterQuality to determine how pixels blend when stretched
       final Paint paint = Paint()
-        ..filterQuality = FilterQuality.medium; // Use .none for crisp pixel blocks, .medium for smooth blending
+        ..filterQuality = FilterQuality
+            .medium; // Use .none for crisp pixel blocks, .medium for smooth blending
 
       // 4. Draw it stretched!
       canvas.drawImageRect(image!, src, dst, paint);
@@ -255,4 +199,3 @@ Future<ui.Image> generateSunMap({
   final ui.FrameInfo frame = await codec.getNextFrame();
   return frame.image;
 }
-
