@@ -59,20 +59,21 @@ class HeatMap extends StatelessWidget {
         }
         if (snapshot.hasData) {
           print('snapshot.hasData');
-
-          
-        return PublicChartRenderObjectWidget(
+    
+          return PublicChartRenderObjectWidget(
             chartArrayWidget: CustomPaint(
               painter: HeatMapPainter(snapshot.data),
             ),
-            nXAxisTicks: 4,
-            nYAxisTicks: 5,
+            nXAxisBuckets: 4,
+            nYAxisBuckets: 4,
           );
         }
-
-          print('proceeding to final option after the other three snapshot cases');
+    
+        print(
+          'proceeding to final option after the other three snapshot cases',
+        );
         // Fallback case (should rarely be reached)
-          return const Center(child: Text('No Image'));
+        return const Center(child: Text('No Image'));
       },
     );
   }
@@ -156,46 +157,10 @@ class _HeatMapArchiveState extends State<HeatMapArchive> {
             chartArrayWidget: CustomPaint(
               painter: HeatMapPainter(_heatmapImage),
             ),
-            nXAxisTicks: 4,
-            nYAxisTicks: 5,
+            nXAxisBuckets: 4,
+            nYAxisBuckets: 4,
           );
     return bottomWidget;
-    // Column(
-    //   children: [
-    //     Text(
-    //       'Phoenixville, PA, USA',
-    //       style: Theme.of(context).textTheme.titleLarge,
-    //     ),
-    //     Table(
-    //       // Tightly control the column widths
-    //       columnWidths: const {
-    //         0: FixedColumnWidth(60.0), // Fixed width for Y-Axis
-    //         1: FlexColumnWidth(), // Chart & X-Axis dynamically fill the rest
-    //       },
-    //       defaultVerticalAlignment: TableCellVerticalAlignment.fill,
-    //       children: [
-    //         TableRow(
-    //           children: [
-    //             // 1. Y-AXIS
-    //             ColoredBox(color: Colors.green),
-    //             // 2. CHART BODY (Height is locked to the Y-axis row height)
-    //             bottomWidget,
-    //           ],
-    //         ),
-    //         TableRow(
-    //           children: [
-    //             // 3. EMPTY CORNER SPACER
-    //             const SizedBox(),
-    //             // 4. X-AXIS (Width is locked perfectly to the chart body above it)
-    //             SizedBox(height: 100, child: ColoredBox(color: Colors.blue)),
-    //           ],
-    //         ),
-    //       ],
-    //     ),
-
-    //     Text('Scale here'),
-    //   ],
-    // );
   }
 }
 
@@ -208,8 +173,24 @@ class HeatMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (image != null) {
-      // Logic for drawing the image goes here
-      canvas.drawImage(image!, Offset.zero, Paint());
+      // 1. Define the full bounds of the raw source image pixels
+      final Rect src = Rect.fromLTWH(
+        0, 
+        0, 
+        image!.width.toDouble(), 
+        image!.height.toDouble(),
+      );
+      
+      // 2. Define the full layout bounds allocated to your CustomPaint (600x300)
+      final Rect dst = Rect.fromLTWH(0, 0, size.width, size.height);
+      
+      // 3. Create a paint object. 
+      // Optional: Set filterQuality to determine how pixels blend when stretched
+      final Paint paint = Paint()
+        ..filterQuality = FilterQuality.medium; // Use .none for crisp pixel blocks, .medium for smooth blending
+
+      // 4. Draw it stretched!
+      canvas.drawImageRect(image!, src, dst, paint);
     }
   }
 
@@ -275,19 +256,3 @@ Future<ui.Image> generateSunMap({
   return frame.image;
 }
 
-class YAxis extends StatelessWidget {
-  const YAxis({super.key, required this.verticalBuffer});
-
-  final double verticalBuffer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        SizedBox(height: verticalBuffer),
-        SizedBox(height: verticalBuffer),
-      ],
-    );
-  }
-}

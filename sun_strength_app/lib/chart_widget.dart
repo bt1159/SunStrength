@@ -1,10 +1,10 @@
+// flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
 import 'dart:core';
 import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 // import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/rendering.dart';
-import 'package:sun_strength_app/models/charter.dart';
 
 // enum ChartSlot { chartArray, yAxisColumn, xAxisRow }
 
@@ -15,20 +15,23 @@ class PublicChartRenderObjectWidget extends StatelessWidget {
   const PublicChartRenderObjectWidget({
     super.key,
     required this.chartArrayWidget,
-    required this.nXAxisTicks,
-    required this.nYAxisTicks,
+    required this.nXAxisBuckets,
+    required this.nYAxisBuckets,
   });
 
   final Widget chartArrayWidget;
-  final int nXAxisTicks;
-  final int nYAxisTicks;
+  final int nXAxisBuckets;
+  final int nYAxisBuckets;
 
   @override
   Widget build(BuildContext context) {
+    print(
+      'about to build PublicChartRenderObjectWidget with nXAxisTicks: $nXAxisBuckets, nYAxisTicks: $nYAxisBuckets',
+    );
     return _ChartRenderObjectWidget(
       chartArrayWidget: chartArrayWidget,
-      nXAxisTicks: nXAxisTicks,
-      nYAxisTicks: nYAxisTicks,
+      nXAxisBuckets: nXAxisBuckets,
+      nYAxisBuckets: nYAxisBuckets,
     );
   }
 }
@@ -44,26 +47,22 @@ class _ChartRenderObjectWidget
   /// {@macro PrivateChartRenderObjectWidget}
   const _ChartRenderObjectWidget({
     required this.chartArrayWidget,
-    required this.nXAxisTicks,
-    required this.nYAxisTicks,
+    required this.nXAxisBuckets,
+    required this.nYAxisBuckets,
   });
 
   final Widget chartArrayWidget;
-  final int nXAxisTicks;
-  final int nYAxisTicks;
+  final int nXAxisBuckets;
+  final int nYAxisBuckets;
 
-  // final Widget xAxisColumn = Row(
-  //   mainAxisSize: MainAxisSize.max,
-  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //   children: [Text('Jan'),Text('May'),Text('Sep')],);
 
   @override
   Iterable<ChartSlot> get slots {
     return [
       ChartSlot.chartArray,
-      ...Iterable.generate(nYAxisTicks, (i) => ChartSlot.yAxisLabel(i)),
+      ...Iterable.generate(nYAxisBuckets + 1, (i) => ChartSlot.yAxisLabel(i)),
       // Dynamically add a slot for every label provided
-      ...Iterable.generate(nXAxisTicks, (i) => ChartSlot.xAxisLabel(i)),
+      ...Iterable.generate(nXAxisBuckets, (i) => ChartSlot.xAxisLabel(i)),
     ];
   }
 
@@ -74,15 +73,15 @@ class _ChartRenderObjectWidget
     // Return a text widget for the specific index
     if (slot.id == 'yAxisLabel') {
       final String labelText =
-          TimeLabelList.fromCount(nYAxisTicks)?.labelList[slot.index!] ??
-          'BadXAxisCount';
+          TimeLabelList.fromCount(nYAxisBuckets)?.labelList[slot.index!] ??
+          'BadYAxisCount';
       return Text(labelText);
     }
 
     // Return a text widget for the specific index
     if (slot.id == 'xAxisLabel') {
       final String labelText =
-          MonthLabelList.fromCount(nXAxisTicks)?.labelList[slot.index!] ??
+          MonthLabelList.fromCount(nXAxisBuckets)?.labelList[slot.index!] ??
           'BadXAxisCount';
       return Text(labelText);
     }
@@ -99,8 +98,8 @@ class _ChartRenderObjectWidget
   @override
   _ChartRenderObject createRenderObject(BuildContext context) {
     return _ChartRenderObject(
-      xAxisLabelCount: nXAxisTicks,
-      yAxisLabelCount: nYAxisTicks + 1,
+      nXAxisBuckets: nXAxisBuckets,
+      nYAxisBuckets: nYAxisBuckets,
     );
   }
 
@@ -115,8 +114,8 @@ class _ChartRenderObjectWidget
     BuildContext context,
     covariant _ChartRenderObject renderObject,
   ) {
-    renderObject.xAxisLabelCount = nXAxisTicks;
-    renderObject.yAxisLabelCount = nYAxisTicks;
+    renderObject.xAxisLabelCount = nXAxisBuckets;
+    renderObject.yAxisLabelCount = nYAxisBuckets;
   }
 
   @override
@@ -140,75 +139,35 @@ class _ChartRenderObject extends RenderBox
         SlottedContainerRenderObjectMixin<ChartSlot, RenderBox>,
         DebugOverflowIndicatorMixin {
   _ChartRenderObject({
-    required int xAxisLabelCount,
-    required int yAxisLabelCount,
-  }) : _xAxisLabelCount = xAxisLabelCount,
-       _yAxisLabelCount = yAxisLabelCount;
+    required int nXAxisBuckets,
+    required int nYAxisBuckets,
+  }) : _nXAxisBuckets = nXAxisBuckets,
+       _nYAxisBuckets = nYAxisBuckets;
 
-  int _xAxisLabelCount;
-  int _yAxisLabelCount;
+  int _nXAxisBuckets;
+  int _nYAxisBuckets;
 
   set xAxisLabelCount(int value) {
-    if (_xAxisLabelCount == value) return;
-    _xAxisLabelCount = value;
+    if (_nXAxisBuckets == value) return;
+    _nXAxisBuckets = value;
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
   }
 
   set yAxisLabelCount(int value) {
-    if (_yAxisLabelCount == value) return;
-    _yAxisLabelCount = value;
+    if (_nYAxisBuckets == value) return;
+    _nYAxisBuckets = value;
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
   }
 
   RenderBox? get _chartArray => childForSlot(ChartSlot.chartArray);
   Iterable<RenderBox?> get _xAxisLabels => Iterable.generate(
-    _xAxisLabelCount,
+    _nXAxisBuckets,
     (index) => childForSlot(ChartSlot.xAxisLabel(index)),
   );
   Iterable<RenderBox?> get _yAxisLabels => Iterable.generate(
-    _yAxisLabelCount,
+    _nYAxisBuckets + 1,
     (index) => childForSlot(ChartSlot.yAxisLabel(index)),
   );
-
-  //  /// This method is called during
-  // /// [SlottedContainerRenderObjectMixin._setChild].  See also [dropChild].  It
-  // /// is overridden in order to set [WidgetLayoutInfo.needFirstCalc] to true,
-  // /// since the child is newly added.
-  // ///
-  // /// It is only during [performLayout] that all of these calculations are
-  // /// handled. During that method, [listNeededFirstCalcs] is called to get a
-  // /// list of [_TwoMemberObject] representing the children that need their
-  // /// reCalc... methods called.  Then, after some other potential changes are
-  // /// checked, it calls [updateIndependentVariable] on that full list.
-  // @override
-  // void adoptChild(RenderObject child) {
-  //   super.adoptChild(child);
-  //   // PlayerSlot? slot = findSlotForChild(child as RenderBox);
-  //   // assert(slot != null,
-  //   //     'This child should have been added but no slot was found');
-  //   // _slotsLayoutInfo[slot]!.needFirstCalc = true;
-  //   // if (slot != null && slot == PlayerSlot.epTitle1) {
-  //   //   if (kDebugMode) {
-  //   //     print(
-  //   //         'Just adopted epTitle1, which sets its needFirstCalc to true.  That will cause the \'hash\' TMO to be added to the recalc list during performLayout');
-  //   //   }
-  //   // }
-  // }
-
-  // /// When a child is dropped, its [WidgetLayoutInfo] will remain in this
-  // /// object.  Since it will never change unless it is re-added, I need to
-  // /// manually set the [WidgetLayoutInfo] values to 0 so that any other
-  // /// measurements relying on them are calulated correctly.  The offset values
-  // /// of each widget child or TextPainter child should only be referenced by
-  // /// that object for this very reason.
-  // @override
-  // void dropChild(RenderObject child) {
-  //   super.dropChild(child);
-  //   // PlayerSlot? slot = findSlotForChild(child as RenderBox);
-  //   // assert(slot != null,
-  //   //     'This child should have been added but no slot was found');
-  //   // _slotsLayoutInfo[slot]!.needFirstCalc = true;
-  // }
 
   @override
   void setupParentData(covariant RenderObject child) {
@@ -249,17 +208,16 @@ class _ChartRenderObject extends RenderBox
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
     double maxYAxisLabelWidth = _yAxisLabels
-        .map((e) => e?.getDryLayout(constraints).width ?? 0)
+        .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
         .max
         .toDouble();
     double maxXAxisLabelHeight = _xAxisLabels
-        .map((e) => e?.getDryLayout(constraints).height ?? 0)
+        .map((e) => e?.getDryLayout(constraints.loosen()).height ?? 0)
         .toList()
         .max
         .toDouble();
-    // fold(0, (previousValue, element) => max(previousValue, element),);
-    Size chartSize = _chartArray?.getDryLayout(constraints) ?? Size(0, 0);
+    Size chartSize = _chartArray?.getDryLayout(constraints.loosen()) ?? Size(0, 0);
     Size drySize = Size(
       maxYAxisLabelWidth + chartSize.width,
       maxXAxisLabelHeight + chartSize.height,
@@ -269,29 +227,35 @@ class _ChartRenderObject extends RenderBox
 
   @override
   void performLayout() {
+    print('starting performLayout');
     double maxYAxisLabelWidth = _yAxisLabels
-        .map((e) => e?.getDryLayout(constraints).width ?? 0)
+        .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
         .max
         .toDouble();
+
     final double heatMapHeight = 300;
 
     // For now, I am going to make the Y axis values NOT centered correctly vertically.  I'll tweak that later.
     _yAxisLabels.toList().reversed.forEachIndexed((index, child) {
+      print('starting the next each in _yAxisLabels');
       if (child == null) return;
       child.layout(constraints.loosen(), parentUsesSize: true);
       final BoxParentData childParentData = child.parentData as BoxParentData;
-      if (index == _yAxisLabelCount) {
+      if (index == _nYAxisBuckets) {
         childParentData.offset = Offset(
-          maxYAxisLabelWidth,
-          index * heatMapHeight / _yAxisLabelCount - child.size.height,
+          0,
+          index * heatMapHeight / _nYAxisBuckets - child.size.height,
         );
       } else {
         childParentData.offset = Offset(
-          maxYAxisLabelWidth,
-          index * heatMapHeight / _yAxisLabelCount,
+          0,
+          index * heatMapHeight / _nYAxisBuckets,
         );
       }
+      print(
+        'finished this each in _yAxisLabels, index: $index, size: ${child.size}, offset: ${childParentData.offset}',
+      );
     });
 
     if (_chartArray != null) {
@@ -305,137 +269,60 @@ class _ChartRenderObject extends RenderBox
       final BoxParentData childParentData =
           _chartArray!.parentData as BoxParentData;
       childParentData.offset = Offset(maxYAxisLabelWidth, 0);
+
+      print(
+        'finished _chartArry, size: ${_chartArray?.size}, offset: ${childParentData.offset}',
+      );
     }
 
     final double heatMapWidth = _chartArray?.size.width ?? 0;
 
     double maxXAxisLabelHeight = 0;
     _xAxisLabels.forEachIndexed((index, child) {
+      print('starting the next each in _xAxisLabels');
       if (child == null) return;
       child.layout(constraints.loosen(), parentUsesSize: true);
       final BoxParentData childParentData = child.parentData as BoxParentData;
+      int monthsPerLabel = (12 / _nXAxisBuckets).toInt();
       double idealHOffset =
-          (index + 0.5) * (heatMapWidth / 12) - child.size.width / 2;
+          ((monthsPerLabel * index) + 0.5) * (heatMapWidth / 12) - child.size.width / 2;
       if (child.size.width / 2 > idealHOffset) {
         idealHOffset = child.size.width / 2;
       }
       if (heatMapWidth - idealHOffset < child.size.width / 2) {
         idealHOffset = heatMapWidth - child.size.width / 2;
       }
-      childParentData.offset = Offset(maxYAxisLabelWidth, idealHOffset);
+      childParentData.offset = Offset(
+        maxYAxisLabelWidth + idealHOffset,
+        heatMapHeight,
+      );
       maxXAxisLabelHeight = max(maxXAxisLabelHeight, child.size.height);
+      print(
+        'finished this each in _xAxisLabels, index: $index, size: ${child.size}, offset: ${childParentData.offset}',
+      );
     });
     size = Size(
       maxYAxisLabelWidth + heatMapWidth,
       heatMapHeight + maxXAxisLabelHeight,
     );
 
-    // // Check for updated text in epTitle and podTitle values BEFORE rerunning
-    // // needed recalcs
-    // if (reCalcFindEpTitle1RendP()?.text.toString() != epTitleCachedText) {
-    //   _slotsLayoutInfo[PlayerSlot.epTitle1]!.needFirstCalc = true;
-    //   _slotsLayoutInfo[PlayerSlot.epTitle2]!.needFirstCalc = true;
-    // }
-
-    // List<_TwoMemberObject> tMOList = listNeededFirstCalcs();
-
-    // // updateTextAlignment();
-
-    // // Check if constraints have changed BEFORE rerunning needed recalcs
-    // if (constraints.maxWidth != _maxWidthCached) {
-    //   _maxWidthCached = constraints.maxWidth;
-    //   tMOList.add(_TwoMemberObject(RenderParam.maxWidthCached, ''));
-    // }
-
-    // updateIndependentVariable(tMOList);
-
-    // size = constraints.constrain(Size(constraints.maxWidth,
-    //     lerpDouble(miniHeight, constraints.maxHeight, animationValue)!));
-
-    // if (_epTitle1 != null) {
-    //   _epTitle1!.layout(BoxConstraints.tight(Size.zero));
-    // }
-
-    // // Lerping and setting actual layouts and offsets
-    // if (_epTitle2 != null) {
-    //   _epTitle2!.layout(
-    //       BoxConstraints(
-    //           maxWidth: lerpDouble(
-    //               _slotsLayoutInfo[PlayerSlot.epTitle2]!.widthMini,
-    //               _slotsLayoutInfo[PlayerSlot.epTitle2]!.widthFull,
-    //               animationValue)!),
-    //       parentUsesSize: true);
-    //   (_epTitle2!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.epTitle2);
-    // }
-    // if (_podTitle1 != null) {
-    //   _podTitle1!.layout(
-    //       BoxConstraints.tight(getLerpedSize(PlayerSlot.podTitle1)),
-    //       parentUsesSize: true);
-    //   (_podTitle1!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.podTitle1);
-    // }
-    // if (_podTitle2 != null) {
-    //   _podTitle2!.layout(
-    //       BoxConstraints.tight(getLerpedSize(PlayerSlot.podTitle2)),
-    //       parentUsesSize: true);
-    //   (_podTitle2!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.podTitle2);
-    // }
-    // if (_closeButton != null) {
-    //   _closeButton!.layout(
-    //       BoxConstraints.tight(Size(
-    //           _slotsLayoutInfo[PlayerSlot.closeButton]!.widthFull,
-    //           _slotsLayoutInfo[PlayerSlot.closeButton]!.heightFull)),
-    //       parentUsesSize: true);
-    //   (_closeButton!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.closeButton);
-    // }
-    // if (_epImage != null && _slotsLayoutInfo[PlayerSlot.epImage]!.visible) {
-    //   _epImage!.layout(BoxConstraints.tight(getLerpedSize(PlayerSlot.epImage)),
-    //       parentUsesSize: true);
-    //   (_epImage!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.epImage);
-    // }
-    // if (_playPauseButton != null &&
-    //     _slotsLayoutInfo[PlayerSlot.playPauseButton]!.visible) {
-    //   _playPauseButton!.layout(
-    //       BoxConstraints.tight(Size(
-    //         _slotsLayoutInfo[PlayerSlot.playPauseButton]!.widthFull,
-    //         _slotsLayoutInfo[PlayerSlot.playPauseButton]!.heightFull,
-    //       )),
-    //       parentUsesSize: true);
-    //   (_playPauseButton!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.playPauseButton);
-    // }
-    // if (_progressBar != null &&
-    //     _slotsLayoutInfo[PlayerSlot.progressBar]!.visible) {
-    //   _progressBar!.layout(
-    //       BoxConstraints.tight(Size(
-    //           _slotsLayoutInfo[PlayerSlot.progressBar]!.widthFull,
-    //           _slotsLayoutInfo[PlayerSlot.progressBar]!.heightFull)),
-    //       parentUsesSize: true);
-    //   (_progressBar!.parentData as BoxParentData).offset =
-    //       getLerpedOffset(PlayerSlot.progressBar);
-    // }
-    // layoutFullOnly(_nextContainer, PlayerSlot.nextContainer);
-    // layoutFullOnly(_jumpAheadButton, PlayerSlot.jumpAheadButton);
-    // layoutFullOnly(_jumpBackButton, PlayerSlot.jumpBackButton);
-    // layoutFullOnly(_nextButton, PlayerSlot.nextButton);
-    // layoutFullOnly(_prevButton, PlayerSlot.prevButton);
-    // layoutFullOnly(_minimizeButton, PlayerSlot.minimizeButton);
-    // layoutFullOnly(_progressSlider, PlayerSlot.progressSlider);
-    // layoutFullOnly(_sourceProblemLabel, PlayerSlot.sourceProblemLabel);
-    // layoutFullOnly(_loadingIndicator, PlayerSlot.loadingIndicator);
-    // layoutFullOnly(_positionLabel, PlayerSlot.positionLabel);
-    // layoutFullOnly(_lowerButtonRow, PlayerSlot.lowerButtonRow);
+    print('finished performLayout(), size: $size');
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    super.paint(context, offset);
+    print('starting paint');
+
+    // Loop through all non-null children active in your slots
+    for (final RenderBox child in children) {
+      final BoxParentData childParentData = child.parentData as BoxParentData;
+
+      // Paint each child at its layout offset, adjusted by the global screen offset
+      context.paintChild(child, childParentData.offset + offset);
+    }
 
     // FUTURE ME: Add background grids, borders, or dividers here!
+    print('done paint');
   }
 }
 
@@ -568,6 +455,7 @@ enum TimeLabelList {
   /// This is the number of spans the day is cut into.  The actual number of ticks will be one more than that.
   final int count;
 
+  /// [count] is the number of spans the day is cut into.  The actual number of ticks will be one more than that.
   static TimeLabelList? fromCount(int count) {
     for (var value in TimeLabelList.values) {
       if (value.count == count) return value;
@@ -575,20 +463,3 @@ enum TimeLabelList {
     return null; // Handle invalid numbers safely
   }
 }
-
-
-
-
-
-
-  //   final double deltaT = 24 / nYAxisTicks;
-  //   final Iterable<tz.TZDateTime> tickValues = Iterable.generate(nYAxisTicks, (index) => tz.TZDateTime.utc(2000).add(Duration(microseconds: (deltaT * 3600 * 1000000).round())));
-  //   final Iterable<String> tickLabels = tickValues.map((e) => '${(e.hour - 1) % 12 + 1}:${e.minute}:${e.second} ${e.hour > 11 ? 'PM' : 'AM'}');
-  //   final Iterable<Widget> children = tickLabels.map((e) => Text(e));
-  //   final Widget output = Column(
-  //     crossAxisAlignment: CrossAxisAlignment.end,
-  //     mainAxisSize: MainAxisSize.max,
-  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //     children: children.toList());
-  //   return output;
-  // }

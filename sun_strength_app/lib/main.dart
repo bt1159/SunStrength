@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.dark,
-      home: MyHomePage(title: 'UV strength!!'),
+      home: MyHomePage(title: 'UV strength'),
     );
   }
 }
