@@ -3,8 +3,8 @@ import 'dart:core';
 import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-// import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/rendering.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that just constains the a [_ChartRenderObjectWidget].
@@ -18,13 +18,14 @@ class PublicChartRenderObjectWidget extends StatefulWidget {
     required this.nYAxisBuckets,
     required this.leapYear,
     required this.rawMatrixData,
-  });
+  }) : nDays = (leapYear ? 366 : 365);
 
   final Widget chartArrayWidget;
   final int nXAxisBuckets;
   final int nYAxisBuckets;
   final bool leapYear;
   final List<List<double>> rawMatrixData;
+  final int nDays;
 
   @override
   State<PublicChartRenderObjectWidget> createState() =>
@@ -34,7 +35,7 @@ class PublicChartRenderObjectWidget extends StatefulWidget {
 class _PublicChartRenderObjectWidgetState
     extends State<PublicChartRenderObjectWidget> {
   // Tooltip State Variables
-  Offset? _hoverPosition;
+  Offset? _hoverBoxPosition;
   String? _tooltipText;
 
   void _handleChartHover(Offset canvasTextLocalPosition, Size canvasSize) {
@@ -45,36 +46,39 @@ class _PublicChartRenderObjectWidgetState
     final double y = canvasTextLocalPosition.dy;
 
     // Calculate grid cell dimensions dynamically based on current layout size
-    final double columnWidth = canvasSize.width / widget.nXAxisBuckets;
-    final double rowHeight = canvasSize.height / widget.nYAxisBuckets;
+    final double pxWidth = canvasSize.width / widget.nDays;
+    final double pxHeight = canvasSize.height / 96;
 
     // Determine the exact row and column indices
-    final int colIndex = (x / columnWidth).floor().clamp(
-      0,
-      widget.nXAxisBuckets - 1,
-    );
-    final int rowIndex = (y / rowHeight).floor().clamp(
-      0,
-      widget.nYAxisBuckets - 1,
-    );
+    final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
+    final int timeIndex = (95 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
 
-    // Look up data parameters safely
-    final double value = widget.rawMatrixData[rowIndex][colIndex];
-    final String month = MonthLabelList.fromCount(
-      widget.nXAxisBuckets,
-    )!.labelList[colIndex];
+    // Look up data parameters safely.  First index is day, then time
+    final double value = widget.rawMatrixData[dayIndex][timeIndex];
+
+    final int yearInput = 2026;
+    final String tZoneInput = "America/New_York";
+    final tz.Location localTZ = tz.getLocation(tZoneInput);
+    final int datetimeDelta =
+        (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
+    final hoverDateTimte = tz.TZDateTime(
+      localTZ,
+      yearInput,
+    ).add(Duration(milliseconds: datetimeDelta));
+    
 
     // Smoothly update state to show the popup
+    // THIS IS WHERE I SHOULD TWEAK THE HOVERBOXPOSITION
     setState(() {
-      _hoverPosition = canvasTextLocalPosition;
-      _tooltipText = '$month\nValue: ${value.toStringAsFixed(2)}';
+      _hoverBoxPosition = canvasTextLocalPosition;
+      _tooltipText = '$hoverDateTimte\nValue: ${value.toStringAsFixed(2)}';
     });
   }
 
   void _hideTooltip() {
-    if (_hoverPosition != null) {
+    if (_hoverBoxPosition != null) {
       setState(() {
-        _hoverPosition = null;
+        _hoverBoxPosition = null;
         _tooltipText = null;
       });
     }
@@ -104,13 +108,13 @@ class _PublicChartRenderObjectWidgetState
           ),
         ),
         // 2. The Floating Tooltip Popup Layer
-        if (_hoverPosition != null && _tooltipText != null)
+        if (_hoverBoxPosition != null && _tooltipText != null)
           Positioned(
             // Position it dynamically relative to the cursor position!
             left:
-                _hoverPosition!.dx +
+                _hoverBoxPosition!.dx +
                 45, // Offset slightly to clear the cursor graphic
-            top: _hoverPosition!.dy,
+            top: _hoverBoxPosition!.dy,
             child: IgnorePointer(
               // Prevents the tooltip box from stealing mouse focus
               child: Container(
@@ -363,16 +367,28 @@ class _ChartRenderObject extends RenderBox
 
   /// This could be simplified if I knew that no widgets would overlap.  In that case, as soon as it is true, I could exit.
   /// The problem is, if there was any overlap, I would need to make sure of the order I am checking in.
+  /// 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    bool childrenHitTestBool = false;
-    for (final RenderBox child in children) {
+    // Loop through children in reverse order (top-to-bottom visually)
+    // so items rendered on top catch the mouse events first!
+    for (final RenderBox child in children.toList().reversed) {
       final BoxParentData childParentData = child.parentData as BoxParentData;
-      childrenHitTestBool =
-          childrenHitTestBool ||
-          child.hitTest(result, position: position - childParentData.offset);
+      
+      // Use Flutter's matrix helper instead of manual subtraction
+      final bool isHit = result.addWithPaintOffset(
+        offset: childParentData.offset,
+        position: position,
+        hitTest: (BoxHitTestResult result, Offset transformedPosition) {
+          return child.hitTest(result, position: transformedPosition);
+        },
+      );
+      
+      // As soon as a child claims the hit test, stop checking others
+      if (isHit) return true;
     }
-    return childrenHitTestBool;
+    
+    return false;
   }
 
   /// Consider added efficiency by calculating the maxes of the axis once and then storing them.  Then,
@@ -475,19 +491,6 @@ class _ChartRenderObject extends RenderBox
     );
   }
 
-  // @override
-  // void paint(PaintingContext context, Offset offset) {
-
-  //   // Loop through all non-null children active in your slots
-  //   for (final RenderBox child in children) {
-  //     final BoxParentData childParentData = child.parentData as BoxParentData;
-
-  //     // Paint each child at its layout offset, adjusted by the global screen offset
-  //     context.paintChild(child, childParentData.offset + offset);
-  //   }
-
-  //   // FUTURE ME: Add background grids, borders, or dividers here!
-  // }
 
   @override
   void paint(PaintingContext context, Offset offset) {
@@ -537,6 +540,17 @@ class _ChartRenderObject extends RenderBox
         );
       }
     }
+  }
+
+  @override
+  void applyPaintTransform(RenderObject child, Matrix4 transform) {
+    final BoxParentData childParentData = child.parentData as BoxParentData;
+    transform.translateByDouble(
+      childParentData.offset.dx,
+      childParentData.offset.dy,
+      0,
+      1.0,
+    );
   }
 }
 

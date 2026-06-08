@@ -1,8 +1,0 @@
-{
-  "remote.portsAttributes": {
-    "8080": {
-      "visibility": "public",
-      "onAutoForward": "openBrowser"
-    }
-  }
-}

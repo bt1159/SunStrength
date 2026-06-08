@@ -35,6 +35,7 @@ class _HeatMapState extends State<HeatMap> {
     );
 
     // I need a more robust way to determin leap year or not
+    // return output;
     return output;
   }
 
@@ -76,16 +77,15 @@ class _HeatMapState extends State<HeatMap> {
               if (snapshot.data == null) {
                 return Center(child: Text('No data returned'));
               } else {
-
-              return PublicChartRenderObjectWidget(
-                chartArrayWidget: CustomPaint(
-                  painter: HeatMapPainter(snapshot.data!.image),
-                ),
-                rawMatrixData: [],
-                nXAxisBuckets: 12,
-                nYAxisBuckets: 6,
-                leapYear: snapshot.data!.leapYear,
-              );
+                return PublicChartRenderObjectWidget(
+                  chartArrayWidget: CustomPaint(
+                    painter: HeatMapPainter(snapshot.data!.image),
+                  ),
+                  rawMatrixData: snapshot.data!.rawMatrixData,
+                  nXAxisBuckets: 12,
+                  nYAxisBuckets: 6,
+                  leapYear: snapshot.data!.leapYear,
+                );
               }
             }
 
@@ -164,20 +164,23 @@ Future<ImageContainer> generateSunMap({
 
   // 1. Allocate the final flat byte buffer upfront.
   final Uint8List pixelBuffer = Uint8List(width * height * bytesPerPixel);
-  final List<List<double>> rawMatrixData = List.filled(96, List.filled(width, 0));
-
+  final List<List<double>> rawMatrixData = List.generate(
+  width,
+  (_) => List.filled(96, 0.0), 
+);
+  
   int x = -1;
   int yMath = 0;
+  int z = 0;
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
-  for (final strength in chronologicalSunStrength) {
-
+  for (double strength in chronologicalSunStrength) {
     // For rawMatrixData, x will index the outer list and y will index each inner list.
     if (yMath == 0) {
       x++;
     }
-    // Determine which day (X) and 15-min block (Y_math) this value represents
+
 
     // Invert Y because ui.decodeImageFromPixels expects Y=0 at the TOP,
     // but your math treats midnight morning as the BOTTOM.
@@ -199,7 +202,11 @@ Future<ImageContainer> generateSunMap({
 
     if (yMath == 96) {
       yMath = 0;
-      x++;
+    }
+
+    z++;
+    if (z == 200) {
+      z = 0;
     }
   }
 
@@ -216,11 +223,19 @@ Future<ImageContainer> generateSunMap({
 
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
-  return ImageContainer(image: frame.image, leapYear: width == 366, rawMatrixData: rawMatrixData);
+  return ImageContainer(
+    image: frame.image,
+    leapYear: width == 366,
+    rawMatrixData: rawMatrixData,
+  );
 }
 
 class ImageContainer {
-  ImageContainer({required this.image, required this.leapYear, required this.rawMatrixData});
+  ImageContainer({
+    required this.image,
+    required this.leapYear,
+    required this.rawMatrixData,
+  });
 
   final ui.Image image;
   final bool leapYear;
