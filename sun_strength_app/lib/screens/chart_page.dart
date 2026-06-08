@@ -14,7 +14,7 @@ class HeatMap extends StatefulWidget {
 
 class _HeatMapState extends State<HeatMap> {
   double _currentK = 2;
-  late Future<ui.Image> _chartImageFuture;
+  late Future<ImageContainer> _chartImageFuture;
 
   /// The function that actually creates the 2D array of solar strength bytes.
   ///
@@ -22,18 +22,20 @@ class _HeatMapState extends State<HeatMap> {
   /// Visible: 0.22 <= k <= 0.36
   /// UV-A: 0.36 <= k <= 0.92
   /// UV-C: 2.3 <= k <= 4.6
-  Future<ui.Image> createImage(double k) async {
+  Future<ImageContainer> createImage(double k) async {
     final Iterable<double> yearSolarStrengthsLocalRelative =
         masterFunctionSolarStrengthArray(h: 0, k: k);
     final int pixelH = 96;
     final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
         .toInt();
 
-    final Future<ui.Image> img = generateSunMap(
+    final Future<ImageContainer> output = generateSunMap(
       chronologicalSunStrength: yearSolarStrengthsLocalRelative,
       width: pixelW,
     );
-    return img;
+
+    // I need a more robust way to determin leap year or not
+    return output;
   }
 
   @override
@@ -53,10 +55,11 @@ class _HeatMapState extends State<HeatMap> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FutureBuilder<ui.Image>(
+        FutureBuilder<ImageContainer>(
           future: _chartImageFuture,
-          builder: (BuildContext context, AsyncSnapshot<ui.Image> snapshot) {
+          builder: (BuildContext context, AsyncSnapshot<ImageContainer> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               print('snapshot.connectionState == ConnectionState.waiting');
               return const Center(
@@ -70,13 +73,20 @@ class _HeatMapState extends State<HeatMap> {
             if (snapshot.hasData) {
               print('snapshot.hasData');
 
+              if (snapshot.data == null) {
+                return Center(child: Text('No data returned'));
+              } else {
+
               return PublicChartRenderObjectWidget(
                 chartArrayWidget: CustomPaint(
-                  painter: HeatMapPainter(snapshot.data),
+                  painter: HeatMapPainter(snapshot.data!.image),
                 ),
-                nXAxisBuckets: 4,
-                nYAxisBuckets: 4,
+                rawMatrixData: [],
+                nXAxisBuckets: 12,
+                nYAxisBuckets: 6,
+                leapYear: snapshot.data!.leapYear,
               );
+              }
             }
 
             print(
@@ -145,7 +155,7 @@ class HeatMapPainter extends CustomPainter {
   }
 }
 
-Future<ui.Image> generateSunMap({
+Future<ImageContainer> generateSunMap({
   required Iterable<double> chronologicalSunStrength,
   required int width,
 }) async {
@@ -154,13 +164,19 @@ Future<ui.Image> generateSunMap({
 
   // 1. Allocate the final flat byte buffer upfront.
   final Uint8List pixelBuffer = Uint8List(width * height * bytesPerPixel);
+  final List<List<double>> rawMatrixData = List.filled(96, List.filled(width, 0));
 
-  int x = 0;
+  int x = -1;
   int yMath = 0;
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
   for (final strength in chronologicalSunStrength) {
+
+    // For rawMatrixData, x will index the outer list and y will index each inner list.
+    if (yMath == 0) {
+      x++;
+    }
     // Determine which day (X) and 15-min block (Y_math) this value represents
 
     // Invert Y because ui.decodeImageFromPixels expects Y=0 at the TOP,
@@ -177,7 +193,10 @@ Future<ui.Image> generateSunMap({
         .toInt(); // B
     pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
 
+    rawMatrixData[x][yImage] = strength;
+
     yMath++;
+
     if (yMath == 96) {
       yMath = 0;
       x++;
@@ -197,5 +216,13 @@ Future<ui.Image> generateSunMap({
 
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
-  return frame.image;
+  return ImageContainer(image: frame.image, leapYear: width == 366, rawMatrixData: rawMatrixData);
+}
+
+class ImageContainer {
+  ImageContainer({required this.image, required this.leapYear, required this.rawMatrixData});
+
+  final ui.Image image;
+  final bool leapYear;
+  final List<List<double>> rawMatrixData;
 }

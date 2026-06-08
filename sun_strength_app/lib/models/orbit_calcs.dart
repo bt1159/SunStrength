@@ -52,7 +52,8 @@ final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 // void main() {
 //   getChartData();
 // }
-final double latInput = 42.6424568895893;
+// final double latInput = 42.6424568895893;
+final double latInput = 25;
 final double longInput = -71.3833058055504;
 final double p1 = radians(latInput);
 final double l1 = radians(longInput);

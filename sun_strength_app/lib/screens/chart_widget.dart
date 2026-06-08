@@ -6,29 +6,127 @@ import 'package:flutter/material.dart';
 // import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/rendering.dart';
 
-
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that just constains the a [_ChartRenderObjectWidget].
 /// {@endtemplate}
-class PublicChartRenderObjectWidget extends StatelessWidget {
+class PublicChartRenderObjectWidget extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
   const PublicChartRenderObjectWidget({
     super.key,
     required this.chartArrayWidget,
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
+    required this.leapYear,
+    required this.rawMatrixData,
   });
 
   final Widget chartArrayWidget;
   final int nXAxisBuckets;
   final int nYAxisBuckets;
+  final bool leapYear;
+  final List<List<double>> rawMatrixData;
+
+  @override
+  State<PublicChartRenderObjectWidget> createState() =>
+      _PublicChartRenderObjectWidgetState();
+}
+
+class _PublicChartRenderObjectWidgetState
+    extends State<PublicChartRenderObjectWidget> {
+  // Tooltip State Variables
+  Offset? _hoverPosition;
+  String? _tooltipText;
+
+  void _handleChartHover(Offset canvasTextLocalPosition, Size canvasSize) {
+    // Because the MouseRegion only wraps the canvas, canvasTextLocalPosition (0,0)
+    // is perfectly aligned to the top-left of the heat map! No Y-axis offsets needed.
+
+    final double x = canvasTextLocalPosition.dx;
+    final double y = canvasTextLocalPosition.dy;
+
+    // Calculate grid cell dimensions dynamically based on current layout size
+    final double columnWidth = canvasSize.width / widget.nXAxisBuckets;
+    final double rowHeight = canvasSize.height / widget.nYAxisBuckets;
+
+    // Determine the exact row and column indices
+    final int colIndex = (x / columnWidth).floor().clamp(
+      0,
+      widget.nXAxisBuckets - 1,
+    );
+    final int rowIndex = (y / rowHeight).floor().clamp(
+      0,
+      widget.nYAxisBuckets - 1,
+    );
+
+    // Look up data parameters safely
+    final double value = widget.rawMatrixData[rowIndex][colIndex];
+    final String month = MonthLabelList.fromCount(
+      widget.nXAxisBuckets,
+    )!.labelList[colIndex];
+
+    // Smoothly update state to show the popup
+    setState(() {
+      _hoverPosition = canvasTextLocalPosition;
+      _tooltipText = '$month\nValue: ${value.toStringAsFixed(2)}';
+    });
+  }
+
+  void _hideTooltip() {
+    if (_hoverPosition != null) {
+      setState(() {
+        _hoverPosition = null;
+        _tooltipText = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _ChartRenderObjectWidget(
-      chartArrayWidget: chartArrayWidget,
-      nXAxisBuckets: nXAxisBuckets,
-      nYAxisBuckets: nYAxisBuckets,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _ChartRenderObjectWidget(
+          nXAxisBuckets: widget.nXAxisBuckets,
+          nYAxisBuckets: widget.nYAxisBuckets,
+          leapYear: widget.leapYear,
+          chartArrayWidget: Builder(
+            builder: (context) {
+              return MouseRegion(
+                onHover: (event) {
+                  // Find the rendering size of the canvas dynamically
+                  final RenderBox box = context.findRenderObject() as RenderBox;
+                  _handleChartHover(event.localPosition, box.size);
+                },
+                onExit: (_) => _hideTooltip(),
+                child: widget.chartArrayWidget,
+              );
+            },
+          ),
+        ),
+        // 2. The Floating Tooltip Popup Layer
+        if (_hoverPosition != null && _tooltipText != null)
+          Positioned(
+            // Position it dynamically relative to the cursor position!
+            left:
+                _hoverPosition!.dx +
+                45, // Offset slightly to clear the cursor graphic
+            top: _hoverPosition!.dy,
+            child: IgnorePointer(
+              // Prevents the tooltip box from stealing mouse focus
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  _tooltipText!,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -38,7 +136,7 @@ class PublicChartRenderObjectWidget extends StatelessWidget {
 ///
 /// This is custom widget creats an element, [_ChartRenderObjectElement], and
 /// a render object, [_ChartRenderObject].
-/// 
+///
 /// [chartArrayWidget] is the Widget that contains just the 2D bit array.  [nXAxisBuckets] and [nYAxisBuckets]
 /// are the number of buckets that the x and y axes are split into.  Note that there will be the same number of
 /// x axis labels as buckets but the y axis will have one more label than bucket.
@@ -50,12 +148,13 @@ class _ChartRenderObjectWidget
     required this.chartArrayWidget,
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
+    required this.leapYear,
   });
 
   final Widget chartArrayWidget;
   final int nXAxisBuckets;
   final int nYAxisBuckets;
-
+  final bool leapYear;
 
   @override
   Iterable<ChartSlot> get slots {
@@ -67,6 +166,7 @@ class _ChartRenderObjectWidget
     ];
   }
 
+  /// This is the method that ACTUALLY creates the widgets that get insterted into the tree.
   @override
   Widget childForSlot(ChartSlot slot) {
     if (slot == ChartSlot.chartArray) return chartArrayWidget;
@@ -76,7 +176,7 @@ class _ChartRenderObjectWidget
       final String labelText =
           TimeLabelList.fromCount(nYAxisBuckets)?.labelList[slot.index!] ??
           'BadYAxisCount';
-      return Text(labelText);
+      return Text(labelText, textAlign: TextAlign.right);
     }
 
     // Return a text widget for the specific index
@@ -84,7 +184,7 @@ class _ChartRenderObjectWidget
       final String labelText =
           MonthLabelList.fromCount(nXAxisBuckets)?.labelList[slot.index!] ??
           'BadXAxisCount';
-      return Text(labelText);
+      return Text(labelText, textAlign: TextAlign.center);
     }
 
     throw ArgumentError('Unknown slot');
@@ -101,6 +201,7 @@ class _ChartRenderObjectWidget
     return _ChartRenderObject(
       nXAxisBuckets: nXAxisBuckets,
       nYAxisBuckets: nYAxisBuckets,
+      leapYear: leapYear,
     );
   }
 
@@ -117,6 +218,7 @@ class _ChartRenderObjectWidget
   ) {
     renderObject.nXAxisBuckets = nXAxisBuckets;
     renderObject.nYAxisBuckets = nYAxisBuckets;
+    renderObject.leapYear = leapYear;
   }
 
   @override
@@ -136,8 +238,8 @@ class _ChartRenderObjectElement
 }
 
 /// A custom [RenderBox] that is tied to a [_ChartRenderObjectWidget].
-/// 
-/// This RenderBox is the entire reason for this dart file.  It makes it possible to 
+///
+/// This RenderBox is the entire reason for this dart file.  It makes it possible to
 /// compute the layouts for the various chart elements in parallel, making it much easier,
 /// or even possible, to make the y axis labels line up correctly with the data, for instance.
 /// Same with the x axis labels, and so on.
@@ -148,25 +250,84 @@ class _ChartRenderObject extends RenderBox
   _ChartRenderObject({
     required int nXAxisBuckets,
     required int nYAxisBuckets,
+    required bool leapYear,
   }) : _nXAxisBuckets = nXAxisBuckets,
-       _nYAxisBuckets = nYAxisBuckets;
+       _nYAxisBuckets = nYAxisBuckets,
+       _leapYear = leapYear;
 
   int _nXAxisBuckets;
   int _nYAxisBuckets;
+  bool _leapYear;
+  List<int> _bomIndices = [
+    0,
+    31,
+    59,
+    90,
+    120,
+    151,
+    181,
+    212,
+    243,
+    273,
+    304,
+    334,
+    365,
+  ];
 
-/// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when 
-/// it needs to change the value for [nXAxisBuckets]
+  /// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when
+  /// it needs to change the value for [nXAxisBuckets]
   set nXAxisBuckets(int value) {
     if (_nXAxisBuckets == value) return;
     _nXAxisBuckets = value;
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
   }
 
-/// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when 
-/// it needs to change the value for [nYAxisBuckets]
+  /// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when
+  /// it needs to change the value for [nYAxisBuckets]
   set nYAxisBuckets(int value) {
     if (_nYAxisBuckets == value) return;
     _nYAxisBuckets = value;
+    markNeedsLayout(); // Tell Flutter to re-run performLayout()
+  }
+
+  /// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when
+  /// it needs to change the value for [leapYear]
+  set leapYear(bool value) {
+    if (_leapYear == value) return;
+    _leapYear = value;
+    if (_leapYear) {
+      _bomIndices = [
+        0,
+        31,
+        60,
+        91,
+        121,
+        152,
+        182,
+        213,
+        244,
+        274,
+        305,
+        335,
+        366,
+      ];
+    } else {
+      _bomIndices = [
+        0,
+        31,
+        59,
+        90,
+        120,
+        151,
+        181,
+        212,
+        243,
+        273,
+        304,
+        334,
+        365,
+      ];
+    }
     markNeedsLayout(); // Tell Flutter to re-run performLayout()
   }
 
@@ -218,20 +379,23 @@ class _ChartRenderObject extends RenderBox
   /// before using, check [markNeedsLayout] tag thing.
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
-    double maxYAxisLabelWidth = _yAxisLabels
+    final double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
         .max
         .toDouble();
-    double maxXAxisLabelHeight = _xAxisLabels
+    final double maxXAxisLabelHeight = _xAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).height ?? 0)
         .toList()
         .max
         .toDouble();
-    Size chartSize = _chartArray?.getDryLayout(constraints.loosen()) ?? Size(0, 0);
-    Size drySize = Size(
+    final Size chartSize =
+        _chartArray?.getDryLayout(constraints.loosen()) ?? Size(0, 0);
+    final double typicalYAxisLabelHeight =
+        _yAxisLabels.first?.getDryLayout(constraints.loosen()).height ?? 0;
+    final Size drySize = Size(
       maxYAxisLabelWidth + chartSize.width,
-      maxXAxisLabelHeight + chartSize.height,
+      maxXAxisLabelHeight + chartSize.height + typicalYAxisLabelHeight / 2,
     );
     return constraints.constrain(drySize);
   }
@@ -246,25 +410,20 @@ class _ChartRenderObject extends RenderBox
 
     final double heatMapHeight = 300;
 
-    // For now, I am going to make the Y axis values NOT centered correctly vertically.  I'll tweak that later.
     _yAxisLabels.toList().reversed.forEachIndexed((index, child) {
-      
       if (child == null) return;
-      child.layout(constraints.loosen(), parentUsesSize: true);
+      child.layout(
+        constraints.loosen().tighten(width: maxYAxisLabelWidth),
+        parentUsesSize: true,
+      );
       final BoxParentData childParentData = child.parentData as BoxParentData;
-      if (index == _nYAxisBuckets) {
-        childParentData.offset = Offset(
-          0,
-          index * heatMapHeight / _nYAxisBuckets - child.size.height,
-        );
-      } else {
-        childParentData.offset = Offset(
-          0,
-          index * heatMapHeight / _nYAxisBuckets,
-        );
-      }
+      childParentData.offset = Offset(
+        0,
+        index * heatMapHeight / _nYAxisBuckets,
+      );
     });
 
+    final double typicalYAxisLabelHeight = _yAxisLabels.first?.size.height ?? 0;
     if (_chartArray != null) {
       _chartArray!.layout(
         BoxConstraints.tightFor(
@@ -275,8 +434,10 @@ class _ChartRenderObject extends RenderBox
       );
       final BoxParentData childParentData =
           _chartArray!.parentData as BoxParentData;
-      childParentData.offset = Offset(maxYAxisLabelWidth, 0);
-
+      childParentData.offset = Offset(
+        maxYAxisLabelWidth,
+        typicalYAxisLabelHeight / 2,
+      );
     }
 
     final double heatMapWidth = _chartArray?.size.width ?? 0;
@@ -286,40 +447,96 @@ class _ChartRenderObject extends RenderBox
       if (child == null) return;
       child.layout(constraints.loosen(), parentUsesSize: true);
       final BoxParentData childParentData = child.parentData as BoxParentData;
+
       int monthsPerLabel = (12 / _nXAxisBuckets).toInt();
-      double idealHOffset =
-          ((monthsPerLabel * index) + 0.5) * (heatMapWidth / 12) - child.size.width / 2;
+      final int nDays = _leapYear ? 366 : 365;
+      final double xPerDay = heatMapWidth / nDays;
+      final double x0 = (_bomIndices[index * monthsPerLabel] * xPerDay);
+      final double x1 = (_bomIndices[(index * monthsPerLabel) + 1] * xPerDay);
+
+      double idealHOffset = (x0 + x1) / 2 - child.size.width / 2;
+      // Handle if first month label's width would cause an overlap on left end
       if (child.size.width / 2 > idealHOffset) {
         idealHOffset = child.size.width / 2;
       }
+      // Handle if last month label's width would cause an overlap on right end
       if (heatMapWidth - idealHOffset < child.size.width / 2) {
         idealHOffset = heatMapWidth - child.size.width / 2;
       }
       childParentData.offset = Offset(
         maxYAxisLabelWidth + idealHOffset,
-        heatMapHeight,
+        heatMapHeight + typicalYAxisLabelHeight / 2,
       );
       maxXAxisLabelHeight = max(maxXAxisLabelHeight, child.size.height);
     });
     size = Size(
       maxYAxisLabelWidth + heatMapWidth,
-      heatMapHeight + maxXAxisLabelHeight,
+      typicalYAxisLabelHeight / 2 + heatMapHeight + maxXAxisLabelHeight,
     );
-
   }
+
+  // @override
+  // void paint(PaintingContext context, Offset offset) {
+
+  //   // Loop through all non-null children active in your slots
+  //   for (final RenderBox child in children) {
+  //     final BoxParentData childParentData = child.parentData as BoxParentData;
+
+  //     // Paint each child at its layout offset, adjusted by the global screen offset
+  //     context.paintChild(child, childParentData.offset + offset);
+  //   }
+
+  //   // FUTURE ME: Add background grids, borders, or dividers here!
+  // }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-
-    // Loop through all non-null children active in your slots
+    // Paint each child
     for (final RenderBox child in children) {
       final BoxParentData childParentData = child.parentData as BoxParentData;
-
-      // Paint each child at its layout offset, adjusted by the global screen offset
       context.paintChild(child, childParentData.offset + offset);
     }
 
-    // FUTURE ME: Add background grids, borders, or dividers here!
+    // 2. Safely grab your heatmap canvas child to find its dimensions and location
+    final RenderBox? chartCanvas = _chartArray;
+    if (chartCanvas != null) {
+      final BoxParentData chartParentData =
+          chartCanvas.parentData as BoxParentData;
+
+      // 3. Calculate the absolute pixel origin of the heatmap on the screen
+      final Offset canvasOrigin = offset + chartParentData.offset;
+      final Size chartSize = chartCanvas.size; // This will be your (600, 300)
+
+      // 4. Set up your thin grid paint styling
+      final Paint gridPaint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.25)
+        ..strokeWidth = 0.5
+        ..style = PaintingStyle.stroke;
+
+      // 5. Draw Vertical Grid Lines (X-Axis Dividers)
+
+      final int nDays = _leapYear ? 366 : 365;
+      final double xPerDay = chartSize.width / nDays;
+      for (int i = 1; i < 12; i++) {
+        final double x = canvasOrigin.dx + (_bomIndices[i] * xPerDay);
+        context.canvas.drawLine(
+          Offset(x, canvasOrigin.dy),
+          Offset(x, canvasOrigin.dy + chartSize.height),
+          gridPaint,
+        );
+      }
+
+      // 6. Draw Horizontal Grid Lines (Y-Axis Dividers)
+      final double rowHeight = chartSize.height / _nYAxisBuckets;
+      for (int j = 1; j < _nYAxisBuckets; j++) {
+        final double y = canvasOrigin.dy + (j * rowHeight);
+        context.canvas.drawLine(
+          Offset(canvasOrigin.dx, y),
+          Offset(canvasOrigin.dx + chartSize.width, y),
+          gridPaint,
+        );
+      }
+    }
   }
 }
 
@@ -420,7 +637,7 @@ enum TimeLabelList {
     '10:00 PM',
     '12:00 AM',
   ]),
-  eight(6, [
+  eight(8, [
     '12:00 AM',
     '3:00 AM',
     '6:00 AM',
