@@ -53,16 +53,21 @@ final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 //   getChartData();
 // }
 // final double latInput = 42.6424568895893;
-final double latInput = 25;
-final double longInput = -71.3833058055504;
-final double p1 = radians(latInput);
-final double l1 = radians(longInput);
+// final double latInput = 25;
+// final double longInput = -71.3833058055504;
 
-Iterable<double> masterFunctionSolarStrengthArray({required double k, required double h}) {
+Iterable<double> masterFunctionSolarStrengthArray({
+  required double k,
+  required double h,
+  required num lat,
+  required num lon,
+}) {
   final Iterable<({double earthRotationAngle, double trueAnomaly})>
   yearTrueAnomalies = getYearTrueAnomalies();
   final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(
-    yearTrueAnomalies,
+    inputData: yearTrueAnomalies,
+    lat: lat,
+    lon: lon,
   );
   final Iterable<double> yearSolarStrengthsLocalRelative =
       getYearSolarStrengthsLocalRelativeToGlobal(
@@ -137,9 +142,14 @@ getYearTrueAnomalies({
   return yearTrueAnomalies;
 }
 
-Iterable<double> getYearSolarElevationAngles(
-  Iterable<({double earthRotationAngle, double trueAnomaly})> inputData,
-) {
+Iterable<double> getYearSolarElevationAngles({
+  required Iterable<({double earthRotationAngle, double trueAnomaly})>
+  inputData,
+  required num lat,
+  required num lon,
+}) {
+  final double p1 = radians(lat.toDouble());
+  final double l1 = radians(lon.toDouble());
   final Iterable<double> output = inputData.map((
     ({double earthRotationAngle, double trueAnomaly}) inputDataPoint,
   ) {

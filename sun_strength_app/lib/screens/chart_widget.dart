@@ -38,16 +38,13 @@ class _PublicChartRenderObjectWidgetState
   Offset? _hoverBoxPosition;
   String? _tooltipText;
 
-  void _handleChartHover(Offset canvasTextLocalPosition, Size canvasSize) {
-    // Because the MouseRegion only wraps the canvas, canvasTextLocalPosition (0,0)
-    // is perfectly aligned to the top-left of the heat map! No Y-axis offsets needed.
-
-    final double x = canvasTextLocalPosition.dx;
-    final double y = canvasTextLocalPosition.dy;
+  void _handleChartHover(Offset chartTextLocalPosition, Size chartSize, Offset chartWidgetOffsetToParent) {
+    final double x = chartTextLocalPosition.dx;
+    final double y = chartTextLocalPosition.dy;
 
     // Calculate grid cell dimensions dynamically based on current layout size
-    final double pxWidth = canvasSize.width / widget.nDays;
-    final double pxHeight = canvasSize.height / 96;
+    final double pxWidth = chartSize.width / widget.nDays;
+    final double pxHeight = chartSize.height / 96;
 
     // Determine the exact row and column indices
     final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
@@ -65,12 +62,9 @@ class _PublicChartRenderObjectWidgetState
       localTZ,
       yearInput,
     ).add(Duration(milliseconds: datetimeDelta));
-    
 
-    // Smoothly update state to show the popup
-    // THIS IS WHERE I SHOULD TWEAK THE HOVERBOXPOSITION
     setState(() {
-      _hoverBoxPosition = canvasTextLocalPosition;
+      _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent;
       _tooltipText = '$hoverDateTimte\nValue: ${value.toStringAsFixed(2)}';
     });
   }
@@ -99,7 +93,8 @@ class _PublicChartRenderObjectWidgetState
                 onHover: (event) {
                   // Find the rendering size of the canvas dynamically
                   final RenderBox box = context.findRenderObject() as RenderBox;
-                  _handleChartHover(event.localPosition, box.size);
+                  final BoxParentData? boxParentData = box.parentData as BoxParentData?;
+                  _handleChartHover(event.localPosition, box.size, boxParentData?.offset ?? Offset(0,0));
                 },
                 onExit: (_) => _hideTooltip(),
                 child: widget.chartArrayWidget,
@@ -112,8 +107,7 @@ class _PublicChartRenderObjectWidgetState
           Positioned(
             // Position it dynamically relative to the cursor position!
             left:
-                _hoverBoxPosition!.dx +
-                45, // Offset slightly to clear the cursor graphic
+                _hoverBoxPosition!.dx, // Offset slightly to clear the cursor graphic
             top: _hoverBoxPosition!.dy,
             child: IgnorePointer(
               // Prevents the tooltip box from stealing mouse focus
@@ -367,14 +361,14 @@ class _ChartRenderObject extends RenderBox
 
   /// This could be simplified if I knew that no widgets would overlap.  In that case, as soon as it is true, I could exit.
   /// The problem is, if there was any overlap, I would need to make sure of the order I am checking in.
-  /// 
+  ///
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     // Loop through children in reverse order (top-to-bottom visually)
     // so items rendered on top catch the mouse events first!
     for (final RenderBox child in children.toList().reversed) {
       final BoxParentData childParentData = child.parentData as BoxParentData;
-      
+
       // Use Flutter's matrix helper instead of manual subtraction
       final bool isHit = result.addWithPaintOffset(
         offset: childParentData.offset,
@@ -383,11 +377,11 @@ class _ChartRenderObject extends RenderBox
           return child.hitTest(result, position: transformedPosition);
         },
       );
-      
+
       // As soon as a child claims the hit test, stop checking others
       if (isHit) return true;
     }
-    
+
     return false;
   }
 
@@ -490,7 +484,6 @@ class _ChartRenderObject extends RenderBox
       typicalYAxisLabelHeight / 2 + heatMapHeight + maxXAxisLabelHeight,
     );
   }
-
 
   @override
   void paint(PaintingContext context, Offset offset) {

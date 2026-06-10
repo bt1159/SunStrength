@@ -2,11 +2,50 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/helpers.dart';
+import 'package:sun_strength_app/models/saved_location_notifier.dart';
+import 'package:sun_strength_app/screens/location_selector_route.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
 
+class ChartHomePage extends StatelessWidget {
+  const ChartHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
+    return Scaffold(
+      appBar: AppBar(
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text('UV strength'),
+      ),
+      body: Consumer<CurrentLocationNotifier>(
+        builder: (context, currentLocationNotifier, child) {
+          print(
+            'about to run builder for consumer of CurrentLocationNotifier.  currentLocatinoNotifer.value.name: ${currentLocationNotifier.value?.name}',
+          );
+          return HeatMap(currentlocation: currentLocationNotifier.value);
+        },
+      ),
+    );
+  }
+}
+
 class HeatMap extends StatefulWidget {
-  const HeatMap({super.key});
+  const HeatMap({super.key, required this.currentlocation});
+  final Location? currentlocation;
 
   @override
   State<HeatMap> createState() => _HeatMapState();
@@ -14,7 +53,7 @@ class HeatMap extends StatefulWidget {
 
 class _HeatMapState extends State<HeatMap> {
   double _currentK = 2;
-  late Future<ImageContainer> _chartImageFuture;
+  late Future<ImageContainer?> _chartImageFuture;
 
   /// The function that actually creates the 2D array of solar strength bytes.
   ///
@@ -22,9 +61,17 @@ class _HeatMapState extends State<HeatMap> {
   /// Visible: 0.22 <= k <= 0.36
   /// UV-A: 0.36 <= k <= 0.92
   /// UV-C: 2.3 <= k <= 4.6
-  Future<ImageContainer> createImage(double k) async {
+  Future<ImageContainer?> createImage(double k) async {
+    print('running createImage with lat: ${widget.currentlocation?.lat}');
+    if (widget.currentlocation == null) return null;
+    print('just called createImage');
     final Iterable<double> yearSolarStrengthsLocalRelative =
-        masterFunctionSolarStrengthArray(h: 0, k: k);
+        masterFunctionSolarStrengthArray(
+          h: 0,
+          k: k,
+          lat: widget.currentlocation!.lat,
+          lon: widget.currentlocation!.lon,
+        );
     final int pixelH = 96;
     final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
         .toInt();
@@ -36,16 +83,36 @@ class _HeatMapState extends State<HeatMap> {
 
     // I need a more robust way to determin leap year or not
     // return output;
+
+    print('about to finish createImage');
     return output;
   }
 
   @override
   void initState() {
+    print('just called initState');
     super.initState();
     _chartImageFuture = createImage(_currentK);
+    print('hit end of initState');
+  }
+  
+  @override
+  void didUpdateWidget(covariant HeatMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Check if the location actually changed between the old widget configuration and the new one
+    if (widget.currentlocation != oldWidget.currentlocation) {
+      print('Location changed! Triggering a new createImage future...');
+      
+      // Re-run createImage and tell FutureBuilder to rebuild by calling setState
+      setState(() {
+        _chartImageFuture = createImage(_currentK);
+      });
+    }
   }
 
   void _updateParameter(double newValue) {
+    print('just started updateParameter');
     setState(() {
       _currentK = newValue;
       // Explicitly trigger a re-run ONLY when the button is tapped!
@@ -55,12 +122,13 @@ class _HeatMapState extends State<HeatMap> {
 
   @override
   Widget build(BuildContext context) {
+    print('just started build method for State<HeatMap>');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FutureBuilder<ImageContainer>(
+        FutureBuilder<ImageContainer?>(
           future: _chartImageFuture,
-          builder: (BuildContext context, AsyncSnapshot<ImageContainer> snapshot) {
+          builder: (BuildContext context, AsyncSnapshot<ImageContainer?> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               print('snapshot.connectionState == ConnectionState.waiting');
               return const Center(
@@ -77,14 +145,19 @@ class _HeatMapState extends State<HeatMap> {
               if (snapshot.data == null) {
                 return Center(child: Text('No data returned'));
               } else {
-                return PublicChartRenderObjectWidget(
-                  chartArrayWidget: CustomPaint(
-                    painter: HeatMapPainter(snapshot.data!.image),
-                  ),
-                  rawMatrixData: snapshot.data!.rawMatrixData,
-                  nXAxisBuckets: 12,
-                  nYAxisBuckets: 6,
-                  leapYear: snapshot.data!.leapYear,
+                return Column(
+                  children: [
+                    Text(widget.currentlocation?.name ?? 'No location name found'),
+                    PublicChartRenderObjectWidget(
+                      chartArrayWidget: CustomPaint(
+                        painter: HeatMapPainter(snapshot.data!.image),
+                      ),
+                      rawMatrixData: snapshot.data!.rawMatrixData,
+                      nXAxisBuckets: 12,
+                      nYAxisBuckets: 6,
+                      leapYear: snapshot.data!.leapYear,
+                    ),
+                  ],
                 );
               }
             }
@@ -93,7 +166,11 @@ class _HeatMapState extends State<HeatMap> {
               'proceeding to final option after the other three snapshot cases',
             );
             // Fallback case (should rarely be reached)
-            return const Center(child: Text('No Image'));
+            if (snapshot.data == null) {
+              return const Center(child: Text('Future returned null'));
+            } else {
+              return const Center(child: Text('No Image'));
+            }
           },
         ),
         Row(
@@ -109,6 +186,49 @@ class _HeatMapState extends State<HeatMap> {
             ElevatedButton(
               onPressed: () => _updateParameter(2),
               child: Text('Switch to UV-B'),
+            ),
+          ],
+        ),
+
+        Row(
+          children: [
+            if (widget.currentlocation != null)
+              ElevatedButton(
+                onPressed: () async {
+                  await context.read<SavedLocationProvider>().updateLocation(
+                    widget.currentlocation!,
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Location saved as default'),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                        width: 200, // Narrows the width to look like a toast
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Save as default location'),
+              )
+            else
+              ElevatedButton(
+                onPressed: null,
+                child: const Text('Save as default location'),
+              ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LocationSelectionScreen.changeMode(),
+                  ),
+                );
+              },
+              child: Text('Change location'),
             ),
           ],
         ),
@@ -165,10 +285,10 @@ Future<ImageContainer> generateSunMap({
   // 1. Allocate the final flat byte buffer upfront.
   final Uint8List pixelBuffer = Uint8List(width * height * bytesPerPixel);
   final List<List<double>> rawMatrixData = List.generate(
-  width,
-  (_) => List.filled(96, 0.0), 
-);
-  
+    width,
+    (_) => List.filled(96, 0.0),
+  );
+
   int x = -1;
   int yMath = 0;
   int z = 0;
@@ -180,7 +300,6 @@ Future<ImageContainer> generateSunMap({
     if (yMath == 0) {
       x++;
     }
-
 
     // Invert Y because ui.decodeImageFromPixels expects Y=0 at the TOP,
     // but your math treats midnight morning as the BOTTOM.

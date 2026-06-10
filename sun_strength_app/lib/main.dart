@@ -1,8 +1,19 @@
+// flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
 import 'package:flutter/material.dart';
-import 'screens/chart_page.dart';
+import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/helpers.dart';
+import 'package:sun_strength_app/models/saved_location_notifier.dart';
+import 'package:sun_strength_app/screens/location_selector_route.dart';
+import 'screens/chart_route.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider<SavedLocationProvider>(
+      create: (_) => SavedLocationProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -12,45 +23,66 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('Started build method for MyApp');
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark, // <-- This does the heavy lifting
+    return ChangeNotifierProxyProvider<SavedLocationProvider, CurrentLocationNotifier>(
+      create: (_) => CurrentLocationNotifier(),
+      update: (_, savedLocationProvider, previous) {
+        final CurrentLocationNotifier? updatedWidget = previous?..update(savedLocationProvider.value);
+        if (updatedWidget != null) {
+          return updatedWidget;
+        } else {
+          throw ('No widget returned');
+        }
+      },
+      builder: (_, _) => MaterialApp(
+        title: 'Flutter Demo',
+        theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark, // <-- This does the heavy lifting
+          ),
         ),
+        themeMode: ThemeMode.dark,
+        home: const AppGateway(),
       ),
-      themeMode: ThemeMode.dark,
-      home: MyHomePage(title: 'UV strength'),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
+/// {@macro AppGatewayBuild}
+class AppGateway extends StatelessWidget {
+  const AppGateway({super.key});
 
-  final String title;
-
+  /// {@template AppGatewayBuild}
+  /// Because the [SavedLocationProvider] is referenced with a [Provider.of], this build method will be
+  /// triggered any time it calls its NotifyListeners().  That is only ever used, however, in the
+  /// initial loading of the Provider.  After that, if the default location is cleared or overwritten,
+  /// it does not NotifyListeners, so this build method will not be re-called.  There could be a
+  /// risk, however, if this widget is rebuilt for some reason after the user has manually looked
+  /// up a location different than the saved default location.
+  /// {@endtemplate}
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(title),
-      ),
-      body: HeatMap(),
+    print('running AppGateway.build');
+    // Listen to the location provider
+    final locationProvider = Provider.of<SavedLocationProvider>(context);
+
+    // 1. Still waiting for SharedPreferences to read from disk
+    if (!locationProvider.isInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // 2. No location saved -> Send them straight to the selection screen
+    if (locationProvider.value == null) {
+      print('in AppGateway.build, locationProvider.value == null');
+      return const LocationSelectionScreen();
+    }
+
+    // 3. Location exists -> Open directly to the Heatmap
+
+    print(
+      'in AppGateway.build passed all if statements, which implies that locationProvider.value != null, locationProvider.value?.name: ${locationProvider.value?.name}',
     );
+    return const ChartHomePage();
   }
 }
