@@ -48,7 +48,7 @@ class _PublicChartRenderObjectWidgetState
 
     // Determine the exact row and column indices
     final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
-    final int timeIndex = (95 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
+    final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
 
     // Look up data parameters safely.  First index is day, then time
     final double value = widget.rawMatrixData[dayIndex][timeIndex];

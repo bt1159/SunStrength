@@ -1,7 +1,6 @@
 // flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
 import 'package:flutter/material.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
-import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_location_notifier.dart';
 import 'package:sun_strength_app/screens/location_selector_route.dart';
 import 'screens/chart_route.dart';
@@ -23,10 +22,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('Started build method for MyApp');
-    return ChangeNotifierProxyProvider<SavedLocationProvider, CurrentLocationNotifier>(
+    return ChangeNotifierProxyProvider<
+      SavedLocationProvider,
+      CurrentLocationNotifier
+    >(
       create: (_) => CurrentLocationNotifier(),
       update: (_, savedLocationProvider, previous) {
-        final CurrentLocationNotifier? updatedWidget = previous?..update(savedLocationProvider.value);
+        final CurrentLocationNotifier? updatedWidget = previous
+          ?..update(savedLocationProvider.value);
         if (updatedWidget != null) {
           return updatedWidget;
         } else {
@@ -70,6 +73,10 @@ class AppGateway extends StatelessWidget {
     // 1. Still waiting for SharedPreferences to read from disk
     if (!locationProvider.isInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (context.read<CurrentLocationNotifier>().value != null) {
+      return const ChartHomePage();
     }
 
     // 2. No location saved -> Send them straight to the selection screen
