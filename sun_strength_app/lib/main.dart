@@ -6,6 +6,10 @@ import 'package:sun_strength_app/screens/location_selector_route.dart';
 import 'screens/chart_route.dart';
 import 'package:provider/provider.dart';
 
+// Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key, 
+// and restrict it to HTTP Referrers and add your local development URL 
+// (http://localhost:*) and your production domain so others cannot steal it.
+
 void main() {
   runApp(
     ChangeNotifierProvider<SavedLocationProvider>(
@@ -82,7 +86,7 @@ class AppGateway extends StatelessWidget {
     // 2. No location saved -> Send them straight to the selection screen
     if (locationProvider.value == null) {
       print('in AppGateway.build, locationProvider.value == null');
-      return const LocationSelectionScreen();
+      return const LocationSelectionScreen2();
     }
 
     // 3. Location exists -> Open directly to the Heatmap

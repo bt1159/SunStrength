@@ -38,6 +38,10 @@ dependencies:
   collection: ^1.19.1
   shared_preferences: ^2.5.5
   provider: ^6.1.5+1
+  google_maps_flutter: ^2.11.0 # Or latest version
+  flutter_typeahead: ^5.2.0     # Great for custom autocomplete overlays
+  http: ^1.2.0
+  google_maps: ^8.2.0 # Matches the underlying JS library hooks
 
 dev_dependencies:
   flutter_test:
