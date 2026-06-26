@@ -42,9 +42,14 @@ dependencies:
   flutter_typeahead: ^5.2.0     # Great for custom autocomplete overlays
   http: ^1.2.0
   google_maps: ^8.2.0 # Matches the underlying JS library hooks
+  dartz: ^0.10.1
+  
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  mocktail: ^0.3.0
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

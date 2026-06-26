@@ -10,7 +10,7 @@ class CurrentLocationNotifier extends ValueNotifier<Location?> {
   
   bool savedLocationLoaded = false;
 
-  void update(Location? savedLocation) {
+  void updateWithInitialSaved(Location? savedLocation) {
     if (savedLocationLoaded) return;
     print(
       'Before assignment: Equal? ${value == savedLocation} and value?.name: ${value?.name}, savedLocation?.name: ${savedLocation?.name}',
@@ -18,5 +18,14 @@ class CurrentLocationNotifier extends ValueNotifier<Location?> {
     value = savedLocation;
     savedLocationLoaded = true;
     print('CurrentLocationNotifier just updated from savedLocation');
+  }
+
+
+  void updateWithNewLocation(Location? newLocation) {
+    print(
+      'Before assignment: Equal? ${value == newLocation}, value?.name: ${value?.name}, savedLocation?.name: ${newLocation?.name}',
+    ); // If this is true, it won't rebuild!
+    value = newLocation;
+    print('CurrentLocationNotifier just updated from new Location?');
   }
 }

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 
-class SavedLocationProvider extends ValueNotifier<Location?> {
+class SavedLocationNotifier extends ValueNotifier<Location?> {
   // Initialize with null, meaning "we don't know the state yet"
-  SavedLocationProvider() : super(null) {
+  SavedLocationNotifier() : super(null) {
     print('Starting SavedLocationProvider constructor');
     _loadLocationFromStorage();
     print('finished SavedLocationProvider constructor');
@@ -18,30 +18,35 @@ class SavedLocationProvider extends ValueNotifier<Location?> {
   Future<void> _loadLocationFromStorage() async {
     print('Starting SavedLocationProvider._loadLocationFromStorage');
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? savedJson = prefs.getString('default_solar_location');
 
       if (savedJson != null) {
         final Map<String, dynamic> valueJSON =
             jsonDecode(savedJson) as Map<String, dynamic>;
+      _isInitialized = true;
         value = Location.fromMap(inputMap: valueJSON);
 
         print(
           'In SavedLocationProvider._loadLocationFromStorage, just set value to new value, value?.name ${value?.name}',
         );
+      } else {
+        
+      _isInitialized = true;
+      notifyListeners();
       }
     } catch (e) {
       debugPrint("Error reading storage: $e");
-    } finally {
       _isInitialized = true;
-      notifyListeners(); // Alert the UI that initialization is complete
+    } finally {
+      // notifyListeners(); // Alert the UI that initialization is complete
       print(
         'In SavedLocationProvider._loadLocationFromStorage, just finished the finally statement and called NotifyListeners, potentially as a duplicate',
       );
       
     }
 
-    print('Starting SavedLocationProvider._loadLocationFromStorage');
+    print('Finished SavedLocationProvider._loadLocationFromStorage');
   }
 
   // Update location from the selection screen
@@ -56,5 +61,10 @@ class SavedLocationProvider extends ValueNotifier<Location?> {
     value = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('default_solar_location');
+  }
+  @override
+  notifyListeners() {
+    print('running SavedLocationNotifier.notifyListeners()');
+    super.notifyListeners();
   }
 }

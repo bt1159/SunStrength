@@ -195,7 +195,7 @@ class _HeatMapState extends State<HeatMap> {
             if (widget.currentlocation != null)
               ElevatedButton(
                 onPressed: () async {
-                  await context.read<SavedLocationProvider>().updateLocation(
+                  await context.read<SavedLocationNotifier>().updateLocation(
                     widget.currentlocation!,
                   );
                   if (context.mounted) {

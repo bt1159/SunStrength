@@ -6,17 +6,12 @@ import 'package:sun_strength_app/screens/location_selector_route.dart';
 import 'screens/chart_route.dart';
 import 'package:provider/provider.dart';
 
-// Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key, 
-// and restrict it to HTTP Referrers and add your local development URL 
+// Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key,
+// and restrict it to HTTP Referrers and add your local development URL
 // (http://localhost:*) and your production domain so others cannot steal it.
 
 void main() {
-  runApp(
-    ChangeNotifierProvider<SavedLocationProvider>(
-      create: (_) => SavedLocationProvider(),
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -26,21 +21,28 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('Started build method for MyApp');
-    return ChangeNotifierProxyProvider<
-      SavedLocationProvider,
-      CurrentLocationNotifier
-    >(
-      create: (_) => CurrentLocationNotifier(),
-      update: (_, savedLocationProvider, previous) {
-        final CurrentLocationNotifier? updatedWidget = previous
-          ?..update(savedLocationProvider.value);
-        if (updatedWidget != null) {
-          return updatedWidget;
-        } else {
-          throw ('No widget returned');
-        }
-      },
-      builder: (_, _) => MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SavedLocationNotifier>(
+          create: (_) => SavedLocationNotifier(),
+        ),
+        ChangeNotifierProxyProvider<
+          SavedLocationNotifier,
+          CurrentLocationNotifier
+        >(
+          create: (_) => CurrentLocationNotifier(),
+          update: (_, savedLocationNotifier, previous) {
+            final CurrentLocationNotifier? updatedWidget = previous
+              ?..updateWithInitialSaved(savedLocationNotifier.value);
+            if (updatedWidget != null) {
+              return updatedWidget;
+            } else {
+              throw ('No widget returned');
+            }
+          },
+        ),
+      ],
+      child: MaterialApp(
         title: 'Flutter Demo',
         theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
         darkTheme: ThemeData(
@@ -61,7 +63,7 @@ class AppGateway extends StatelessWidget {
   const AppGateway({super.key});
 
   /// {@template AppGatewayBuild}
-  /// Because the [SavedLocationProvider] is referenced with a [Provider.of], this build method will be
+  /// Because the [SavedLocationNotifier] is referenced with a [Provider.of], this build method will be
   /// triggered any time it calls its NotifyListeners().  That is only ever used, however, in the
   /// initial loading of the Provider.  After that, if the default location is cleared or overwritten,
   /// it does not NotifyListeners, so this build method will not be re-called.  There could be a
@@ -72,7 +74,7 @@ class AppGateway extends StatelessWidget {
   Widget build(BuildContext context) {
     print('running AppGateway.build');
     // Listen to the location provider
-    final locationProvider = Provider.of<SavedLocationProvider>(context);
+    final locationProvider = Provider.of<SavedLocationNotifier>(context);
 
     // 1. Still waiting for SharedPreferences to read from disk
     if (!locationProvider.isInitialized) {
@@ -96,4 +98,5 @@ class AppGateway extends StatelessWidget {
     );
     return const ChartHomePage();
   }
+
 }
