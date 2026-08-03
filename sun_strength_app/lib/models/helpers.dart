@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 typedef LocationCallback = void Function({required Location location});
 
@@ -9,14 +10,22 @@ class Location {
       lat = inputMap['lat'],
       lon = inputMap['lon'];
 
+  Location.fromLatLng({required LatLng latLng, required this.name})
+    : lat = latLng.latitude,
+      lon = latLng.longitude;
+
   final String name;
   final num lat;
   final num lon;
 
-  Map<String, dynamic> get toMap => {'name':name,'lat': lat,'lon': lon};  
-  Map<String, Object> get toObjMap => {'name':name,'lat': lat,'lon': lon};
+  LatLng get latLng => LatLng(lat.toDouble(), lon.toDouble());
+
+  Map<String, dynamic> get toMap => {'name': name, 'lat': lat, 'lon': lon};
+  Map<String, Object> get toObjMap => {'name': name, 'lat': lat, 'lon': lon};
   String get toJSONString => jsonEncode(toMap);
 
+  @override
+  String toString() => 'name: $name, lat: $lat, lon: $lon';
 
   @override
   bool operator ==(Object other) {
@@ -32,6 +41,5 @@ class Location {
   }
 
   @override
-  // 3. Always override hashCode using the same properties
   int get hashCode => Object.hash(name, lat, lon);
 }

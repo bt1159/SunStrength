@@ -1,6 +1,7 @@
 import 'dart:math';
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:lat_lng_to_timezone/lat_lng_to_timezone.dart' as tzmap;
 
 const kDebugMode = true;
 
@@ -56,14 +57,22 @@ final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 // final double latInput = 25;
 // final double longInput = -71.3833058055504;
 
+/// Function called by widget tree to generate the actual data points used to make the chart.
+///
+/// Note: the data ALWAYS starts at 12am 01 Jan, but the timezone of that start time is
+/// determined inside this function from the lat and lon given.
 Iterable<double> masterFunctionSolarStrengthArray({
   required double k,
   required double h,
   required num lat,
   required num lon,
 }) {
+  print('running masterFunctionSolarStrengthArray');
+  final String timeZoneName = tzmap.latLngToTimezoneString(lat, lon);
   final Iterable<({double earthRotationAngle, double trueAnomaly})>
-  yearTrueAnomalies = getYearTrueAnomalies();
+  yearTrueAnomalies = getYearTrueAnomalies(
+    tZoneInput: timeZoneName == 'unknown' ? null : timeZoneName,
+  );
   final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(
     inputData: yearTrueAnomalies,
     lat: lat,
@@ -78,15 +87,31 @@ Iterable<double> masterFunctionSolarStrengthArray({
   return yearSolarStrengthsLocalRelative;
 }
 
+/// Function to output the earth rotation angle and true anomaly that will be used to calculate each
+/// solar strength data point.  time zone is an input here so that actual offset from J2000 to 12am
+/// Jan 01 at this time zone and with the given year can be calculated
 Iterable<({double earthRotationAngle, double trueAnomaly})>
-getYearTrueAnomalies({
-  int yearInput = 2026,
-  String tZoneInput = "America/New_York",
-}) {
-  print('started getChartData');
+getYearTrueAnomalies({int yearInput = 2026, String? tZoneInput}) {
+  print(
+    'started getYearTrueAnomalies for year: $yearInput and tZoneInput before null assign: $tZoneInput',
+  );
+
+  tZoneInput ??= "America/New_York";
 
   tz.initializeTimeZones();
-  final tz.Location localTZ = tz.getLocation(tZoneInput);
+
+  tz.Location localTZ;
+
+  try {
+    localTZ = tz.getLocation(tZoneInput);
+    print(
+      'inside getYearTrueAnomalies, trying to see if tZoneInput was used correctly.  locatTZ: $localTZ',
+    );
+  } catch (error) {
+    print(error);
+    localTZ = tz.getLocation("America/New_York");
+  }
+
   final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
   final tz.TZDateTime date0 = tz.TZDateTime(localTZ, yearInput, 1, 1, 0, 0, 0);
   final int nDays = date0
@@ -142,6 +167,9 @@ getYearTrueAnomalies({
   return yearTrueAnomalies;
 }
 
+/// Uses the list of earth rotation angles and true anomalies, and the local lat & lon, to calculate
+/// the angle of the sun at that location for each ERA & true anomaly.  Time zone is no longer needed as
+/// an input since we are just using the ERAs and true anomalies.
 Iterable<double> getYearSolarElevationAngles({
   required Iterable<({double earthRotationAngle, double trueAnomaly})>
   inputData,
@@ -184,6 +212,8 @@ Iterable<double> getYearSolarElevationAngles({
   return output.map((e) => max(0, e));
 }
 
+/// Function that convers the angle of the sun for each data point to the relative solar strength.  Time
+/// zone is not needed as an input because this calculation is independent of time.
 Iterable<double> getYearSolarStrengthsLocalRelativeToGlobal({
   required Iterable<double> yearSolarElevationAngles,
   required double k,

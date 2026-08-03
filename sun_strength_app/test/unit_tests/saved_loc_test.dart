@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_location_notifier.dart';
+import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
 // import 'package:mocktail/mocktail.dart';
 
@@ -23,9 +23,6 @@ void main() {
     lat: 15,
     lon: 15,
   );
-  final Map<String, Object> defaultPrefTestMap = {
-    'default_solar_location': jsonEncode(locationTest.toObjMap),
-  };
 
   // The function passed to setUp will be run one time before each test().
   // If it is called within a group, it applies only to tests within that group.
@@ -57,8 +54,8 @@ void main() {
       bool listenerCalled = false;
       SharedPreferences.setMockInitialValues({});
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
       savedLocationNotifier.addListener(() {
         listenerCalled = true;
       });
@@ -75,7 +72,7 @@ void main() {
       // See also:
       //
       //  * [expectLater] for use with asynchronous matchers.
-      expect(savedLocationNotifier.value, isNull);
+      expect(savedLocationNotifier.value?.defaultLocation, isNull);
       expect(savedLocationNotifier.isInitialized, isTrue);
       expect(listenerCalled, isFalse);
 
@@ -102,8 +99,8 @@ void main() {
       final String? savedJson = prefs.getString('default_solar_location');
       print('savedJson: $savedJson');
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
       bool listenerCalled = false;
       savedLocationNotifier.addListener(() {
         listenerCalled = true;
@@ -121,7 +118,7 @@ void main() {
       // See also:
       //
       //  * [expectLater] for use with asynchronous matchers.
-      expect(savedLocationNotifier.value, locationPxv);
+      expect(savedLocationNotifier.value?.defaultLocation, locationPxv);
       expect(savedLocationNotifier.isInitialized, isTrue);
       expect(listenerCalled, isTrue);
 
@@ -164,14 +161,14 @@ void main() {
       // final String? savedJson = prefs.getString('default_solar_location');
       // print('savedJson: $savedJson');
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
 
       await pumpEventQueue();
-      expect(savedLocationNotifier.value != null, true);
+      expect(savedLocationNotifier.value?.defaultLocation != null, true);
       expect(listenerCalled, false);
       expect(currentLocationNotifier.savedLocationLoaded, false);
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value);
+      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
       expect(currentLocationNotifier.value?.name, locationPxv.name);
       expect(listenerCalled, true);
@@ -187,11 +184,11 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value);
+      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
       currentLocationNotifier.updateWithNewLocation(locationTest);
       print('listenerCalledCounter: $listenerCalledCounter');
@@ -210,11 +207,11 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value);
+      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
       currentLocationNotifier.updateWithNewLocation(locationTest);
 
@@ -237,17 +234,17 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedLocationNotifier savedLocationNotifier =
-          SavedLocationNotifier();
+      final SavedSettingsNotifier savedLocationNotifier =
+          SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value);
+      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       final int lockedCounter = listenerCalledCounter;
-      currentLocationNotifier.updateWithNewLocation(savedLocationNotifier.value);
+      currentLocationNotifier.updateWithNewLocation(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, lockedCounter);
-      expect(currentLocationNotifier.value?.name, savedLocationNotifier.value?.name);
+      expect(currentLocationNotifier.value?.name, savedLocationNotifier.value?.defaultLocation?.name);
     });
   });
 }
