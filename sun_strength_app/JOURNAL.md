@@ -8,6 +8,8 @@ Ok.  Timezone is working now.  There was a bug because I had randomly hardcoded 
 
 Next, I need to add a button to change the timezone display...or do I?  Maybe that just doesn't matter.  I do, however, want to add a method for the sidebar button to change default location.
 
+Added am/pm setting.
+
 ## 2026-06-16
 - Fixed issues in _getAutocompleteSuggestions() by asking Google.  All problems were related to JSObect class definitions, which I don't really understand.  It is all about a Flutter "layer" and a "JavaScript" layer, and I don't understand fundamentally how these work.
 -  Made a lot of progress, but now when I enter something for autocomplete, I am getting this in the console: Error fetching autocomplete predictions: TypeError: null: type 'Null' is not a subtype of type 'JSArray<Object?>'
@@ -39,8 +41,6 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 ## Add a note explaining the "relative" value.
 
 ## See if there is a good way to add a "today" indicator.  If so, add a toggle for that.
-
-## Add a setting about 24 vs. 12 hour time display.
 
 ## Make the pop up look better.  First, reference the above 24 vs. 12 hour display.  Just use local time (without the UTCC offset).  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
 

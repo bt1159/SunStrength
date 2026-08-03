@@ -44,6 +44,7 @@ dependencies:
   google_maps: ^8.2.0 # Matches the underlying JS library hooks
   dartz: ^0.10.1
   lat_lng_to_timezone: ^0.2.0
+  intl: ^0.20.3
   
 
 dev_dependencies:

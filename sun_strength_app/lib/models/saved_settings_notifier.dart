@@ -124,6 +124,35 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.remove('default_solar_timezone');
   }
 
+  // Update location from the selection screen
+  Future<void> updateTwelveHour(bool twelveHour) async {
+    print('running updateTwelveHour with twelveHour: $twelveHour');
+    if (value?.twelveHour == twelveHour) {
+      print('inside updateTwelveHour, about to return because new value matches previous value');
+      return;
+    }
+    final SavedAppSettings settings = SavedAppSettings(
+      defaultLocation: value?.defaultLocation,
+      tZoneInput: value?.tZoneInput,
+      twelveHour: twelveHour,
+    );
+    print('inside updateTwelveHour, previous value?.twelveHour: ${value?.twelveHour}, new settings: $settings');
+    value = settings;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('twelveHour', twelveHour.toString());
+  }
+
+  // Clear location
+  Future<void> clearTwelveHour() async {
+    final SavedAppSettings settings = SavedAppSettings(
+      defaultLocation: value?.defaultLocation,
+      tZoneInput: value?.tZoneInput,
+    );
+    value = settings;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('twelveHour');
+  }
+
   @override
   notifyListeners() {
     print('running SavedSettingsNotifier.notifyListeners()');
@@ -132,11 +161,18 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
 }
 
 class SavedAppSettings {
-  SavedAppSettings({this.defaultLocation, this.tZoneInput});
+  SavedAppSettings({
+    this.defaultLocation,
+    this.tZoneInput,
+    this.twelveHour = true,
+  });
 
   factory SavedAppSettings.fromSaved(SharedPreferences prefs) {
     Location? newDefaultLocation;
     String? newTZoneInput;
+    bool twelveHour = true;
+
+    // Parse out location
     final String? savedLocJsonString = prefs.getString(
       'default_solar_location',
     );
@@ -145,18 +181,32 @@ class SavedAppSettings {
           jsonDecode(savedLocJsonString) as Map<String, dynamic>;
       newDefaultLocation = Location.fromMap(inputMap: savedLocJson);
     }
+
+    // Parse out time zone
     final String? savedTZJsonString = prefs.getString('default_solar_timezone');
     if (savedTZJsonString != null) {
       newTZoneInput = jsonDecode(savedTZJsonString) as String;
     }
+
+    // Parse out twelveHour
+    final String? savedTwelveHourJsonString = prefs.getString('twelveHour');
+    if (savedTwelveHourJsonString != null) {
+      twelveHour = jsonDecode(savedTwelveHourJsonString) as bool;
+    }
+
     return SavedAppSettings(
       defaultLocation: newDefaultLocation,
       tZoneInput: newTZoneInput,
+      twelveHour: twelveHour,
     );
   }
 
   final Location? defaultLocation;
   final String? tZoneInput;
+  final bool twelveHour;
+
+  @override
+  String toString() => 'SavedAppSettings, defaultLocation: $defaultLocation, tZoneInput: $tZoneInput, twelveHour: $twelveHour';
 
   @override
   bool operator ==(Object other) {
@@ -167,9 +217,10 @@ class SavedAppSettings {
         other.defaultLocation?.name == defaultLocation?.name &&
         other.defaultLocation?.lat == defaultLocation?.lat &&
         other.defaultLocation?.lon == defaultLocation?.lon &&
-        other.tZoneInput == tZoneInput;
+        other.tZoneInput == tZoneInput &&
+        other.twelveHour == twelveHour;
   }
 
   @override
-  int get hashCode => Object.hash(defaultLocation, tZoneInput);
+  int get hashCode => Object.hash(defaultLocation, tZoneInput, twelveHour);
 }

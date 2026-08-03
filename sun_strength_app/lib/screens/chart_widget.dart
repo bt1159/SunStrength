@@ -4,10 +4,13 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 /// {@template PublicChartRenderObjectWidget}
-/// Public Widget that just constains the a [_ChartRenderObjectWidget].
+/// Public Widget that constains the a [_ChartRenderObjectWidget] and also super imposes the hover tooltip when showing.
 /// {@endtemplate}
 class PublicChartRenderObjectWidget extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
@@ -36,9 +39,14 @@ class _PublicChartRenderObjectWidgetState
     extends State<PublicChartRenderObjectWidget> {
   // Tooltip State Variables
   Offset? _hoverBoxPosition;
-  String? _tooltipText;
+  String? _tooltipText12;
+  String? _tooltipText24;
 
-  void _handleChartHover(Offset chartTextLocalPosition, Size chartSize, Offset chartWidgetOffsetToParent) {
+  void _handleChartHover(
+    Offset chartTextLocalPosition,
+    Size chartSize,
+    Offset chartWidgetOffsetToParent,
+  ) {
     final double x = chartTextLocalPosition.dx;
     final double y = chartTextLocalPosition.dy;
 
@@ -58,14 +66,15 @@ class _PublicChartRenderObjectWidgetState
     final tz.Location localTZ = tz.getLocation(tZoneInput);
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
-    final hoverDateTimte = tz.TZDateTime(
+    final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
       localTZ,
       yearInput,
     ).add(Duration(milliseconds: datetimeDelta));
 
     setState(() {
       _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent;
-      _tooltipText = '$hoverDateTimte\nValue: ${value.toStringAsFixed(2)}';
+      _tooltipText12 = '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
+      _tooltipText24 = '${ DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
     });
   }
 
@@ -73,13 +82,15 @@ class _PublicChartRenderObjectWidgetState
     if (_hoverBoxPosition != null) {
       setState(() {
         _hoverBoxPosition = null;
-        _tooltipText = null;
+        _tooltipText12 = null;
+        _tooltipText24 = null;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    print('running _PublicChartRenderObjectWidgetState.build, ${_hoverBoxPosition == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}');
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -93,8 +104,13 @@ class _PublicChartRenderObjectWidgetState
                 onHover: (event) {
                   // Find the rendering size of the canvas dynamically
                   final RenderBox box = context.findRenderObject() as RenderBox;
-                  final BoxParentData? boxParentData = box.parentData as BoxParentData?;
-                  _handleChartHover(event.localPosition, box.size, boxParentData?.offset ?? Offset(0,0));
+                  final BoxParentData? boxParentData =
+                      box.parentData as BoxParentData?;
+                  _handleChartHover(
+                    event.localPosition,
+                    box.size,
+                    boxParentData?.offset ?? Offset(0, 0),
+                  );
                 },
                 onExit: (_) => _hideTooltip(),
                 child: widget.chartArrayWidget,
@@ -103,11 +119,11 @@ class _PublicChartRenderObjectWidgetState
           ),
         ),
         // 2. The Floating Tooltip Popup Layer
-        if (_hoverBoxPosition != null && _tooltipText != null)
+        if (_hoverBoxPosition != null && _tooltipText12 != null && _tooltipText24 != null)
           Positioned(
             // Position it dynamically relative to the cursor position!
-            left:
-                _hoverBoxPosition!.dx, // Offset slightly to clear the cursor graphic
+            left: _hoverBoxPosition!
+                .dx, // Offset slightly to clear the cursor graphic
             top: _hoverBoxPosition!.dy,
             child: IgnorePointer(
               // Prevents the tooltip box from stealing mouse focus
@@ -117,9 +133,12 @@ class _PublicChartRenderObjectWidgetState
                   color: Colors.black.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(
-                  _tooltipText!,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                child: Selector<SavedSettingsNotifier, bool>(
+                  selector: (_, savedSettingsNotifier) => savedSettingsNotifier.value?.twelveHour ?? true,
+                  builder: (_, twelveHour, _) => Text(
+                    twelveHour ? _tooltipText12! : _tooltipText24!,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
                 ),
               ),
             ),

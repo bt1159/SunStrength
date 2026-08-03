@@ -11,17 +11,19 @@ import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
 
+/// {@template ChartHomePage}
+/// 
+/// Widget called from the main screen that contains the full chart route/page.
+/// 
+/// Its only actual function is to expose the [Consumer] of the [CurrentLocationNotifier] to widgets below.
+/// 
+/// {@endtemplate}
 class ChartHomePage extends StatelessWidget {
+ /// {@macro ChartHomePage}
   const ChartHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Consumer<CurrentLocationNotifier>(
       builder: (context, currentLocationNotifier, child) {
         print(
@@ -33,7 +35,29 @@ class ChartHomePage extends StatelessWidget {
   }
 }
 
+/// {@template HeatMap}
+/// 
+/// [SatefuleWidget] is the primary widgets containing the building blocks that make up 
+/// the solar strength chart page.
+/// 
+/// This widget holds the [PublicChartRenderObjectWidget], which is the chart itself, including labels, axes, etc.
+/// It also holds the main screen title and all the buttons below.
+/// 
+/// Note: This Widget, the [HeatMap], creates a [HeatMapPainter] and passes that as an input to the 
+/// [PublicChartRenderObjectWidget] that it creates.  See [HeatMapPainter] docs for more info about it.  This 
+/// structure may seem convoluted, but it is done this way so that [PublicChartRenderObjectWidget] does not actually 
+/// need the raw image.  From the widget tree's perspective, the image itself is completely handled here, in [HeatMap].  
+/// It is created here and used here only.
+/// 
+/// There are two reasons [HeatMap] is stateful.  First, is holds the current K setting, i.e., the frequency band 
+/// currently being displayed.  Secondly, being stateful allows it to build the [ImageContainer] as a [Future] since 
+/// that function is async.  More accurately, building the [ui.Image] the async process.  [HeatMap] handles this by 
+/// defining the [Future] during [initState].  Then, it uses a [FutureBuilder] in the widget tree.  Also, note the 
+/// overriden [didUpdateWidget] that handles a new [HeatMap] widget and checks if the passed location has changed.
+/// 
+/// {@endtemplate}
 class HeatMap extends StatefulWidget {
+ /// {@macro HeatMap}
   const HeatMap({super.key, required this.currentlocation});
   final Location? currentlocation;
 
@@ -242,10 +266,16 @@ class _HeatMapState extends State<HeatMap> {
   }
 }
 
+/// {@template HeatMapPainter}
+/// 
+/// This widget takes an [ui.Image] object as an input actually "paints" that into a widget.  
+/// This way, this widget is given a canvas and a size and applies the [image] to that.
+/// 
+/// {@endtemplate}
 class HeatMapPainter extends CustomPainter {
   final ui.Image? image;
 
-  // Pass the image through the constructor
+  /// {@macro HeatMapPainter}
   HeatMapPainter(this.image);
 
   @override
@@ -280,12 +310,18 @@ class HeatMapPainter extends CustomPainter {
   }
 }
 
+
+/// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned 
+/// inside of an [ImageContainer].  This [Future] is called, received, and handled by [HeatMap].
+/// 
+/// The main work of this function is to receive the long, one-dimensional list of [double] sun strength values, reshape them into 
+/// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that 
+/// two-dimensional list of color bytes.
 Future<ImageContainer> generateSunMap({
   required Iterable<double> chronologicalSunStrength,
   required int width,
 }) async {
-  print('running generateSunMap, at line 0, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, width: $width');
-  int lineNumber = 0;
+  print('running generateSunMap, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, width: $width');
   const int height = 96; // 15-minute intervals in 24 hours (24 * 4)
   const int bytesPerPixel = 4; // RGBA
 
@@ -296,8 +332,6 @@ Future<ImageContainer> generateSunMap({
     (_) => List.filled(96, 0.0),
   );
 
-  lineNumber = 1;
-  print('running generateSunMap, at lineNumber: $lineNumber');
 
   int x = -1;
   int yMath = 0;
@@ -310,8 +344,6 @@ Future<ImageContainer> generateSunMap({
     if (yMath == 0) {
       x++;
     }
-  // lineNumber = 2;
-  // print('running generateSunMap, at lineNumber: $lineNumber');
 
     // Invert Y because ui.decodeImageFromPixels expects Y=0 at the TOP,
     // but your math treats midnight morning as the BOTTOM.
@@ -331,8 +363,6 @@ Future<ImageContainer> generateSunMap({
 
     yMath++;
 
-  // lineNumber = 3;
-  // print('running generateSunMap, at lineNumber: $lineNumber');
     if (yMath == 96) {
       yMath = 0;
     }
@@ -343,8 +373,6 @@ Future<ImageContainer> generateSunMap({
     }
   }
 
-  lineNumber = 4;
-  print('running generateSunMap, at lineNumber: $lineNumber');
   // 3. Hand the perfectly ordered buffer over to the engine
   final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
     pixelBuffer,
@@ -356,12 +384,8 @@ Future<ImageContainer> generateSunMap({
     pixelFormat: ui.PixelFormat.rgba8888,
   );
 
-  lineNumber = 5;
-  print('running generateSunMap, at lineNumber: $lineNumber');
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
-  lineNumber = 6;
-  print('running generateSunMap, at lineNumber: $lineNumber');
   return ImageContainer(
     image: frame.image,
     leapYear: width == 366,
@@ -369,7 +393,17 @@ Future<ImageContainer> generateSunMap({
   );
 }
 
+/// {@template ImageContainer}
+/// 
+/// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether 
+/// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
+/// 
+/// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to 
+/// [PublicChartRenderObjectWidget] and used to fill out the hover text.
+/// 
+/// {@endtemplate}
 class ImageContainer {
+  /// {@macro ImageContainer}
   ImageContainer({
     required this.image,
     required this.leapYear,

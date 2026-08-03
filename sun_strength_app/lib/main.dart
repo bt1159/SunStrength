@@ -73,6 +73,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// Widget that handles loading the saved settings and chooses what to display based on that loading process.
+///
 /// {@macro AppGatewayBuild}
 class AppGateway extends StatelessWidget {
   const AppGateway({super.key});
@@ -140,27 +142,37 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: [AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text('UV strength'),
-      ),AppBar(title: const Text("Select Your Location")),
+      appBar: [
+        AppBar(
+          // TRY THIS: Try changing the color here to a specific color (to
+          // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+          // change color while the other colors stay the same.
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          // Here we take the value from the MyHomePage object that was created by
+          // the App.build method, and use it to set our appbar title.
+          title: Text('UV strength'),
+        ),
+        AppBar(title: const Text("Select Your Location")),
       ][_currentIndex],
       drawer: Drawer(
         child: ListView(
           children: [
             ListTile(onTap: () {}, title: Text('Change default time zone')),
             ListTile(onTap: () {}, title: Text('Change default location')),
+            ListTile(onTap: () {
+              final bool currentTwelveHour = context.read<SavedSettingsNotifier>().value?.twelveHour ?? true;
+              print('currentTwelveHour: $currentTwelveHour');
+              context.read<SavedSettingsNotifier>().updateTwelveHour(!currentTwelveHour);
+              Navigator.of(context).pop();
+            }, title: Text('Toggle AM/PM vs. 24 hour display')),
           ],
         ),
       ),
       body: Provider<UpdateCurrentIndex>(
         create: (_) => (int newIndex) {
-          print('Just received call to switch stack index to: $newIndex, with _currentIndex: $_currentIndex');
+          print(
+            'Just received call to switch stack index to: $newIndex, with _currentIndex: $_currentIndex',
+          );
           if (newIndex == _currentIndex) return;
           setState(() {
             _currentIndex = newIndex;
@@ -168,10 +180,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
         },
         child: IndexedStack(
           index: _currentIndex,
-          children: [
-            const ChartHomePage(),
-            const LocationSelectionScreen(),            
-          ],
+          children: [const ChartHomePage(), const LocationSelectionScreen()],
         ),
       ),
     );
