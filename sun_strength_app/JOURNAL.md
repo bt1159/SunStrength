@@ -1,4 +1,9 @@
 # Daily log
+## 2026-08-04
+Today, I want to fix the tooltip appearance, especially the location.
+
+Ok, I am doing a bit of an overhaul of the two CNs for settings.  I want the saved settings to contain default location, timezone, twelvehour, and year.  The timezone in particular does NOT need to be the local timezone of the default location.  This should be a saved setting.  I can later update the chart page so that the user can select visible timezone between local (for selected location), default timezone, and some custom value. The question is about current.  I think that current should not necessarily story the timezone associated with the current location but rather whatever the user has selected.  That way, the charting functions can ALWAYS use the current notifier to get the timezone that they should be making visible.  Updating the currently location may or may not mean updating the timezone.  If the user is currently viewing local, maybe it should.  But, if the user is currently viewing a manually selected one or the default, than it should not.  I think that would work.
+
 ## 2026-08-03
 Not sure where to start, so running in debug.  I know I was starting by trying to add/fix the functionality about timezone.  Initially, the app was just using NY time all the time.  Instead, I actually want it to find the timezone for the place.  I need to test where I actually got with that.
 

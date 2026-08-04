@@ -49,7 +49,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     }
   }
 
-  // Helper to place a visual pin on the map
+  // updates state variable to new location.  The state variable's value will be sent to notifier if the user clicks button to generate map
   void _updateMarker(Location location) {
     setState(() {
       _currentPosition = location;

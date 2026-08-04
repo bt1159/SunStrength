@@ -167,7 +167,7 @@ void main() {
       await pumpEventQueue();
       expect(savedLocationNotifier.value?.defaultLocation != null, true);
       expect(listenerCalled, false);
-      expect(currentLocationNotifier.savedLocationLoaded, false);
+      expect(currentLocationNotifier.savedChartSettingsLoaded, false);
       currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
       expect(currentLocationNotifier.value?.name, locationPxv.name);
