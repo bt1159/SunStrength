@@ -44,7 +44,8 @@ class MyApp extends StatelessWidget {
                 savedLocationNotifier.value != null) {
               updatedWidget = previous
                 ?..updateWithInitialSaved(
-                  savedLocationNotifier.value!.defaultLocation,
+                  newLocation: savedLocationNotifier.value?.defaultLocation,
+                  newYear: savedLocationNotifier.value?.defaultYear,
                 );
             } else {
               updatedWidget = previous;
@@ -159,12 +160,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
           children: [
             ListTile(onTap: () {}, title: Text('Change default time zone')),
             ListTile(onTap: () {}, title: Text('Change default location')),
-            ListTile(onTap: () {
-              final bool currentTwelveHour = context.read<SavedSettingsNotifier>().value?.twelveHour ?? true;
-              print('currentTwelveHour: $currentTwelveHour');
-              context.read<SavedSettingsNotifier>().updateTwelveHour(!currentTwelveHour);
-              Navigator.of(context).pop();
-            }, title: Text('Toggle AM/PM vs. 24 hour display')),
+            ListTile(
+              onTap: () {
+                final bool currentTwelveHour =
+                    context.read<SavedSettingsNotifier>().value?.twelveHour ??
+                    true;
+                print('currentTwelveHour: $currentTwelveHour');
+                context.read<SavedSettingsNotifier>().updateTwelveHour(
+                  !currentTwelveHour,
+                );
+                Navigator.of(context).pop();
+              },
+              title: Text('Toggle AM/PM vs. 24 hour display'),
+            ),
           ],
         ),
       ),

@@ -190,7 +190,7 @@ void main() {
       await pumpEventQueue();
       currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateWithNewLocation(locationTest);
+      currentLocationNotifier.updateWithNewLocationLocalTZ(locationTest);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 2);
       expect(currentLocationNotifier.value?.name, locationTest.name);
@@ -213,9 +213,9 @@ void main() {
       await pumpEventQueue();
       currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateWithNewLocation(locationTest);
+      currentLocationNotifier.updateWithNewLocationLocalTZ(locationTest);
 
-      currentLocationNotifier.updateWithNewLocation(null);
+      currentLocationNotifier.updateWithNewLocationLocalTZ(null);
 
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 3);
@@ -241,7 +241,7 @@ void main() {
       currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       final int lockedCounter = listenerCalledCounter;
-      currentLocationNotifier.updateWithNewLocation(savedLocationNotifier.value?.defaultLocation);
+      currentLocationNotifier.updateWithNewLocationLocalTZ(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, lockedCounter);
       expect(currentLocationNotifier.value?.name, savedLocationNotifier.value?.defaultLocation?.name);

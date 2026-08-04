@@ -4,6 +4,9 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:lat_lng_to_timezone/lat_lng_to_timezone.dart' as tzmap;
 
+// TODO: I think I will need to add a way to update the location without updating the timezone to the new local.
+
+// TODO: I need a better way to handle when one is null and the other is not in saved settings.
 class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
   CurrentLocationNotifier() : super(null) {
     print(
@@ -12,7 +15,7 @@ class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
   }
 
   tz.Location getTZFromLocation(Location location) {
-      tz.initializeTimeZones();
+    tz.initializeTimeZones();
     tz.Location output;
 
     final String timeZoneName = tzmap.latLngToTimezoneString(
@@ -33,13 +36,24 @@ class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
 
   bool savedChartSettingsLoaded = false;
 
-  void updateWithInitialSaved(CurrentChartSettings? savedChartSettings) {
+  /// Method that updates the current chart settings when the saved settings are first loaded.  After the initial load, any time after that the saved settings are updated
+  /// gets ignored.
+  ///
+  /// Note: the current location is updated to the saved default location, as is the year and the timezone.  The chart route, however, will have the ability to quickly
+  /// toggle these back.  This entire updating structure is designed with the intent that the chart is not actually displayed until the saved settings are accessed.
+  void updateWithInitialSaved({Location? newLocation, int? newYear}) {
     if (savedChartSettingsLoaded) return;
-    print(
-      'Before assignment: Equal? ${value == savedChartSettings} and value?.location.name: ${value?.location.name}, savedLocation?.name: ${savedChartSettings?.location.name}',
-    );
-    if (value != savedChartSettings) {
-      value = savedChartSettings;
+    if (newLocation == null && newYear == null) {
+      wipeSettings();
+    } else if (newLocation == null) {
+      updateWithNewYear(newYear: newYear!);
+    } else if (newYear == null) {
+      updateWithNewLocationLocalTZ(newLocation: newLocation);
+    } else {
+      updateWithNewLocationLocalTZAndYear(
+        newLocation: newLocation,
+        newYear: newYear,
+      );
     }
     savedChartSettingsLoaded = true;
     print('CurrentLocationNotifier just updated from savedChartSettings');
@@ -50,9 +64,9 @@ class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
     value = null;
   }
 
-  void updateWithNewLocation({required Location newLocation}) {
+  void updateWithNewLocationLocalTZ({required Location newLocation}) {
     print(
-      'Before assignment: Equal? ${value?.location == newLocation}, value?.location.name: ${value?.location.name}, newLocation?.name: ${newLocation?.name}',
+      'Before assignment: Equal? ${value?.location == newLocation}, value?.location.name: ${value?.location.name}, newLocation?.name: ${newLocation.name}',
     );
     if (newLocation == value?.location) {
       return;
@@ -74,7 +88,10 @@ class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
     print('CurrentLocationNotifier just updated from new Location?');
   }
 
-  void updateWithNewLocationAndYear({required Location newLocation, required int newYear}) {
+  void updateWithNewLocationLocalTZAndYear({
+    required Location newLocation,
+    required int newYear,
+  }) {
     print(
       'Before assignment: Equal? ${value?.location == newLocation}, value?.location.name: ${value?.location.name}, newLocation?.name: ${newLocation.name}, value?.year: ${value?.year}, newYear: $newYear',
     );

@@ -406,7 +406,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
-              context.read<CurrentLocationNotifier>().updateWithNewLocation(
+              context.read<CurrentLocationNotifier>().updateWithNewLocationLocalTZ(
                 _currentPosition,
               );              
               print("Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch");
