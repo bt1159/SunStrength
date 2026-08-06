@@ -1,8 +1,16 @@
 # Daily log
+## 2026-08-06
+I had just started to do a big update so that the y axis labels could be updated when the timezone changes.  But now I realize that isn't needed.  When the user changes the timezone, it will also shift the data points so that the bottom y axis point is STILL 12:00 am.  No need to change the y axis labels.
+
+I have been working on adding the color scale.  I have the start of one, but it still needs work.  Idea: create ANOTHER custom renderwidget and renderbox.  Pass the color scale widget I just made to it as its only child.  Inside the render box, create the vertical tick lines and the labels.  That way, I can control spacing better.  In fact, if I am going to do that, I might as well just create the coloring inside my custom render box as well.  I don't need to create it as a widget and pass it in.
+
+## 2026-08-05
+I am going to continue working on updated the notifier structure.
+
 ## 2026-08-04
 Today, I want to fix the tooltip appearance, especially the location.
 
-Ok, I am doing a bit of an overhaul of the two CNs for settings.  I want the saved settings to contain default location, timezone, twelvehour, and year.  The timezone in particular does NOT need to be the local timezone of the default location.  This should be a saved setting.  I can later update the chart page so that the user can select visible timezone between local (for selected location), default timezone, and some custom value. The question is about current.  I think that current should not necessarily story the timezone associated with the current location but rather whatever the user has selected.  That way, the charting functions can ALWAYS use the current notifier to get the timezone that they should be making visible.  Updating the currently location may or may not mean updating the timezone.  If the user is currently viewing local, maybe it should.  But, if the user is currently viewing a manually selected one or the default, than it should not.  I think that would work.
+Ok, I am doing a bit of an overhaul of the two CNs for settings.  I want the saved settings to contain default location, timezone, twelvehour, and year.  The timezone in particular does NOT need to be the local timezone of the default location.  This should be a saved setting.  I can later update the chart page so that the user can select visible timezone between local (for selected location), default timezone, and some custom value. The question is about current.  I think that current should not necessarily story the timezone associated with the current location but rather whatever the user has selected.  That way, the charting functions can ALWAYS use the current notifier to get the timezone that they should be making visible.  Updating the current location may or may not mean updating the timezone.  If the user is currently viewing local, maybe it should.  But, if the user is currently viewing a manually selected one or the default, than it should not.  I think that would work.
 
 ## 2026-08-03
 Not sure where to start, so running in debug.  I know I was starting by trying to add/fix the functionality about timezone.  Initially, the app was just using NY time all the time.  Instead, I actually want it to find the timezone for the place.  I need to test where I actually got with that.
@@ -24,18 +32,11 @@ Added am/pm setting.
 - Fixed _getLocation blah blah but still working on _getLatLngforLocation or whatever
 
 # Future work
-## When opens to default and then click change location, marker is right but nothing appears in search bar
-
-## Accomodate legitimate null possibilities
-In location_selector_route.dart, there are some functions using the Google Places API that return variables that my code allows to be null.  Currently, if they are null, the function simply returns null, but I do not actually do anything about this is the app.  In other words, if it is actually possible, I need to tell the user something.
-
 ## Google Maps API Marker
 There is some API that has been deprecated.   I think it is the thing that actually creates my marker.  It shows up in the console.
 
 ## Google Maps JavaScript API error in console
 I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXeMmb5BdYlAWG8_Bs&libraries=places:2457 Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading
-
-## Change search bar so that, if no input, don't display anything.
 
 ## Change zooming behavior so that, when map is clicked.  Map does not automatically zoom in a bunch.
 

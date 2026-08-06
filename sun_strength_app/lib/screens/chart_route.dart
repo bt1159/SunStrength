@@ -12,14 +12,14 @@ import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
 
 /// {@template ChartHomePage}
-/// 
+///
 /// Widget called from the main screen that contains the full chart route/page.
-/// 
+///
 /// Its only actual function is to expose the [Consumer] of the [CurrentLocationNotifier] to widgets below.
-/// 
+///
 /// {@endtemplate}
 class ChartHomePage extends StatelessWidget {
- /// {@macro ChartHomePage}
+  /// {@macro ChartHomePage}
   const ChartHomePage({super.key});
 
   @override
@@ -27,39 +27,41 @@ class ChartHomePage extends StatelessWidget {
     return Consumer<CurrentLocationNotifier>(
       builder: (context, currentLocationNotifier, child) {
         print(
-          'about to run builder for consumer of CurrentLocationNotifier.  currentLocatinoNotifer.value.name: ${currentLocationNotifier.value?.name}',
+          'about to run builder for consumer of CurrentLocationNotifier.  currentLocatinoNotifer.value.name: ${currentLocationNotifier.value?.location.name}',
         );
-        return HeatMap(currentlocation: currentLocationNotifier.value);
+        return currentLocationNotifier.value == null
+            ? Placeholder()
+            : HeatMap(currentChartSettings: currentLocationNotifier.value!);
       },
     );
   }
 }
 
 /// {@template HeatMap}
-/// 
-/// [SatefuleWidget] is the primary widgets containing the building blocks that make up 
+///
+/// [SatefuleWidget] is the primary widgets containing the building blocks that make up
 /// the solar strength chart page.
-/// 
+///
 /// This widget holds the [PublicChartRenderObjectWidget], which is the chart itself, including labels, axes, etc.
 /// It also holds the main screen title and all the buttons below.
-/// 
-/// Note: This Widget, the [HeatMap], creates a [HeatMapPainter] and passes that as an input to the 
-/// [PublicChartRenderObjectWidget] that it creates.  See [HeatMapPainter] docs for more info about it.  This 
-/// structure may seem convoluted, but it is done this way so that [PublicChartRenderObjectWidget] does not actually 
-/// need the raw image.  From the widget tree's perspective, the image itself is completely handled here, in [HeatMap].  
+///
+/// Note: This Widget, the [HeatMap], creates a [HeatMapPainter] and passes that as an input to the
+/// [PublicChartRenderObjectWidget] that it creates.  See [HeatMapPainter] docs for more info about it.  This
+/// structure may seem convoluted, but it is done this way so that [PublicChartRenderObjectWidget] does not actually
+/// need the raw image.  From the widget tree's perspective, the image itself is completely handled here, in [HeatMap].
 /// It is created here and used here only.
-/// 
-/// There are two reasons [HeatMap] is stateful.  First, is holds the current K setting, i.e., the frequency band 
-/// currently being displayed.  Secondly, being stateful allows it to build the [ImageContainer] as a [Future] since 
-/// that function is async.  More accurately, building the [ui.Image] the async process.  [HeatMap] handles this by 
-/// defining the [Future] during [initState].  Then, it uses a [FutureBuilder] in the widget tree.  Also, note the 
+///
+/// There are two reasons [HeatMap] is stateful.  First, is holds the current K setting, i.e., the frequency band
+/// currently being displayed.  Secondly, being stateful allows it to build the [ImageContainer] as a [Future] since
+/// that function is async.  More accurately, building the [ui.Image] the async process.  [HeatMap] handles this by
+/// defining the [Future] during [initState].  Then, it uses a [FutureBuilder] in the widget tree.  Also, note the
 /// overriden [didUpdateWidget] that handles a new [HeatMap] widget and checks if the passed location has changed.
-/// 
+///
 /// {@endtemplate}
 class HeatMap extends StatefulWidget {
- /// {@macro HeatMap}
-  const HeatMap({super.key, required this.currentlocation});
-  final Location? currentlocation;
+  /// {@macro HeatMap}
+  const HeatMap({super.key, required this.currentChartSettings});
+  final CurrentChartSettings currentChartSettings;
 
   @override
   State<HeatMap> createState() => _HeatMapState();
@@ -77,17 +79,18 @@ class _HeatMapState extends State<HeatMap> {
   /// UV-C: 2.3 <= k <= 4.6
   Future<ImageContainer?> createImage(double k) async {
     print(
-      'running createImage with lat: ${widget.currentlocation?.lat}, lon: ${widget.currentlocation?.lon}, name: ${widget.currentlocation?.name}',
+      'running createImage with lat: ${widget.currentChartSettings.location.lat}, lon: ${widget.currentChartSettings.location.lon}, name: ${widget.currentChartSettings.location.name}',
     );
-    if (widget.currentlocation == null) return null;
 
     // Generate the Iterable<double> that is all the data points for the chart.
     final Iterable<double> yearSolarStrengthsLocalRelative =
         masterFunctionSolarStrengthArray(
+          timeZone: widget.currentChartSettings.timeZone,
+          year: widget.currentChartSettings.year,
           h: 0,
           k: k,
-          lat: widget.currentlocation!.lat,
-          lon: widget.currentlocation!.lon,
+          lat: widget.currentChartSettings.location.lat,
+          lon: widget.currentChartSettings.location.lon,
         );
     final int pixelH = 96;
     final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
@@ -123,7 +126,7 @@ class _HeatMapState extends State<HeatMap> {
     super.didUpdateWidget(oldWidget);
 
     // Check if the location actually changed between the old widget configuration and the new one
-    if (widget.currentlocation != oldWidget.currentlocation) {
+    if (widget.currentChartSettings != oldWidget.currentChartSettings) {
       print('Location changed! Triggering a new createImage future...');
 
       // Re-run createImage and tell FutureBuilder to rebuild by calling setState
@@ -147,92 +150,106 @@ class _HeatMapState extends State<HeatMap> {
   @override
   Widget build(BuildContext context) {
     print('just started build method for State<HeatMap>');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FutureBuilder<ImageContainer?>(
-          future: _chartImageFuture,
-          builder: (BuildContext context, AsyncSnapshot<ImageContainer?> snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              print('snapshot.connectionState == ConnectionState.waiting');
-              return const Center(
-                child: CircularProgressIndicator(), // Your spinner
-              );
-            }
-            if (snapshot.hasError) {
-              print('snapshot.hasError');
-              return Center(child: Text('Snapshot Error: ${snapshot.error}'));
-            }
-            if (snapshot.hasData) {
-              print('snapshot.hasData');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        spacing: 10,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FutureBuilder<ImageContainer?>(
+            future: _chartImageFuture,
+            builder:
+                (
+                  BuildContext context,
+                  AsyncSnapshot<ImageContainer?> snapshot,
+                ) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    print(
+                      'snapshot.connectionState == ConnectionState.waiting',
+                    );
+                    return const Center(
+                      child: CircularProgressIndicator(), // Your spinner
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    print('snapshot.hasError');
+                    return Center(
+                      child: Text('Snapshot Error: ${snapshot.error}'),
+                    );
+                  }
+                  if (snapshot.hasData) {
+                    print('snapshot.hasData');
 
-              if (snapshot.data == null) {
-                return Center(child: Text('No data returned'));
-              } else {
-                return Column(
-                  children: [
-                    Text(
-                      widget.currentlocation?.name ?? 'No location name found',
-                    ),
-                    PublicChartRenderObjectWidget(
-                      chartArrayWidget: CustomPaint(
-                        painter: HeatMapPainter(snapshot.data!.image),
-                      ),
-                      rawMatrixData: snapshot.data!.rawMatrixData,
-                      nXAxisBuckets: 12,
-                      nYAxisBuckets: 6,
-                      leapYear: snapshot.data!.leapYear,
-                    ),
-                  ],
-                );
-              }
-            }
+                    if (snapshot.data == null) {
+                      return Center(child: Text('No data returned'));
+                    } else {
+                      return Column(
+                        children: [
+                          Text(widget.currentChartSettings.location.name),
+                          PublicChartRenderObjectWidget(
+                            chartArrayWidget: CustomPaint(
+                              painter: HeatMapPainter(snapshot.data!.image),
+                            ),
+                            rawMatrixData: snapshot.data!.rawMatrixData,
+                            nXAxisBuckets: 12,
+                            nYAxisBuckets: 6,
+                            leapYear: snapshot.data!.leapYear,
+                            timeZone: widget.currentChartSettings.timeZone,
+                            year: widget.currentChartSettings.year,
+                          ),
+                        ],
+                      );
+                    }
+                  }
 
-            print(
-              'proceeding to final option after the other three snapshot cases',
-            );
-            // Fallback case (should rarely be reached)
-            if (snapshot.data == null) {
-              return const Center(child: Text('Future returned null'));
-            } else {
-              return const Center(child: Text('No Image'));
-            }
-          },
-        ),
-        Row(
-          children: [
-            ElevatedButton(
-              onPressed: _currentK == 0.3 ? null : () => _updateParameter(0.3),
-              child: Text('Switch to visible light'),
-            ),
-            ElevatedButton(
-              onPressed: _currentK == 0.64
-                  ? null
-                  : () => _updateParameter(0.64),
-              child: Text('Switch to UV-A'),
-            ),
-            ElevatedButton(
-              onPressed: _currentK == 2 ? null : () => _updateParameter(2),
-              child: Text('Switch to UV-B'),
-            ),
-          ],
-        ),
-
-        Row(
-          children: [
-            if (widget.currentlocation != null)
+                  print(
+                    'proceeding to final option after the other three snapshot cases',
+                  );
+                  // Fallback case (should rarely be reached)
+                  if (snapshot.data == null) {
+                    return const Center(child: Text('No location selected'));
+                  } else {
+                    return const Center(child: Text('No Image'));
+                  }
+                },
+          ),
+          const ColorScale(),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: _currentK == 0.3
+                    ? null
+                    : () => _updateParameter(0.3),
+                child: Text('Visible light'),
+              ),
+              ElevatedButton(
+                onPressed: _currentK == 0.64
+                    ? null
+                    : () => _updateParameter(0.64),
+                child: Text('UV-A'),
+              ),
+              ElevatedButton(
+                onPressed: _currentK == 2 ? null : () => _updateParameter(2),
+                child: Text('UV-B'),
+              ),
+            ],
+          ),
+          Row(
+            children: [
               ElevatedButton(
                 onPressed:
                     context
                             .read<SavedSettingsNotifier>()
                             .value
                             ?.defaultLocation ==
-                        widget.currentlocation
+                        widget.currentChartSettings.location
                     ? null
                     : () async {
                         await context
                             .read<SavedSettingsNotifier>()
-                            .updateLocation(widget.currentlocation!);
+                            .updateLocation(
+                              widget.currentChartSettings.location,
+                            );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -249,28 +266,24 @@ class _HeatMapState extends State<HeatMap> {
                         }
                       },
                 child: const Text('Save as default location'),
-              )
-            else
-              ElevatedButton(
-                onPressed: null,
-                child: const Text('Save as default location'),
               ),
-            ElevatedButton(
-              onPressed: () => context.read<UpdateCurrentIndex>()(1),
-              child: Text('Change location'),
-            ),
-          ],
-        ),
-      ],
+              ElevatedButton(
+                onPressed: () => context.read<UpdateCurrentIndex>()(1),
+                child: Text('Change location'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
 /// {@template HeatMapPainter}
-/// 
-/// This widget takes an [ui.Image] object as an input actually "paints" that into a widget.  
+///
+/// This widget takes an [ui.Image] object as an input actually "paints" that into a widget.
 /// This way, this widget is given a canvas and a size and applies the [image] to that.
-/// 
+///
 /// {@endtemplate}
 class HeatMapPainter extends CustomPainter {
   final ui.Image? image;
@@ -310,18 +323,19 @@ class HeatMapPainter extends CustomPainter {
   }
 }
 
-
-/// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned 
+/// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
 /// inside of an [ImageContainer].  This [Future] is called, received, and handled by [HeatMap].
-/// 
-/// The main work of this function is to receive the long, one-dimensional list of [double] sun strength values, reshape them into 
-/// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that 
+///
+/// The main work of this function is to receive the long, one-dimensional list of [double] sun strength values, reshape them into
+/// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that
 /// two-dimensional list of color bytes.
 Future<ImageContainer> generateSunMap({
   required Iterable<double> chronologicalSunStrength,
   required int width,
 }) async {
-  print('running generateSunMap, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, width: $width');
+  print(
+    'running generateSunMap, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, width: $width',
+  );
   const int height = 96; // 15-minute intervals in 24 hours (24 * 4)
   const int bytesPerPixel = 4; // RGBA
 
@@ -331,7 +345,6 @@ Future<ImageContainer> generateSunMap({
     width,
     (_) => List.filled(96, 0.0),
   );
-
 
   int x = -1;
   int yMath = 0;
@@ -394,13 +407,13 @@ Future<ImageContainer> generateSunMap({
 }
 
 /// {@template ImageContainer}
-/// 
-/// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether 
+///
+/// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether
 /// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
-/// 
-/// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to 
+///
+/// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to
 /// [PublicChartRenderObjectWidget] and used to fill out the hover text.
-/// 
+///
 /// {@endtemplate}
 class ImageContainer {
   /// {@macro ImageContainer}
@@ -413,4 +426,32 @@ class ImageContainer {
   final ui.Image image;
   final bool leapYear;
   final List<List<double>> rawMatrixData;
+}
+
+class ColorScale extends StatelessWidget {
+  const ColorScale({super.key});
+
+  // pixelBuffer[targetByteIndex] = (min(1, 3 * strength) * 255).toInt(); // R
+  // pixelBuffer[targetByteIndex + 1] = (min(1, max(0, 3 * strength - 1)) * 255)
+  //     .toInt(); // G
+  // pixelBuffer[targetByteIndex + 2] = (max(0, 3 * strength - 2) * 255)
+  //     .toInt(); // B
+  // pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // width: 200,
+      width: double.infinity,
+      height: 100,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black, Colors.red, Colors.yellow, Colors.white],
+          stops: [0,(1/3),(2/3),1],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+    );
+  }
 }

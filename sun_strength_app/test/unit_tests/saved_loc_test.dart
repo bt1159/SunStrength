@@ -168,9 +168,9 @@ void main() {
       expect(savedLocationNotifier.value?.defaultLocation != null, true);
       expect(listenerCalled, false);
       expect(currentLocationNotifier.savedChartSettingsLoaded, false);
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      expect(currentLocationNotifier.value?.name, locationPxv.name);
+      expect(currentLocationNotifier.value?.location.name, locationPxv.name);
       expect(listenerCalled, true);
     });
     test('Loading saved and updating to something else', () async {
@@ -184,16 +184,13 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
-
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateWithNewLocationLocalTZ(locationTest);
+      currentLocationNotifier.updateCurrentChartSettings(newLocation: locationTest);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 2);
-      expect(currentLocationNotifier.value?.name, locationTest.name);
+      expect(currentLocationNotifier.value?.location.name, locationTest.name);
     });
     test('Changing location to null after a non-null', () async {
       // Test that CurrentLocationNotifier correctly updates to null after having a real location
@@ -202,7 +199,7 @@ void main() {
       int listenerCalledCounter = 0;
       currentLocationNotifier.addListener(() {
         listenerCalledCounter++;
-        print('inside currentLocationNotifier, this should be running immediately after notifyListeners.  new value?.name: ${currentLocationNotifier.value?.name}');
+        print('inside currentLocationNotifier, this should be running immediately after notifyListeners.  new value?.name: ${currentLocationNotifier.value?.location.name}');
       });
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
@@ -211,11 +208,11 @@ void main() {
           SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      currentLocationNotifier.updateWithInitialSaved(newLocation: savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateWithNewLocationLocalTZ(locationTest);
+      currentLocationNotifier.updateCurrentChartSettings(newLocation: locationTest);
 
-      currentLocationNotifier.updateWithNewLocationLocalTZ(null);
+      // currentLocationNotifier.updateWithNewLocationLocalTZ(null);
 
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 3);
@@ -238,13 +235,13 @@ void main() {
           SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       final int lockedCounter = listenerCalledCounter;
-      currentLocationNotifier.updateWithNewLocationLocalTZ(savedLocationNotifier.value?.defaultLocation);
+      currentLocationNotifier.updateCurrentChartSettings(newLocation: savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, lockedCounter);
-      expect(currentLocationNotifier.value?.name, savedLocationNotifier.value?.defaultLocation?.name);
+      expect(currentLocationNotifier.value?.location.name, savedLocationNotifier.value?.defaultLocation?.name);
     });
   });
 }

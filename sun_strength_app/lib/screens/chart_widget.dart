@@ -21,6 +21,8 @@ class PublicChartRenderObjectWidget extends StatefulWidget {
     required this.nYAxisBuckets,
     required this.leapYear,
     required this.rawMatrixData,
+    required this.year,
+    required this.timeZone,
   }) : nDays = (leapYear ? 366 : 365);
 
   final Widget chartArrayWidget;
@@ -29,6 +31,8 @@ class PublicChartRenderObjectWidget extends StatefulWidget {
   final bool leapYear;
   final List<List<double>> rawMatrixData;
   final int nDays;
+  final int year;
+  final tz.Location timeZone;
 
   @override
   State<PublicChartRenderObjectWidget> createState() =>
@@ -61,20 +65,19 @@ class _PublicChartRenderObjectWidgetState
     // Look up data parameters safely.  First index is day, then time
     final double value = widget.rawMatrixData[dayIndex][timeIndex];
 
-    final int yearInput = 2026;
-    final String tZoneInput = "America/New_York";
-    final tz.Location localTZ = tz.getLocation(tZoneInput);
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
     final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
-      localTZ,
-      yearInput,
+      widget.timeZone,
+      widget.year,
     ).add(Duration(milliseconds: datetimeDelta));
 
     setState(() {
       _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent;
-      _tooltipText12 = '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
-      _tooltipText24 = '${ DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
+      _tooltipText12 =
+          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
+      _tooltipText24 =
+          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
     });
   }
 
@@ -90,7 +93,9 @@ class _PublicChartRenderObjectWidgetState
 
   @override
   Widget build(BuildContext context) {
-    print('running _PublicChartRenderObjectWidgetState.build, ${_hoverBoxPosition == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}');
+    print(
+      'running _PublicChartRenderObjectWidgetState.build, ${_hoverBoxPosition == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}',
+    );
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -119,7 +124,9 @@ class _PublicChartRenderObjectWidgetState
           ),
         ),
         // 2. The Floating Tooltip Popup Layer
-        if (_hoverBoxPosition != null && _tooltipText12 != null && _tooltipText24 != null)
+        if (_hoverBoxPosition != null &&
+            _tooltipText12 != null &&
+            _tooltipText24 != null)
           Positioned(
             // Position it dynamically relative to the cursor position!
             left: _hoverBoxPosition!
@@ -134,7 +141,8 @@ class _PublicChartRenderObjectWidgetState
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Selector<SavedSettingsNotifier, bool>(
-                  selector: (_, savedSettingsNotifier) => savedSettingsNotifier.value?.twelveHour ?? true,
+                  selector: (_, savedSettingsNotifier) =>
+                      savedSettingsNotifier.value?.twelveHour ?? true,
                   builder: (_, twelveHour, _) => Text(
                     twelveHour ? _tooltipText12! : _tooltipText24!,
                     style: const TextStyle(color: Colors.white, fontSize: 12),
@@ -703,3 +711,4 @@ enum TimeLabelList {
     return null; // Handle invalid numbers safely
   }
 }
+

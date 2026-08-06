@@ -1,7 +1,6 @@
 import 'dart:math';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:lat_lng_to_timezone/lat_lng_to_timezone.dart' as tzmap;
 
 const kDebugMode = true;
 
@@ -66,12 +65,12 @@ Iterable<double> masterFunctionSolarStrengthArray({
   required double h,
   required num lat,
   required num lon,
+  required tz.Location timeZone,
+  required int year,
 }) {
   print('running masterFunctionSolarStrengthArray');
-  final String timeZoneName = tzmap.latLngToTimezoneString(lat, lon);
-  final Iterable<({double earthRotationAngle, double trueAnomaly})>
-  yearTrueAnomalies = getYearTrueAnomalies(
-    tZoneInput: timeZoneName == 'unknown' ? null : timeZoneName,
+  final TimedOrbitData yearTrueAnomalies = getYearTrueAnomalies(
+    timeZone: timeZone, yearInput: year,
   );
   final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(
     inputData: yearTrueAnomalies,
@@ -91,29 +90,13 @@ Iterable<double> masterFunctionSolarStrengthArray({
 /// solar strength data point.  time zone is an input here so that actual offset from J2000 to 12am
 /// Jan 01 at this time zone and with the given year can be calculated
 Iterable<({double earthRotationAngle, double trueAnomaly})>
-getYearTrueAnomalies({int yearInput = 2026, String? tZoneInput}) {
+getYearTrueAnomalies({required int yearInput, required tz.Location timeZone}) {
   print(
-    'started getYearTrueAnomalies for year: $yearInput and tZoneInput before null assign: $tZoneInput',
+    'started getYearTrueAnomalies for year: $yearInput and tZoneInput before null assign: ${timeZone.name}',
   );
 
-  tZoneInput ??= "America/New_York";
-
-  tz.initializeTimeZones();
-
-  tz.Location localTZ;
-
-  try {
-    localTZ = tz.getLocation(tZoneInput);
-    print(
-      'inside getYearTrueAnomalies, trying to see if tZoneInput was used correctly.  locatTZ: $localTZ',
-    );
-  } catch (error) {
-    print(error);
-    localTZ = tz.getLocation("America/New_York");
-  }
-
   final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
-  final tz.TZDateTime date0 = tz.TZDateTime(localTZ, yearInput, 1, 1, 0, 0, 0);
+  final tz.TZDateTime date0 = tz.TZDateTime(timeZone, yearInput, 1, 1, 0, 0, 0);
   final int nDays = date0
       .copyWith(year: date0.year + 1)
       .difference(date0)

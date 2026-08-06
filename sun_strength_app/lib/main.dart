@@ -10,12 +10,6 @@ import 'package:provider/provider.dart';
 // and restrict it to HTTP Referrers and add your local development URL
 // (http://localhost:*) and your production domain so others cannot steal it.
 
-// TODO: My chart is always displayed in Eastern time (not sure if I hardcoded that or it is using the PC's locat time).
-// It should default to local time for that location but give an option.
-
-// TODO: Convert saved location notifier to a more broad settings notifier.  Should it be a custom class for settings and maintain
-// a ValueNotifier, or just make each setting a separate thing.  On the other hand, should they even be seperate settings?
-
 void main() {
   print('running main()');
   runApp(const MyApp());
@@ -119,9 +113,6 @@ class AppGateway extends StatelessWidget {
   }
 }
 
-// TODO I don't like how this works right now.  Passing these update functions is super clunky and dumb.  Consider a Provider since the function will never change.
-
-// TODO I also need to update the two children here to get rid of their own Scaffolds.
 class MainShellScreen extends StatefulWidget {
   const MainShellScreen({super.key, this.startingIndex = 0});
 

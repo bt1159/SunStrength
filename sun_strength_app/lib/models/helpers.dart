@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:ffi';
+// import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -160,3 +160,5 @@ class SavedAppSettings {
   int get hashCode =>
       Object.hash(defaultLocation, defaultTimeZone, twelveHour, defaultYear);
 }
+
+typedef TimedOrbitData = Iterable<({double earthRotationAngle, double trueAnomaly})>;

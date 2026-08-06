@@ -37,10 +37,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     super.initState();
     final Location? currentAppLocation = context
         .read<CurrentLocationNotifier>()
-        .value;
+        .value
+        ?.location;
     if (currentAppLocation != null) {
-      _currentPosition = currentAppLocation;
-      _updateMarker(_currentPosition);
+      _updateMarker(currentAppLocation);
     } else {
       _currentPosition = Location.fromLatLng(
         latLng: LatLng(39.8283, -98.5795),
@@ -49,7 +49,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     }
   }
 
-  // updates state variable to new location.  The state variable's value will be sent to notifier if the user clicks button to generate map
+  /// updates state variable to new location.  The state variable's value will be sent to notifier if the user clicks button to generate map
   void _updateMarker(Location location) {
     setState(() {
       _currentPosition = location;
@@ -70,10 +70,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // 1. Fetch autocomplete suggestions as the user types
-  Future<List<Map<String, String>>> _getAutocompleteSuggestions(
+  Future<List<Map<String, String>>?> _getAutocompleteSuggestions(
     String input,
   ) async {
-    if (input.isEmpty) return [];
+    if (input.isEmpty) {
+      print('inside _getAutocompleteSuggestions, input is empty');
+      return null;
+    }
+    print('inside _getAutocompleteSuggestions, input is NOT empty');
 
     try {
       // 1. Prepare and send the Google Maps Autocomplete request across the JS bridge
@@ -323,13 +327,12 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             );
             _updateMarker(newLocation);
             _moveMapTo(tappedPosition);
-            
+
             print('Finishing GoogleMap.onTap()');
           },
         ),
 
         // THE FLOATING SEARCH BAR
-        // TODO: DO not show No Items Found when nothing is typed
         Positioned(
           top: 20,
           left: 20,
@@ -352,8 +355,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   );
                 },
                 // Calls Google API as user types
-                suggestionsCallback: (search) =>
-                    _getAutocompleteSuggestions(search),
+                suggestionsCallback: (search) => _getAutocompleteSuggestions(search),
 
                 // Renders the dropdown items
                 itemBuilder: (context, suggestion) {
@@ -362,30 +364,42 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     title: Text(suggestion['description']!),
                   );
                 },
+                // emptyBuilder: ,
 
                 // ACTION: User selects an address suggestion
                 onSelected: (suggestion) async {
                   print('Running TypeAheadField.onSelected');
                   _searchController.text = suggestion['description']!;
 
-                  print('In TypeAheadField.onSelected, about to call and await _getLatLngFromPlaceId()');
+                  print(
+                    'In TypeAheadField.onSelected, about to call and await _getLatLngFromPlaceId()',
+                  );
                   LatLng? targetCoordinates = await _getLatLngFromPlaceId(
                     suggestion['place_id']!,
                   );
-                  print('In TypeAheadField.onSelected, just got back response from _getLatLngFromPlaceId()');
+                  print(
+                    'In TypeAheadField.onSelected, just got back response from _getLatLngFromPlaceId()',
+                  );
                   if (targetCoordinates != null) {
                     final Location newLocation = Location.fromLatLng(
                       latLng: targetCoordinates,
                       name: _searchController.text,
                     );
-                  print('In TypeAheadField.onSelected, targetCoordinates received were NOT null');
-                    
+                    print(
+                      'In TypeAheadField.onSelected, targetCoordinates received were NOT null',
+                    );
+
                     _updateMarker(newLocation);
-                    _moveMapTo(targetCoordinates);  //This is actually async, does that matter?
-                  print('In TypeAheadField.onSelected, just triggered _updateMarker and _moveMapTo');
+                    _moveMapTo(
+                      targetCoordinates,
+                    ); //This is actually async, does that matter?
+                    print(
+                      'In TypeAheadField.onSelected, just triggered _updateMarker and _moveMapTo',
+                    );
                   } else {
-                    
-                  print('In TypeAheadField.onSelected, targetCoordinates received were null');
+                    print(
+                      'In TypeAheadField.onSelected, targetCoordinates received were null',
+                    );
                   }
                 },
               ),
@@ -406,10 +420,12 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
-              context.read<CurrentLocationNotifier>().updateWithNewLocationLocalTZ(
-                _currentPosition,
-              );              
-              print("Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch");
+              context
+                  .read<CurrentLocationNotifier>()
+                  .updateCurrentChartSettings(newLocation: _currentPosition);
+              print(
+                "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",
+              );
               context.read<UpdateCurrentIndex>()(0);
               print("Just triggerred an index switch");
             },
