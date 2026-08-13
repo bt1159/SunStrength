@@ -1,4 +1,4 @@
-import 'dart:math';
+// import 'dart:math';
 // import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -8,8 +8,10 @@ import 'package:sun_strength_app/main.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
+import 'package:sun_strength_app/screens/color_scale_widget.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
+
 
 /// {@template ChartHomePage}
 ///
@@ -42,12 +44,12 @@ class ChartHomePage extends StatelessWidget {
 /// [SatefuleWidget] is the primary widgets containing the building blocks that make up
 /// the solar strength chart page.
 ///
-/// This widget holds the [PublicChartRenderObjectWidget], which is the chart itself, including labels, axes, etc.
+/// This widget holds the [ChartWidget], which is the chart itself, including labels, axes, etc.
 /// It also holds the main screen title and all the buttons below.
 ///
 /// Note: This Widget, the [HeatMap], creates a [HeatMapPainter] and passes that as an input to the
-/// [PublicChartRenderObjectWidget] that it creates.  See [HeatMapPainter] docs for more info about it.  This
-/// structure may seem convoluted, but it is done this way so that [PublicChartRenderObjectWidget] does not actually
+/// [ChartWidget] that it creates.  See [HeatMapPainter] docs for more info about it.  This
+/// structure may seem convoluted, but it is done this way so that [ChartWidget] does not actually
 /// need the raw image.  From the widget tree's perspective, the image itself is completely handled here, in [HeatMap].
 /// It is created here and used here only.
 ///
@@ -99,7 +101,7 @@ class _HeatMapState extends State<HeatMap> {
     // Use the data points and the pixel width the create the actual chart
     final Future<ImageContainer> output = generateSunMap(
       chronologicalSunStrength: yearSolarStrengthsLocalRelative,
-      width: pixelW,
+      pixelWidth: pixelW,
     );
 
     // I need a more robust way to determin leap year or not
@@ -152,128 +154,133 @@ class _HeatMapState extends State<HeatMap> {
     print('just started build method for State<HeatMap>');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        spacing: 10,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FutureBuilder<ImageContainer?>(
-            future: _chartImageFuture,
-            builder:
-                (
-                  BuildContext context,
-                  AsyncSnapshot<ImageContainer?> snapshot,
-                ) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    print(
-                      'snapshot.connectionState == ConnectionState.waiting',
-                    );
-                    return const Center(
-                      child: CircularProgressIndicator(), // Your spinner
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    print('snapshot.hasError');
-                    return Center(
-                      child: Text('Snapshot Error: ${snapshot.error}'),
-                    );
-                  }
-                  if (snapshot.hasData) {
-                    print('snapshot.hasData');
-
-                    if (snapshot.data == null) {
-                      return Center(child: Text('No data returned'));
-                    } else {
-                      return Column(
-                        children: [
-                          Text(widget.currentChartSettings.location.name),
-                          PublicChartRenderObjectWidget(
-                            chartArrayWidget: CustomPaint(
-                              painter: HeatMapPainter(snapshot.data!.image),
-                            ),
-                            rawMatrixData: snapshot.data!.rawMatrixData,
-                            nXAxisBuckets: 12,
-                            nYAxisBuckets: 6,
-                            leapYear: snapshot.data!.leapYear,
-                            timeZone: widget.currentChartSettings.timeZone,
-                            year: widget.currentChartSettings.year,
-                          ),
-                        ],
+      child: Container(
+        constraints: BoxConstraints(maxWidth: 800),
+        child: Column(
+          spacing: 10,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FutureBuilder<ImageContainer?>(
+              future: _chartImageFuture,
+              builder:
+                  (
+                    BuildContext context,
+                    AsyncSnapshot<ImageContainer?> snapshot,
+                  ) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      print(
+                        'snapshot.connectionState == ConnectionState.waiting',
+                      );
+                      return const Center(
+                        child: CircularProgressIndicator(), // Your spinner
                       );
                     }
-                  }
+                    if (snapshot.hasError) {
+                      print('snapshot.hasError');
+                      return Center(
+                        child: Text('Snapshot Error: ${snapshot.error}'),
+                      );
+                    }
+                    if (snapshot.hasData) {
+                      print('snapshot.hasData');
 
-                  print(
-                    'proceeding to final option after the other three snapshot cases',
-                  );
-                  // Fallback case (should rarely be reached)
-                  if (snapshot.data == null) {
-                    return const Center(child: Text('No location selected'));
-                  } else {
-                    return const Center(child: Text('No Image'));
-                  }
-                },
-          ),
-          const ColorScale(),
-          Row(
-            children: [
-              ElevatedButton(
-                onPressed: _currentK == 0.3
-                    ? null
-                    : () => _updateParameter(0.3),
-                child: Text('Visible light'),
-              ),
-              ElevatedButton(
-                onPressed: _currentK == 0.64
-                    ? null
-                    : () => _updateParameter(0.64),
-                child: Text('UV-A'),
-              ),
-              ElevatedButton(
-                onPressed: _currentK == 2 ? null : () => _updateParameter(2),
-                child: Text('UV-B'),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              ElevatedButton(
-                onPressed:
-                    context
-                            .read<SavedSettingsNotifier>()
-                            .value
-                            ?.defaultLocation ==
-                        widget.currentChartSettings.location
-                    ? null
-                    : () async {
-                        await context
-                            .read<SavedSettingsNotifier>()
-                            .updateLocation(
-                              widget.currentChartSettings.location,
-                            );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Location saved as default'),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 2),
-                              width:
-                                  200, // Narrows the width to look like a toast
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                      if (snapshot.data == null) {
+                        return Center(child: Text('No data returned'));
+                      } else {
+                        return Column(
+                          children: [
+                            Text(widget.currentChartSettings.location.name),
+                            ChartWidget(
+                              chartArrayWidget: CustomPaint(
+                                painter: HeatMapPainter(snapshot.data!.image),
                               ),
+                              rawMatrixData: snapshot.data!.rawMatrixData,
+                              nXAxisBuckets: 12,
+                              nYAxisBuckets: 6,
+                              leapYear: snapshot.data!.leapYear,
+                              timeZone: widget.currentChartSettings.timeZone,
+                              year: widget.currentChartSettings.year,
                             ),
-                          );
-                        }
-                      },
-                child: const Text('Save as default location'),
-              ),
-              ElevatedButton(
-                onPressed: () => context.read<UpdateCurrentIndex>()(1),
-                child: Text('Change location'),
-              ),
-            ],
-          ),
-        ],
+                          ],
+                        );
+                      }
+                    }
+
+                    print(
+                      'proceeding to final option after the other three snapshot cases',
+                    );
+                    // Fallback case (should rarely be reached)
+                    if (snapshot.data == null) {
+                      return const Center(child: Text('No location selected'));
+                    } else {
+                      return const Center(child: Text('No Image'));
+                    }
+                  },
+            ),
+            const ColorScaleWidget(),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _currentK == 0.3
+                      ? null
+                      : () => _updateParameter(0.3),
+                  child: Text('Visible light'),
+                ),
+                ElevatedButton(
+                  onPressed: _currentK == 0.64
+                      ? null
+                      : () => _updateParameter(0.64),
+                  child: Text('UV-A'),
+                ),
+                ElevatedButton(
+                  onPressed: _currentK == 2 ? null : () => _updateParameter(2),
+                  child: Text('UV-B'),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed:
+                      context
+                              .read<SavedSettingsNotifier>()
+                              .value
+                              ?.defaultLocation ==
+                          widget.currentChartSettings.location
+                      ? null
+                      : () async {
+                          await context
+                              .read<SavedSettingsNotifier>()
+                              .updateLocation(
+                                widget.currentChartSettings.location,
+                              );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Location saved as default',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                                width:
+                                    200, // Narrows the width to look like a toast
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                  child: const Text('Save as default location'),
+                ),
+                ElevatedButton(
+                  onPressed: () => context.read<UpdateCurrentIndex>()(1),
+                  child: Text('Change location'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -331,18 +338,18 @@ class HeatMapPainter extends CustomPainter {
 /// two-dimensional list of color bytes.
 Future<ImageContainer> generateSunMap({
   required Iterable<double> chronologicalSunStrength,
-  required int width,
+  required int pixelWidth,
 }) async {
   print(
-    'running generateSunMap, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, width: $width',
+    'running generateSunMap, chronologicalSunStrength.length: ${chronologicalSunStrength.length}, pixelWidth: $pixelWidth',
   );
   const int height = 96; // 15-minute intervals in 24 hours (24 * 4)
   const int bytesPerPixel = 4; // RGBA
 
   // 1. Allocate the final flat byte buffer upfront.
-  final Uint8List pixelBuffer = Uint8List(width * height * bytesPerPixel);
+  final Uint8List pixelBuffer = Uint8List(pixelWidth * height * bytesPerPixel);
   final List<List<double>> rawMatrixData = List.generate(
-    width,
+    pixelWidth,
     (_) => List.filled(96, 0.0),
   );
 
@@ -363,14 +370,13 @@ Future<ImageContainer> generateSunMap({
     int yImage = 95 - yMath; // 96 - 1
 
     // Calculate the exact target starting byte in row-major order
-    int targetByteIndex = (yImage * width + x) * 4;
-
-    pixelBuffer[targetByteIndex] = (min(1, 3 * strength) * 255).toInt(); // R
-    pixelBuffer[targetByteIndex + 1] = (min(1, max(0, 3 * strength - 1)) * 255)
-        .toInt(); // G
-    pixelBuffer[targetByteIndex + 2] = (max(0, 3 * strength - 2) * 255)
-        .toInt(); // B
-    pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
+    int targetByteIndex = (yImage * pixelWidth + x) * 4;
+    pixelBuffer.replaceRange(targetByteIndex, targetByteIndex + 4, pixelByte(strength));
+    // final Color color = colorFromMap(strength);
+    // pixelBuffer[targetByteIndex] = color.r.toInt(); // R
+    // pixelBuffer[targetByteIndex + 1] = color.g.toInt(); // G
+    // pixelBuffer[targetByteIndex + 2] =color.b.toInt(); // B
+    // pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
 
     rawMatrixData[x][yImage] = strength;
 
@@ -392,7 +398,7 @@ Future<ImageContainer> generateSunMap({
   );
   final ui.ImageDescriptor descriptor = ui.ImageDescriptor.raw(
     buffer,
-    width: width,
+    width: pixelWidth,
     height: height,
     pixelFormat: ui.PixelFormat.rgba8888,
   );
@@ -401,7 +407,7 @@ Future<ImageContainer> generateSunMap({
   final ui.FrameInfo frame = await codec.getNextFrame();
   return ImageContainer(
     image: frame.image,
-    leapYear: width == 366,
+    leapYear: pixelWidth == 366,
     rawMatrixData: rawMatrixData,
   );
 }
@@ -412,7 +418,7 @@ Future<ImageContainer> generateSunMap({
 /// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
 ///
 /// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to
-/// [PublicChartRenderObjectWidget] and used to fill out the hover text.
+/// [ChartWidget] and used to fill out the hover text.
 ///
 /// {@endtemplate}
 class ImageContainer {
@@ -426,32 +432,4 @@ class ImageContainer {
   final ui.Image image;
   final bool leapYear;
   final List<List<double>> rawMatrixData;
-}
-
-class ColorScale extends StatelessWidget {
-  const ColorScale({super.key});
-
-  // pixelBuffer[targetByteIndex] = (min(1, 3 * strength) * 255).toInt(); // R
-  // pixelBuffer[targetByteIndex + 1] = (min(1, max(0, 3 * strength - 1)) * 255)
-  //     .toInt(); // G
-  // pixelBuffer[targetByteIndex + 2] = (max(0, 3 * strength - 2) * 255)
-  //     .toInt(); // B
-  // pixelBuffer[targetByteIndex + 3] = 255; // A (Opaque)
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      // width: 200,
-      width: double.infinity,
-      height: 100,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.black, Colors.red, Colors.yellow, Colors.white],
-          stops: [0,(1/3),(2/3),1],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-    );
-  }
 }

@@ -12,9 +12,9 @@ import 'package:provider/provider.dart';
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that constains the a [_ChartRenderObjectWidget] and also super imposes the hover tooltip when showing.
 /// {@endtemplate}
-class PublicChartRenderObjectWidget extends StatefulWidget {
+class ChartWidget extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
-  const PublicChartRenderObjectWidget({
+  const ChartWidget({
     super.key,
     required this.chartArrayWidget,
     required this.nXAxisBuckets,
@@ -35,12 +35,12 @@ class PublicChartRenderObjectWidget extends StatefulWidget {
   final tz.Location timeZone;
 
   @override
-  State<PublicChartRenderObjectWidget> createState() =>
-      _PublicChartRenderObjectWidgetState();
+  State<ChartWidget> createState() =>
+      _ChartWidgetState();
 }
 
-class _PublicChartRenderObjectWidgetState
-    extends State<PublicChartRenderObjectWidget> {
+class _ChartWidgetState
+    extends State<ChartWidget> {
   // Tooltip State Variables
   Offset? _hoverBoxPosition;
   String? _tooltipText12;
@@ -464,7 +464,9 @@ class _ChartRenderObject extends RenderBox
     if (_chartArray != null) {
       _chartArray!.layout(
         BoxConstraints.tightFor(
-          width: min(600, constraints.maxWidth - maxYAxisLabelWidth),
+          // width: min(600, constraints.maxWidth - maxYAxisLabelWidth),
+          
+          width: constraints.maxWidth - maxYAxisLabelWidth,
           height: heatMapHeight,
         ),
         parentUsesSize: true,
@@ -528,7 +530,7 @@ class _ChartRenderObject extends RenderBox
 
       // 3. Calculate the absolute pixel origin of the heatmap on the screen
       final Offset canvasOrigin = offset + chartParentData.offset;
-      final Size chartSize = chartCanvas.size; // This will be your (600, 300)
+      final Size chartSize = chartCanvas.size;
 
       // 4. Set up your thin grid paint styling
       final Paint gridPaint = Paint()
@@ -537,7 +539,6 @@ class _ChartRenderObject extends RenderBox
         ..style = PaintingStyle.stroke;
 
       // 5. Draw Vertical Grid Lines (X-Axis Dividers)
-
       final int nDays = _leapYear ? 366 : 365;
       final double xPerDay = chartSize.width / nDays;
       for (int i = 1; i < 12; i++) {

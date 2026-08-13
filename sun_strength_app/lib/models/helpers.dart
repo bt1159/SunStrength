@@ -1,9 +1,36 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:color_map/color_map.dart';
 // import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vector_math/vector_math_64.dart';
+
+final Colormap colorMap = Colormaps.inferno;
+Color colorFromMap(double strength) {
+  strength = strength.clamp(0.0, 1.0);
+  final Vector4 vector = colorMap(strength);
+  final Color output = Color.fromARGB(
+    vector.w.toInt(),
+    vector.x.toInt(),
+    vector.y.toInt(),
+    vector.z.toInt(),
+  );
+  return output;
+}
+
+Uint8List pixelByte(double strength) {
+  final Color color = colorFromMap(strength);
+  final Uint8List output = Uint8List(4);
+  output[0] = color.r.toInt(); // R
+  output[1] = color.g.toInt(); // G
+  output[2] = color.b.toInt(); // B
+  output[3] = 255; // A (Opaque)
+  return output;
+}
 
 typedef LocationCallback = void Function({required Location location});
 
@@ -161,4 +188,5 @@ class SavedAppSettings {
       Object.hash(defaultLocation, defaultTimeZone, twelveHour, defaultYear);
 }
 
-typedef TimedOrbitData = Iterable<({double earthRotationAngle, double trueAnomaly})>;
+typedef TimedOrbitData =
+    Iterable<({double earthRotationAngle, double trueAnomaly})>;

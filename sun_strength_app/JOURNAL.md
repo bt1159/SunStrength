@@ -1,4 +1,11 @@
 # Daily log
+## 2026-08-13
+I am going to continue with the color scale.  I also want to look into what is happening with the colors themselves.  It almost looks like there is a color a bit on the yellow side of red that is the same color as one a bit on the black side of red.  The effect is a band that all looks plain red.  It looks weird.
+
+The color bar is now done.  Next, I want to fix the width issue.  Currently, the width of the chart is hard coded in, but it is written in a confusing way that makes it extremely hard to match with the bar.  I want to instead set it up higher in the tree.  Eventually, this could become responsive.
+
+I am currently in the middle of switching to the inferno colormap.  This is working for the 2D chart, but I still need to do it for teh color scale.  I probably have to rework to no longer be a rectangle drawn in the paint() method but rather a image like the chart.  Is there a simpler way?
+
 ## 2026-08-06
 I had just started to do a big update so that the y axis labels could be updated when the timezone changes.  But now I realize that isn't needed.  When the user changes the timezone, it will also shift the data points so that the bottom y axis point is STILL 12:00 am.  No need to change the y axis labels.
 
