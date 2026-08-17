@@ -1,10 +1,23 @@
 # Daily log
+##2026-08-17
+Trying to fix color scale and get it working with the inferno color scheme.
+
+##2026-08-14
+I finally have the 2D heatmap working properly with the inferno color scheme.  I think I like it.  The blue/purple for low values takes some getting used to, but it probably makes sense.  The only problem I have right now is that the high end (>90%) doesn't really look bright enough.  It's not "scary" enough.  It should look dangerously hot...like it's scorching.  It looks like inferno tops out at a mid-pale yellow, while I want it to top out at actual white.
+
+I have not yet converted the scale.  That might help since then you are not being distracted by a scale that shows white at the top.
+
+I am still in the process of converting the color scale.  I just got an error saying: something about a range error.  Value was -400 but should've been between 0 and 16000.
+This is almost certainly in teh color scale and when converting the Iterable<double> to colors.  Because, with 4 values per pixel, that would be 16000 length.  I have no idea why it is trying to find index -400.
+
 ## 2026-08-13
 I am going to continue with the color scale.  I also want to look into what is happening with the colors themselves.  It almost looks like there is a color a bit on the yellow side of red that is the same color as one a bit on the black side of red.  The effect is a band that all looks plain red.  It looks weird.
 
 The color bar is now done.  Next, I want to fix the width issue.  Currently, the width of the chart is hard coded in, but it is written in a confusing way that makes it extremely hard to match with the bar.  I want to instead set it up higher in the tree.  Eventually, this could become responsive.
 
 I am currently in the middle of switching to the inferno colormap.  This is working for the 2D chart, but I still need to do it for teh color scale.  I probably have to rework to no longer be a rectangle drawn in the paint() method but rather a image like the chart.  Is there a simpler way?
+
+ERROR: I need to NOT use replaceRange() I think.  I got an error saying that I cannot remove from a fixed-length list.
 
 ## 2026-08-06
 I had just started to do a big update so that the y axis labels could be updated when the timezone changes.  But now I realize that isn't needed.  When the user changes the timezone, it will also shift the data points so that the bottom y axis point is STILL 12:00 am.  No need to change the y axis labels.
@@ -39,6 +52,9 @@ Added am/pm setting.
 - Fixed _getLocation blah blah but still working on _getLatLngforLocation or whatever
 
 # Future work
+## Tweak the structure of my custom Render Objects.
+Instead of passing a child to them, which requires using CustomPaint(painter: ImagePainter(image: XXXXX)), instead bury all that inside the RenderObjectWidget so that it builds the child widget itself.  OR, add a container above it that does that logic.  This will simplify the tree.
+
 ## Google Maps API Marker
 There is some API that has been deprecated.   I think it is the thing that actually creates my marker.  It shows up in the console.
 

@@ -1,6 +1,6 @@
+import 'dart:ui' as ui;
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
 import 'package:color_map/color_map.dart';
 // import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -9,26 +9,58 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-final Colormap colorMap = Colormaps.inferno;
-Color colorFromMap(double strength) {
-  strength = strength.clamp(0.0, 1.0);
-  final Vector4 vector = colorMap(strength);
-  final Color output = Color.fromARGB(
-    vector.w.toInt(),
-    vector.x.toInt(),
-    vector.y.toInt(),
-    vector.z.toInt(),
-  );
+final Colormap constColorMap = Colormaps.magma;
+// final Colormap colormap = Colormaps.inferno;
+
+// Outputs a vector with four [double] values from 0 to 255 representing r, g, b, a
+Vector4 colorValuesFromMap(
+  double strength, [
+  bool debug = false,
+  Colormap? colormap,
+]) {
+  // void colorTest(double strength) {
+  final Colormap localColorMap = colormap ?? constColorMap;
+  final Vector4 vector = localColorMap(strength);
+  final double r = vector.x * 255;
+  final double g = vector.y * 255;
+  final double b = vector.z * 255;
+  final double a = vector.w * 255;
+  final Vector4 output = Vector4(r, g, b, a);
+  if (debug) {
+    print('a: $a');
+    print('r: $r');
+    print('g: $g');
+    print('b: $b');
+    print('output: $output');
+  }
   return output;
 }
 
-Uint8List pixelByte(double strength) {
-  final Color color = colorFromMap(strength);
+Uint8List pixelByte(double strength, Colormap? colormap, [bool debug = false]) {
+  if (debug) {
+    print('starting color work for next pixel');
+  }
+  final Vector4 vector = colorValuesFromMap(strength, debug, colormap);
+  if (debug) {
+    print('vector: $vector');
+  }
   final Uint8List output = Uint8List(4);
-  output[0] = color.r.toInt(); // R
-  output[1] = color.g.toInt(); // G
-  output[2] = color.b.toInt(); // B
+  final int r = vector.x.toInt(); // R
+  final int g = vector.y.toInt(); // G
+  final int b = vector.z.toInt(); // B
+  if (debug) {
+    print('r:$r');
+    print('g:$g');
+    print('b:$b');
+  }
+
+  output[0] = r; // R
+  output[1] = g; // G
+  output[2] = b; // B
   output[3] = 255; // A (Opaque)
+  if (debug) {
+    print('output: $output');
+  }
   return output;
 }
 
@@ -190,3 +222,155 @@ class SavedAppSettings {
 
 typedef TimedOrbitData =
     Iterable<({double earthRotationAngle, double trueAnomaly})>;
+
+/// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
+/// inside of an [ImageContainer].  This [Future] is called, received, and handled by [HeatMap].
+///
+/// The main work of this function is to receive the long, one-dimensional list of [double] sun strength values, reshape them into
+/// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that
+/// two-dimensional list of color bytes.
+///
+/// Note: [valueIterable] should be order as if it were a Iterable&ltIterable&ltdouble&gt&gt that has been flattened where each
+/// inner list is a vertical column of pixels.  In those vertical lists of pixels, the bottom-most pixel is first.  The left-most
+/// column of pixels is first.  This ordering is driven by the calculation of solar strength where the morning is at the bottom of
+/// the chart.
+Future<ImageContainer> generateColorMap({
+  required Iterable<double> valueIterable,
+  required int pixelWidth,
+  Colormap? colormap,
+}) async {
+  print(
+    'running generateColorMap, chronologicalSunStrength.length: ${valueIterable.length}, pixelWidth: $pixelWidth',
+  );
+
+  const int bytesPerPixel = 4; // RGBA
+  final int pixelHeight = (valueIterable.length / pixelWidth).toInt();
+
+  // 1. Allocate the final flat byte buffer upfront.
+  final Uint8List pixelBuffer = Uint8List(
+    pixelWidth * pixelHeight * bytesPerPixel,
+  );
+  print(
+    'inside generateColorMap, just created pixelBuffer with length, ${pixelBuffer.length}',
+  );
+  final List<List<double>> rawMatrixData = List.generate(
+    pixelWidth,
+    (_) => List.filled(pixelHeight, 0.0),
+  );
+  print(
+    'inside generateColorMap, just created rawMatrixData with length, ${rawMatrixData.length} and inside legnth: ${rawMatrixData.first.length}',
+  );
+
+  int horIndex = -1;
+  int vertIndex = 0;
+
+  // 2. Iterate once. This triggers the lazy evaluation item-by-item.
+  // Memory overhead remains incredibly low because we don't store intermediate lists.
+  for (double strength in valueIterable) {
+    // For rawMatrixData, x will index the outer list, or day, and y will index each inner list, or time.
+    if (vertIndex == 0) {
+      horIndex++;
+    }
+
+    // Invert Y because ui.decodeImageFromPixels expects Y=0 at the TOP,
+    // but your math treats midnight morning as the BOTTOM.
+    int vertIndexReversed = pixelHeight - 1 - vertIndex;
+
+    // Calculate the exact target starting byte in row-major order
+    int targetByteIndex = (vertIndexReversed * pixelWidth + horIndex) * 4;
+    final bool debug = horIndex == (pixelWidth / 2).toInt();
+    if (debug) {
+      print(
+        'about to overwrite pixels, strength: $strength, starting at targetByteIndex: $targetByteIndex',
+      );
+      print('about to setRange');
+    }
+    pixelBuffer.setRange(
+      targetByteIndex,
+      targetByteIndex + 4,
+      pixelByte(strength, colormap, debug),
+    );
+    if (debug) {
+      print('just setRange');
+    }
+
+    rawMatrixData[horIndex][vertIndexReversed] = strength;
+
+    vertIndex++;
+
+    if (vertIndex == pixelHeight) {
+      vertIndex = 0;
+    }
+  }
+
+  print(
+    'inside generateColorMap, just finished assigning data to rawMatrixData and pixelBuffer',
+  );
+
+  // 3. Hand the perfectly ordered buffer over to the engine
+  final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
+    pixelBuffer,
+  );
+  final ui.ImageDescriptor descriptor = ui.ImageDescriptor.raw(
+    buffer,
+    width: pixelWidth,
+    height: pixelHeight,
+    pixelFormat: ui.PixelFormat.rgba8888,
+  );
+
+  final ui.Codec codec = await descriptor.instantiateCodec();
+  final ui.FrameInfo frame = await codec.getNextFrame();
+  return ImageContainer(
+    image: frame.image,
+    leapYear: pixelWidth == 366,
+    rawMatrixData: rawMatrixData,
+  );
+}
+
+/// {@template ImageContainer}
+///
+/// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether
+/// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
+///
+/// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to
+/// [ChartWidget] and used to fill out the hover text.
+///
+/// {@endtemplate}
+class ImageContainer {
+  /// {@macro ImageContainer}
+  ImageContainer({
+    required this.image,
+    required this.leapYear,
+    required this.rawMatrixData,
+  });
+
+  final ui.Image image;
+  final bool leapYear;
+  final List<List<double>> rawMatrixData;
+}
+
+abstract class ColorMapPicker {
+  ColorMapPicker();
+
+  static String getName(Colormap colormap) => colorSchemes
+      .firstWhere(
+        (element) => element.$2 == colormap,
+        orElse: () => ('turbo', Colormaps.turbo),
+      )
+      .$1;
+
+  static Colormap getMap(String? name) => colorSchemes
+      .firstWhere(
+        (element) => element.$1 == name,
+        orElse: () => ('turbo', Colormaps.turbo),
+      )
+      .$2;
+}
+
+typedef MyColorScheme = (String name, Colormap colormap);
+typedef MyColorSchemes = List<MyColorScheme>;
+final MyColorSchemes colorSchemes = [
+  ('turbo', Colormaps.turbo),
+  ('gist_heat', Colormaps.gist_heat),
+  ('hot', Colormaps.hot),
+];

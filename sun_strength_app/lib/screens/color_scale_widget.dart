@@ -8,25 +8,46 @@ import 'package:flutter/rendering.dart';
 // import 'package:intl/intl.dart';
 // import 'package:provider/provider.dart';
 
-class ColorScaleWidget extends LeafRenderObjectWidget {
-  const ColorScaleWidget({super.key});
+class ColorScaleWidget extends SingleChildRenderObjectWidget {
+  const ColorScaleWidget({
+    super.key,
+    super.child,
+    this.labelStyle = const TextStyle(fontSize: 12, color: Colors.white),
+  });
+
+  final TextStyle labelStyle;
 
   @override
   ColorScaleRenderObject createRenderObject(BuildContext context) {
-    return ColorScaleRenderObject();
+    return ColorScaleRenderObject(labelStyle: labelStyle);
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    ColorScaleRenderObject renderObject,
+  ) {
+    renderObject.labelStyle = labelStyle;
   }
 }
 
 class ColorScaleRenderObject extends RenderBox
-    with DebugOverflowIndicatorMixin {
-  ColorScaleRenderObject({
-    this.labelStyle = const TextStyle(fontSize: 12, color: Colors.white),
-  });
+    with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
+  ColorScaleRenderObject({required TextStyle labelStyle})
+    : _labelStyle = labelStyle;
 
-  final double barHeight = 20;
-  final double vertGap = 4;
-  final TextStyle labelStyle;
-  final List<String> labelValues = [
+  static const double _barHeight = 20;
+  static const double _vertGap = 4;
+
+  TextStyle _labelStyle;
+  TextStyle get labelStyle => _labelStyle;
+  set labelStyle(TextStyle value) {
+    if (value == labelStyle) return;
+    _labelStyle = value;
+    markNeedsLayout();
+  }
+
+  static const List<String> _labelValues = [
     '0%',
     '10%',
     '20%',
@@ -39,9 +60,10 @@ class ColorScaleRenderObject extends RenderBox
     '90%',
     '100%',
   ];
+
   TextPainter labelTextPainter(int index) => TextPainter(
     text: TextSpan(
-      text: labelValues[index.clamp(0, labelValues.length - 1)],
+      text: _labelValues[index.clamp(0, _labelValues.length - 1)],
       style: labelStyle,
     ),
     textDirection: TextDirection.ltr,
@@ -50,9 +72,8 @@ class ColorScaleRenderObject extends RenderBox
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
     final farLeftTextPainter = labelTextPainter(0)..layout();
-
     final Size drySize = Size.fromHeight(
-      barHeight + vertGap + farLeftTextPainter.height,
+      _barHeight + _vertGap + farLeftTextPainter.height,
     );
     final actualSize = constraints.constrain(drySize);
     return actualSize;
@@ -61,74 +82,98 @@ class ColorScaleRenderObject extends RenderBox
   @override
   void performLayout() {
     size = computeDryLayout(constraints);
+    if (child != null) {
+      // Layout the two extremem labels so that I can use half of the widths to get the color bar's width
+      final farLeftTextPainter = labelTextPainter(0)..layout();
+      final farRightTextPainter = labelTextPainter(_labelValues.length - 1)
+        ..layout();
+
+      final BoxConstraints rectConstraints = BoxConstraints.tightFor(
+        width:
+            size.width -
+            (farLeftTextPainter.width / 2 + farRightTextPainter.width / 2),
+        height: _barHeight,
+      );
+      // 3. Force the child to layout with the new restricted constraints
+      child!.layout(rectConstraints, parentUsesSize: true);
+      (child!.parentData as BoxParentData).offset = Offset(
+        farLeftTextPainter.width / 2,
+        0,
+      );
+    }
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
     final Canvas canvas = context.canvas;
 
-    // Layout the two extremem labels so that I can use half of the widths to get the color bar's width
-    final farLeftTextPainter = labelTextPainter(0)..layout();
-    final farRightTextPainter = labelTextPainter(labelValues.length - 1)
-      ..layout();
+    if (child != null) {
+      final BoxParentData childParentData = child!.parentData as BoxParentData;
+      context.paintChild(child!, offset + childParentData.offset);
 
-    // Define size of colored bar
-    final Size rectSize = Size(
-      size.width -
-          (farLeftTextPainter.width / 2 + farRightTextPainter.width / 2),
-      barHeight,
-    );
-    final Offset rectOffset = offset + Offset(farLeftTextPainter.width / 2, 0);
-    final Rect rect = rectOffset & rectSize;
+      // // Layout the two extremem labels so that I can use half of the widths to get the color bar's width
+      // final farLeftTextPainter = labelTextPainter(0)..layout();
+      // final farRightTextPainter = labelTextPainter(_labelValues.length - 1)
+      //   ..layout();
 
-    // Define painting (i.e, gradient) for colored bar
-    final Paint gradientPainter = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: <Color>[
-          Color(0xFF000000),
-          Color(0xFFFF0000),
-          Color(0xFFFFFF00),
-          Color(0xFFFFFFFF),
-        ],
-        stops: <double>[0.0, 1 / 3, 2 / 3, 1.0],
-      ).createShader(rect);
+      // // Define size of colored bar
+      // final Size rectSize = Size(
+      //   size.width -
+      //       (farLeftTextPainter.width / 2 + farRightTextPainter.width / 2),
+      //   _barHeight,
+      // );
+      // final Offset rectOffset = offset + Offset(farLeftTextPainter.width / 2, 0);
+      // final Rect rect = rectOffset & rectSize;
 
-    // Draw the rectangle onto the canvas
-    canvas.drawRect(rect, gradientPainter);
+      // // Define painting (i.e, gradient) for colored bar
+      // final Paint gradientPainter = Paint()
+      //   ..shader = const LinearGradient(
+      //     begin: Alignment.centerLeft,
+      //     end: Alignment.centerRight,
+      //     colors: <Color>[
+      //       Color(0xFF000000),
+      //       Color(0xFFFF0000),
+      //       Color(0xFFFFFF00),
+      //       Color(0xFFFFFFFF),
+      //     ],
+      //     stops: <double>[0.0, 1 / 3, 2 / 3, 1.0],
+      //   ).createShader(rect);
 
-    // Define style for vertical lines in bar
-    final Paint gridPaint = Paint()
-      // ..color = Colors.black.withValues(alpha: 0.25)
-      ..color = Colors.blue.withValues(alpha: 0.25)
-      ..strokeWidth = 0.5
-      ..style = PaintingStyle.stroke;
+      // // Draw the rectangle onto the canvas
+      // canvas.drawRect(rect, gradientPainter);
 
-    final double labelSpacing = (rectSize.width / (labelValues.length - 1));
+      // Define style for vertical lines in bar
+      final Paint gridPaint = Paint()
+        // ..color = Colors.black.withValues(alpha: 0.25)
+        ..color = Colors.blue.withValues(alpha: 0.25)
+        ..strokeWidth = 0.5
+        ..style = PaintingStyle.stroke;
 
-    // Draw vertical lines in bar
-    for (int i = 1; i < labelValues.length - 1; i++) {
-      final double x = rectOffset.dx + labelSpacing * i;
-      context.canvas.drawLine(
-        Offset(x, offset.dy),
-        Offset(x, offset.dy + barHeight),
-        gridPaint,
-      );
-    }
+      final double labelSpacing = (child!.size.width / (_labelValues.length - 1));
 
-    // Draw labels
-    for (int i = 0; i < labelValues.length; i++) {
-      final TextPainter textPainter = labelTextPainter(i)..layout();
-      final double xPos = offset.dx + labelSpacing * i;
-      final double yPos = offset.dy + barHeight + vertGap; // 4px gap below bar
+      // Draw vertical lines in bar
+      for (int i = 1; i < _labelValues.length - 1; i++) {
+        context.canvas.drawLine(
+          Offset(childParentData.offset.dx + labelSpacing * i + offset.dx, offset.dy),
+          Offset(childParentData.offset.dx + labelSpacing * i + offset.dx, offset.dy + _barHeight),
+          gridPaint,
+        );
+      }
 
-      final double clampedX = xPos.clamp(
-        offset.dx,
-        offset.dx + size.width - textPainter.width,
-      );
+      // Draw labels
+      for (int i = 0; i < _labelValues.length; i++) {
+        final TextPainter textPainter = labelTextPainter(i)..layout();
+        final double xPos = offset.dx + labelSpacing * i;
+        final double yPos =
+            offset.dy + _barHeight + _vertGap; // 4px gap below bar
 
-      textPainter.paint(canvas, Offset(clampedX, yPos));
+        final double clampedX = xPos.clamp(
+          offset.dx,
+          offset.dx + size.width - textPainter.width,
+        );
+
+        textPainter.paint(canvas, Offset(clampedX, yPos));
+      }
     }
   }
 }
