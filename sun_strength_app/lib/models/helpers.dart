@@ -1,13 +1,36 @@
+// import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
+import 'package:flutter/foundation.dart';
 // import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart';
+import 'dart:math';
+
+const kDebugMode = true;
+
+double interpolate(
+  double ind0,
+  double dep0,
+  double ind1,
+  double dep1,
+  double ind2,
+) {
+  return (dep1 - dep0) / (ind1 - ind0) * (ind2 - ind0) + dep0;
+}
+
+double radians(double deg) {
+  return deg * pi / 180;
+}
+
+double degrees(double rad) {
+  return rad * 180 / pi;
+}
 
 final Colormap constColorMap = Colormaps.magma;
 // final Colormap colormap = Colormaps.inferno;
@@ -139,14 +162,17 @@ class SavedAppSettings {
     this.defaultTimeZone,
     bool? twelveHour,
     int? defaultYear,
+    MyColorScheme? colorScheme,
   }) : defaultYear = defaultYear ?? tz.TZDateTime.now(tz.UTC).year,
-       twelveHour = twelveHour ?? true;
+       twelveHour = twelveHour ?? true,
+       colorScheme = colorScheme ?? colorSchemes.first;
 
   factory SavedAppSettings.fromSaved(SharedPreferences prefs) {
     Location? newDefaultLocation;
     tz.Location? newTZoneInput;
     bool twelveHour = true;
     int? newDefaultYear;
+    MyColorScheme? newColorScheme;
 
     // Parse out location
     final String? savedLocJsonString = prefs.getString(
@@ -184,11 +210,20 @@ class SavedAppSettings {
       newDefaultYear = int.tryParse(savedYearJsonString);
     }
 
+    // Parse out colorScheme
+    final String? savedColorSchemeJsonString = prefs.getString('colorScheme');
+    if (savedColorSchemeJsonString != null) {
+      newColorScheme = colorSchemes.firstWhereOrNull(
+        (element) => element.$1 == savedColorSchemeJsonString,
+      );
+    }
+
     return SavedAppSettings(
       defaultLocation: newDefaultLocation,
       defaultTimeZone: newTZoneInput,
       twelveHour: twelveHour,
       defaultYear: newDefaultYear,
+      colorScheme: newColorScheme,
     );
   }
 
@@ -196,10 +231,11 @@ class SavedAppSettings {
   final tz.Location? defaultTimeZone;
   final bool twelveHour;
   final int? defaultYear;
+  final MyColorScheme colorScheme;
 
   @override
   String toString() =>
-      'SavedAppSettings, defaultLocation: $defaultLocation, tZoneInput: $defaultTimeZone, twelveHour: $twelveHour, year: $defaultYear';
+      'SavedAppSettings, defaultLocation: $defaultLocation, tZoneInput: $defaultTimeZone, twelveHour: $twelveHour, year: $defaultYear, colorScheme: $colorScheme)';
 
   @override
   bool operator ==(Object other) {
@@ -212,12 +248,18 @@ class SavedAppSettings {
         other.defaultLocation?.lon == defaultLocation?.lon &&
         other.defaultTimeZone == defaultTimeZone &&
         other.twelveHour == twelveHour &&
-        other.defaultYear == defaultYear;
+        other.defaultYear == defaultYear &&
+        other.colorScheme == colorScheme;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(defaultLocation, defaultTimeZone, twelveHour, defaultYear);
+  int get hashCode => Object.hash(
+    defaultLocation,
+    defaultTimeZone,
+    twelveHour,
+    defaultYear,
+    colorScheme,
+  );
 }
 
 typedef TimedOrbitData =
@@ -278,7 +320,8 @@ Future<ImageContainer> generateColorMap({
 
     // Calculate the exact target starting byte in row-major order
     int targetByteIndex = (vertIndexReversed * pixelWidth + horIndex) * 4;
-    final bool debug = horIndex == (pixelWidth / 2).toInt();
+    // final bool debug = horIndex == (pixelWidth / 2).toInt();
+    final bool debug = false;
     if (debug) {
       print(
         'about to overwrite pixels, strength: $strength, starting at targetByteIndex: $targetByteIndex',
@@ -374,3 +417,12 @@ final MyColorSchemes colorSchemes = [
   ('gist_heat', Colormaps.gist_heat),
   ('hot', Colormaps.hot),
 ];
+
+class CurrentIndexNotifier extends ValueNotifier<int> {
+  CurrentIndexNotifier() : super(0);
+
+  bool savedSettingsIsInitialized = false;
+
+  @override
+  set value(int newValue) => super.value = newValue.clamp(0, 1);
+}

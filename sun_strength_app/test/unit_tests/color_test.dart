@@ -3,7 +3,6 @@
 // import 'package:color_map/color_map.dart';
 // import 'package:flutter/material.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sun_strength_app/models/helpers.dart';
 import 'package:flutter_test/flutter_test.dart';
 // import 'package:vector_math/vector_math_64.dart';
 

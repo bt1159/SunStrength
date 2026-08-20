@@ -1,8 +1,23 @@
 # Daily log
-##2026-08-17
-Trying to fix color scale and get it working with the inferno color scheme.
+## 2026-08-18
+Improved structure of CurrentIndexProvider instead of ad hoc ValueNotifier.
 
-##2026-08-14
+Issue is that, for some reason, chart doesn't use default color scheme.  I am pretty sure default is saving and loading correctly, but it is not being used by the widget.  Maybe becuase the saved value is coming through after the widget is built, but the widget isn't listening for later updates?
+
+Color Scheme is not correctly using the saved default value.
+
+Tweaked location of tooltip to improve readability.
+
+Chagning year is still doing two problems.  First, the highlighted year in the picker is not updating.  Maybe I need to go back to the way it was by default without an ok button.  Also, the chart is not updating. That is my fault.  I am only changing SavedSettingsNotifier.  I don't remember if I need to manually also update CurrentChartSettings or whatever it is called.
+
+## 2026-08-17
+Fixed color scale and get it working with the inferno color scheme.
+
+Now, 12 hour/24 hour toggle updates the y axis labels.
+
+I mostly updated SavedSettingsNotifier to include saved color scheme, but for reason, when I re-opened the app, it didn't use the new default.
+
+## 2026-08-14
 I finally have the 2D heatmap working properly with the inferno color scheme.  I think I like it.  The blue/purple for low values takes some getting used to, but it probably makes sense.  The only problem I have right now is that the high end (>90%) doesn't really look bright enough.  It's not "scary" enough.  It should look dangerously hot...like it's scorching.  It looks like inferno tops out at a mid-pale yellow, while I want it to top out at actual white.
 
 I have not yet converted the scale.  That might help since then you are not being distracted by a scale that shows white at the top.
@@ -52,6 +67,14 @@ Added am/pm setting.
 - Fixed _getLocation blah blah but still working on _getLatLngforLocation or whatever
 
 # Future work
+## Add a note about DST (pop up changes to always be correct local time, but y axis is solar time).
+
+## Add somewhat of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
+
+## Add year selection somewhere
+
+## I need to actually build out my buttons for directly updating the default settings.
+
 ## Tweak the structure of my custom Render Objects.
 Instead of passing a child to them, which requires using CustomPaint(painter: ImagePainter(image: XXXXX)), instead bury all that inside the RenderObjectWidget so that it builds the child widget itself.  OR, add a container above it that does that logic.  This will simplify the tree.
 

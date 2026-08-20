@@ -45,6 +45,7 @@ class _ChartWidgetState
   Offset? _hoverBoxPosition;
   String? _tooltipText12;
   String? _tooltipText24;
+  static const Offset toolTipFormattingOffset = Offset(20,20);
 
   void _handleChartHover(
     Offset chartTextLocalPosition,
@@ -73,7 +74,7 @@ class _ChartWidgetState
     ).add(Duration(milliseconds: datetimeDelta));
 
     setState(() {
-      _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent;
+      _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent + toolTipFormattingOffset;
       _tooltipText12 =
           '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
       _tooltipText24 =
@@ -99,29 +100,34 @@ class _ChartWidgetState
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _ChartRenderObjectWidget(
-          nXAxisBuckets: widget.nXAxisBuckets,
-          nYAxisBuckets: widget.nYAxisBuckets,
-          leapYear: widget.leapYear,
-          chartArrayWidget: Builder(
-            builder: (context) {
-              return MouseRegion(
-                onHover: (event) {
-                  // Find the rendering size of the canvas dynamically
-                  final RenderBox box = context.findRenderObject() as RenderBox;
-                  final BoxParentData? boxParentData =
-                      box.parentData as BoxParentData?;
-                  _handleChartHover(
-                    event.localPosition,
-                    box.size,
-                    boxParentData?.offset ?? Offset(0, 0),
-                  );
-                },
-                onExit: (_) => _hideTooltip(),
-                child: widget.chartArrayWidget,
-              );
-            },
+        Selector<SavedSettingsNotifier, bool>(
+          selector: (_, savedSettingsNotifier) => savedSettingsNotifier.value?.twelveHour ?? true,
+          builder:(context, twelveHour, child) => _ChartRenderObjectWidget(
+            nXAxisBuckets: widget.nXAxisBuckets,
+            nYAxisBuckets: widget.nYAxisBuckets,
+            leapYear: widget.leapYear,
+            twelveHour: twelveHour,
+            chartArrayWidget: child!,
           ),
+          child: Builder(
+              builder: (context) {
+                return MouseRegion(
+                  onHover: (event) {
+                    // Find the rendering size of the canvas dynamically
+                    final RenderBox box = context.findRenderObject() as RenderBox;
+                    final BoxParentData? boxParentData =
+                        box.parentData as BoxParentData?;
+                    _handleChartHover(
+                      event.localPosition,
+                      box.size,
+                      boxParentData?.offset ?? Offset(0, 0),
+                    );
+                  },
+                  onExit: (_) => _hideTooltip(),
+                  child: widget.chartArrayWidget,
+                );
+              },
+            )
         ),
         // 2. The Floating Tooltip Popup Layer
         if (_hoverBoxPosition != null &&
@@ -174,12 +180,14 @@ class _ChartRenderObjectWidget
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
     required this.leapYear,
+    required this.twelveHour,
   });
 
   final Widget chartArrayWidget;
   final int nXAxisBuckets;
   final int nYAxisBuckets;
   final bool leapYear;
+  final bool twelveHour;
 
   @override
   Iterable<ChartSlot> get slots {
@@ -199,7 +207,7 @@ class _ChartRenderObjectWidget
     // Return a text widget for the specific index
     if (slot.id == 'yAxisLabel') {
       final String labelText =
-          TimeLabelList.fromCount(nYAxisBuckets)?.labelList[slot.index!] ??
+          TimeLabelList.fromCountAndTwelveHour(nYAxisBuckets, twelveHour)?.labelList[slot.index!] ??
           'BadYAxisCount';
       return Text(labelText, textAlign: TextAlign.right);
     }
@@ -630,7 +638,7 @@ enum MonthLabelList {
 }
 
 enum TimeLabelList {
-  twentyfour(24, [
+  twentyfourT(24, true, [
     '12:00 AM',
     '1:00 AM',
     '2:00 AM',
@@ -657,7 +665,7 @@ enum TimeLabelList {
     '11:00 PM',
     '12:00 AM',
   ]),
-  twelve(12, [
+  twelveT(12, true, [
     '12:00 AM',
     '2:00 AM',
     '4:00 AM',
@@ -672,7 +680,7 @@ enum TimeLabelList {
     '10:00 PM',
     '12:00 AM',
   ]),
-  eight(8, [
+  eightT(8, true, [
     '12:00 AM',
     '3:00 AM',
     '6:00 AM',
@@ -683,7 +691,7 @@ enum TimeLabelList {
     '9:00 PM',
     '12:00 AM',
   ]),
-  six(6, [
+  sixT(6, true, [
     '12:00 AM',
     '4:00 AM',
     '8:00 AM',
@@ -692,22 +700,107 @@ enum TimeLabelList {
     '8:00 PM',
     '12:00 AM',
   ]),
-  four(4, ['12:00 AM', '6:00 AM', '12:00 PM', '6:00 PM', '12:00 AM']),
-  three(3, ['12:00 AM', '8:00 AM', '4:00 PM', '12:00 AM']),
-  two(2, ['12:00 AM', '12:00 PM', '12:00 AM']),
-  one(1, ['12:00 AM', '12:00 AM']);
+  fourT(4, true, ['12:00 AM', '6:00 AM', '12:00 PM', '6:00 PM', '12:00 AM']),
+  threeT(3, true, ['12:00 AM', '8:00 AM', '4:00 PM', '12:00 AM']),
+  twoT(2, true, ['12:00 AM', '12:00 PM', '12:00 AM']),
+  oneT(1, true, ['12:00 AM', '12:00 AM']),
+  twentyfourF(24, false, [
+    '0:00',
+    '1:00',
+    '2:00',
+    '3:00',
+    '4:00',
+    '5:00',
+    '6:00',
+    '7:00',
+    '8:00',
+    '9:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+    '21:00',
+    '22:00',
+    '23:00',
+    '24:00',
+  ]),
+  twelveF(12, false, [
+    '0:00',
+    '2:00',
+    '4:00',
+    '6:00',
+    '8:00',
+    '10:00',
+    '12:00',
+    '14:00',
+    '16:00',
+    '18:00',
+    '20:00',
+    '22:00',
+    '24:00',
+  ]),
+  eightF(8, false, [
+    '0:00',
+    '3:00',
+    '6:00',
+    '9:00',
+    '12:00',
+    '15:00',
+    '18:00',
+    '21:00',
+    '24:00',
+  ]),
+  sixF(6, false, [
+    '0:00',
+    '4:00',
+    '8:00',
+    '12:00',
+    '16:00',
+    '20:00',
+    '24:00',
+  ]),
+  fourF(4, false, [
+    '0:00',
+    '6:00',
+    '12:00',
+    '18:00',
+    '24:00',
+  ]),
+  threeF(3, false,[
+    '0:00',
+    '8:00',
+    '16:00',
+    '24:00',
+  ]),
+  twoF(2, false,[
+    '0:00',
+    '12:00',
+    '24:00',
+  ]),
+  oneF(1, false, [
+    '0:00',
+    '24:00',
+  ]);
 
-  const TimeLabelList(this.count, this.labelList);
+  const TimeLabelList(this.count, this.twelveHour, this.labelList);
 
   final List<String> labelList;
+  final bool twelveHour;
 
   /// This is the number of spans the day is cut into.  The actual number of ticks will be one more than that.
   final int count;
 
   /// [count] is the number of spans the day is cut into.  The actual number of ticks will be one more than that.
-  static TimeLabelList? fromCount(int count) {
+  static TimeLabelList? fromCountAndTwelveHour(int count, bool twelveHour) {
     for (var value in TimeLabelList.values) {
-      if (value.count == count) return value;
+      if (value.count == count && value.twelveHour == twelveHour) return value;
     }
     return null; // Handle invalid numbers safely
   }

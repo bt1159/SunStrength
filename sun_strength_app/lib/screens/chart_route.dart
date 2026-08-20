@@ -1,16 +1,13 @@
-import 'dart:math';
 // import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sun_strength_app/main.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:sun_strength_app/screens/color_scale_widget.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
-
 
 /// {@template ChartHomePage}
 ///
@@ -137,6 +134,7 @@ class _HeatMapState extends State<HeatMap> {
     setState(() {
       colorscheme = newMyColorScheme;
       combinedFuture = (createChartImage(_currentK), createScaleImage()).wait;
+      context.read<SavedSettingsNotifier>().updateColorScheme(colorscheme);
     });
   }
 
@@ -144,6 +142,11 @@ class _HeatMapState extends State<HeatMap> {
   void initState() {
     print('just called initState');
     super.initState();
+    MyColorScheme? savedColorScheme = context
+        .read<SavedSettingsNotifier>()
+        .value
+        ?.colorScheme;
+    if (savedColorScheme != null) colorscheme = savedColorScheme;
     combinedFuture = (createChartImage(_currentK), createScaleImage()).wait;
     print('hit end of initState');
   }
@@ -213,7 +216,7 @@ class _HeatMapState extends State<HeatMap> {
                     return Center(child: Text('No data returned'));
                   } else {
                     return Column(
-                      spacing: 10,
+                      spacing: 20,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Column(
@@ -303,7 +306,8 @@ class _HeatMapState extends State<HeatMap> {
                             ),
                             ElevatedButton(
                               onPressed: () =>
-                                  context.read<UpdateCurrentIndex>()(1),
+                                  context.read<CurrentIndexNotifier>().value =
+                                      1,
                               child: Text('Change location'),
                             ),
                           ],

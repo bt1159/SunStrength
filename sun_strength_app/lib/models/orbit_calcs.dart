@@ -2,63 +2,63 @@ import 'dart:math';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-const kDebugMode = true;
-
-//flutter run -d web-server
-// kill ports with: pkill -f flutter
-// launch with specific port with: flutter run -d web-server --web-port=8080
-
-double interpolate(
-  double ind0,
-  double dep0,
-  double ind1,
-  double dep1,
-  double ind2,
-) {
-  return (dep1 - dep0) / (ind1 - ind0) * (ind2 - ind0) + dep0;
-}
-
-double radians(double deg) {
-  return deg * pi / 180;
-}
-
-double degrees(double rad) {
-  return rad * 180 / pi;
-}
-
+/// Angle of tilt of Earth's axis.  This is angle does not impact any calculations
+/// of Earth's orbit (e.g., mean anomaly), its revolution.  It only impacts
+/// calculations that take into account Earth's rotation around its own axis.  By
+/// definition, the direction of this tilt is exactly 90 degrees from the Vernal
+/// Equinox, and this is tied to the global coordinate system used in this app
+/// with longitude/argument of periapsis.
 const double tiltDeg = 23.44;
 final double tilt = radians(tiltDeg);
-const double rA = 152097701; // Earth's orbital aphelion distance in km
-const double rP = 147098290; // Earth's orbital perihelion distance in km
+
+/// Earth's orbital aphelion distance in km
+const double rA = 152097701;
+
+/// Earth's orbital perihelion distance in km
+const double rP = 147098290;
 final double eccen = (rA - rP) / (rA + rP);
-const double lMeanDeg =
-    100.46435; // Mean longitude of Earth at J2000 in degrees
-final double lMean = radians(
-  lMeanDeg,
-); // Mean longitude of Earth at J2000 in radians
-const double lPeriDeg =
-    102.93735; // Longitude of perihelion at J2000 in degrees
-final double lPeri = radians(
-  lPeriDeg,
-); // Longitude of perihelion at J2000 in radians
-final double tMeanAnomalyAtEpoch =
-    lMean - lPeri; // Mean anomaly at epoch in radians
-const double rEarth = 6371; // Earth's radius in km
+
+/// Mean longitude of Earth at J2000 in degrees
+const double lMeanDeg = 100.46435;
+
+/// Mean longitude of Earth at J2000 in radians
+final double lMean = radians(lMeanDeg);
+
+/// Longitude of perihelion at J2000 in degrees
+const double lPeriDeg = 102.93735;
+
+/// Longitude of perihelion at J2000 in radians
+final double lPeri = radians(lPeriDeg);
+
+/// Mean anomaly at epoch in radians
+final double tMeanAnomalyAtEpoch = lMean - lPeri;
+
+/// Earth rotation angle at J2000 relative to Vernal Equinox in radians
+final double eraJ2000VE = 4.89496121282376;
+
+/// Earth's average radius in km
+const double rEarth = 6371;
+
+/// Technically, this is the number of days (i.e., 24 hour periods) it takes Earth to revolve one
+/// complete rotation around the sun.  Note that, this is NOT the number of times the Earth has
+/// actually rotated around its axis during that time.  That would be this number plus one.  This
+/// is because we measure a 24 hour period as the time it takes a point on Earth's surface to
+/// rotate such that the sun returns to the same point (or, technically right ascension), but
+/// because of Earth's revolution, the Earth has already rotated more than one complete rotation
+/// around its axis in that time.
 const double yearLength = 365.242190402;
-// const double h1 = 0.048006; // Elevation to use for now
+
+/// Elevation to use in calculations.  This could later be made dynamic and looked up by lat/lon.
 const double h1 = 0;
 final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 
-// void main() {
-//   getChartData();
-// }
-// final double latInput = 42.6424568895893;
-// final double latInput = 25;
-// final double longInput = -71.3833058055504;
+/// J2000
+final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
 
-/// Function called by widget tree to generate the actual data points used to make the chart.
+/// Function called by widget tree to generate a 1D Iterable of data points that are a year's
+/// worth of solar strengths.
 ///
-/// Note: the data ALWAYS starts at 12am 01 Jan, but the timezone of that start time is
+/// Note: the data ALWAYS starts at 12am 01 Jan local time, but the timezone of that start time is
 /// determined inside this function from the lat and lon given.
 Iterable<double> masterFunctionSolarStrengthArray({
   required double k,
@@ -70,13 +70,15 @@ Iterable<double> masterFunctionSolarStrengthArray({
 }) {
   print('running masterFunctionSolarStrengthArray');
   final TimedOrbitData yearTrueAnomalies = getYearTrueAnomalies(
-    timeZone: timeZone, yearInput: year,
+    timeZone: timeZone,
+    yearInput: year,
   );
   final Iterable<double> yearSolarElevationAngles = getYearSolarElevationAngles(
     inputData: yearTrueAnomalies,
     lat: lat,
     lon: lon,
   );
+  // TODO: Check if this is actually relative to local or to global.
   final Iterable<double> yearSolarStrengthsLocalRelative =
       getYearSolarStrengthsLocalRelativeToGlobal(
         h: h,
@@ -84,6 +86,89 @@ Iterable<double> masterFunctionSolarStrengthArray({
         yearSolarElevationAngles: yearSolarElevationAngles,
       );
   return yearSolarStrengthsLocalRelative;
+}
+
+Iterable<double> masterFunctionSolarStrengthArray2({
+  required double k,
+  required double h,
+  required num lat,
+  required num lon,
+  required tz.Location timeZone,
+  required int year,
+}) {
+
+}
+
+
+
+
+
+double calculateERA(double hOffsetFromJ2000) =>
+    (2 * pi * (yearLength + 1) / yearLength * (hOffsetFromJ2000 / 24) +
+            eraJ2000VE -
+            lPeri)
+        .remainder(2 * pi);
+
+double calculateMeanAnomaly(double hOffsetFromJ2000) =>
+    (tMeanAnomalyAtEpoch + (2 * pi) * (hOffsetFromJ2000 / (yearLength * 24)))
+        .remainder(2 * pi);
+
+double calculateEccentricAnomaly(double meanAnomaly) => newtonRaphson2(
+  func: (guess) => guess - eccen * sin(guess) - meanAnomaly,
+  funcPrime: (guess) => 1 - eccen * cos(guess),
+  initialGuess: meanAnomaly,
+);
+
+double calculateTrueAnomaly(double eccentricAnomaly) =>
+    2 * atan(sqrt(rA / rP) * tan(eccentricAnomaly / 2));
+
+double calculateOrbitalRadius(double trueAnomaly) =>
+    2 * rA * rP / (rA * (1 + cos(trueAnomaly)) + rP * (1 - cos(trueAnomaly)));
+
+double calculateSolarElevationAngle({
+  required double latRad,
+  required double lonRad,
+  required double earthRotationAngle,
+  required double trueAnomaly,
+  required double orbitalRadius,
+}) {
+  final double intermediateTerm =
+      orbitalRadius *
+      ((sin(lPeri) * cos(trueAnomaly) + cos(lPeri) * sin(trueAnomaly)) *
+              (cos(latRad) * cos(tilt) * cos(earthRotationAngle + lonRad) +
+                  sin(latRad) * sin(tilt)) +
+          (-cos(lPeri) * cos(trueAnomaly) + sin(lPeri) * sin(trueAnomaly)) *
+              (cos(latRad) * sin(earthRotationAngle + lonRad)));
+  final double output = -asin(
+    (rEarth + intermediateTerm) /
+        sqrt(
+          pow(rEarth, 2) +
+              pow(orbitalRadius, 2) +
+              2 * rEarth * intermediateTerm,
+        ),
+  );
+  return output;
+}
+
+double calculateSolarAzimuthAngle() => 0;
+
+double calculateSolarStrengthRelativeToGlobalMax({
+  required double elevAngle,
+  required double k,
+  required double h,
+}) {
+  final double airMassSeaLevel = elevAngle <= 0
+      ? 38
+      : 1 /
+            (cos(pi / 2 - elevAngle) +
+                0.50572 * pow(96.07995 - degrees(pi / 2 - elevAngle), -1.6364));
+  final double localSolarStrengthFactor = airMassSeaLevel >= 38
+      ? 0
+      : exp(-k * airMassSeaLevel * exp(-h / 8.5));
+  final double globalMax = exp(-k);
+  final double solarStrengthsLocalRelativeToGlobal =
+      localSolarStrengthFactor / globalMax;
+  return solarStrengthsLocalRelativeToGlobal;
 }
 
 /// Function to output the earth rotation angle and true anomaly that will be used to calculate each
@@ -95,7 +180,6 @@ getYearTrueAnomalies({required int yearInput, required tz.Location timeZone}) {
     'started getYearTrueAnomalies for year: $yearInput and tZoneInput before null assign: ${timeZone.name}',
   );
 
-  final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
   final tz.TZDateTime date0 = tz.TZDateTime(timeZone, yearInput, 1, 1, 0, 0, 0);
   final int nDays = date0
       .copyWith(year: date0.year + 1)
@@ -239,6 +323,26 @@ double newtonRaphson(
     final double prevGuess = currentGuess;
     currentGuess =
         currentGuess - (funcNum(currentGuess) / funcPrimeNum(currentGuess));
+    if ((currentGuess - prevGuess).abs() <= 0.000001) break;
+  }
+
+  return currentGuess;
+}
+
+// This is super dangerous because I am creating a loop that will NEVER end if no root is found.  I am intententionally letting this go here and intend to protect against this with at a higher level somehow.  Since this is going to run SO MUCH, I want to keep this is light as possible.
+// Performance improvement would be to code the function and prime function right in instead of passing them.
+double newtonRaphson2({
+  required double Function(double) func,
+  required double Function(double) funcPrime,
+  double? initialGuess,
+}) {
+  double currentGuess = initialGuess ?? 0;
+
+  //For now, use this checking logic, but I can probably just pick a constant number of times to run this and get a good enough value.
+  while (true) {
+    final double prevGuess = currentGuess;
+    currentGuess =
+        currentGuess - (func(currentGuess) / funcPrime(currentGuess));
     if ((currentGuess - prevGuess).abs() <= 0.000001) break;
   }
 

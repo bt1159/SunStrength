@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sun_strength_app/main.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'dart:async';
@@ -355,7 +354,8 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   );
                 },
                 // Calls Google API as user types
-                suggestionsCallback: (search) => _getAutocompleteSuggestions(search),
+                suggestionsCallback: (search) =>
+                    _getAutocompleteSuggestions(search),
 
                 // Renders the dropdown items
                 itemBuilder: (context, suggestion) {
@@ -426,7 +426,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               print(
                 "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",
               );
-              context.read<UpdateCurrentIndex>()(0);
+              context.read<CurrentIndexNotifier>().value = 0;
               print("Just triggerred an index switch");
             },
             child: const Text(

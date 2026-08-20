@@ -4,19 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-/// This Notifier is a bit different from typical.  It is NOT intended to alert the widget
-/// tree when the current value of a parameter has been updated.  It does indeed keep the
-/// current value, but when the current value is changed, it DOES NOT call notifyListeners().
-/// Instead, notifyListeners() is ONLY CALLED when SharedPreferences.getInstance() is loaded
-/// and the saved values are retreived.  From that point on, when any settings like default
-/// location are updated, this Notifier handles the process of updating the saved
-/// SharedPreferences.  It just doesn't call notifyListeners() when it does it.  That is
-/// mainly because any time the current value of saved location is changed, the widget tree
-/// doesn't actually need to know.  Anything needing that value can just look it up when
-/// needed.
-// TODO: I wrote the above because of the note on AppGateway, but since this is a ValueNotifier,
-// it WILL actually call notifyListeners() when a setting is cleared or overwritten.  Should I
-// change this?
+/// This Notifier is a bit different from typical.  It is NOT ALWAYS intended to trigger rebuilds for all updates.  It depends on multiple 
+/// logic steps.  For instance, [_loadSettingsFromStorage] will always call [notifyListeners].  The [CurrentLocationNotifier], for instance
+/// needs to reuild when the default settings are initially loaded.  Even after that, when the twelveHour setting is updated, this notifier
+/// is where the current AND the default setting is saved.  So, any widgets that display time should update when the twelveHour bool is 
+/// changed.  The default location, however, should NOT trigger rebuilds when it is changed by itself.  In other words, when it is updated 
+/// as part of the initial load, then yes it should trigger CurrentLocationNotifier to update. After that, however, when the user selects a 
+/// new default location, I don't want anything to update.  Rather than being handled here in the update functions, all updates call 
+/// [notifyListeners].  Instead, the widget tree itself should use context.read, Selector, or other methods to control exactly when its 
+/// rebuild is triggered by this notifier.
 class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   // Initialize with null, meaning "we don't know the state yet"
   SavedSettingsNotifier() : super(null) {
@@ -29,6 +25,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   bool get isInitialized => _isInitialized;
 
   // Load from localStorage on boot
+  // CALLS NOTIFYLISTENERS
   Future<void> _loadSettingsFromStorage() async {
     print('Starting SavedSettingsNotifier._loadSettingsFromStorage');
     try {
@@ -36,7 +33,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       _isInitialized = true;
       value = SavedAppSettings.fromSaved(prefs);
       print(
-        'In SavedSettingsNotifier._loadSettingsFromStorage, just set value to new value, value!.defaultLocation?.name ${value!.defaultLocation?.name} and value!.tZoneInput: ${value!.defaultTimeZone}',
+        'In SavedSettingsNotifier._loadSettingsFromStorage, just set value to new value, value: $value',
       );
     } catch (e) {
       debugPrint("Error reading storage: $e");
@@ -46,19 +43,23 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     print('Finished SavedSettingsNotifier._loadSettingsFromStorage');
   }
 
-  // Update location and/or timezone from the selection screen.  NOTE: a null passed for either input will NOT setting the setting to null.  Instead, it will skip that setting.
+  // Update location and/or timezone from the selection screen.  NOTE: a null passed for either input will NOT setting the setting to null.
+  // Instead, it will skip that setting.
+  // CALLS NOTIFYLISTENERS
   Future<void> updateSettings(
     Location? newDefaultLocation,
     tz.Location? newDefaultTimeZone,
     bool? newTwelveHour,
     int? newDefaultYear,
+    MyColorScheme? newColorScheme,
   ) async {
-    if (newDefaultLocation == null && newDefaultTimeZone == null && newTwelveHour == null && newDefaultYear == null) return;
+    if (newDefaultLocation == null && newDefaultTimeZone == null && newTwelveHour == null && newDefaultYear == null && newColorScheme == null) return;
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: newDefaultLocation ?? value?.defaultLocation,
       defaultTimeZone: newDefaultTimeZone ?? value?.defaultTimeZone,
       defaultYear: newDefaultYear ?? value?.defaultYear,
       twelveHour: newTwelveHour ?? value?.twelveHour,
+      colorScheme: newColorScheme ?? value?.colorScheme,
     );
     if (value == settings) return;
     value = settings;
@@ -75,6 +76,10 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     if (newTwelveHour != null) {
       await prefs.setString('twelveHour', newTwelveHour.toString());
     }
+    if (newColorScheme != null) {
+      await prefs.setString('colorScheme', newColorScheme.$1);
+    }
+    print('just finished saving new settings: value: $value');
   }
 
   // Clear location and timezone
@@ -89,6 +94,8 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.remove('default_solar_timezone');
     await prefs.remove('twelveHour');
     await prefs.remove('default_solar_year');
+    await prefs.remove('colorScheme');
+    print('just finished clearing saved settings, value: $value');
   }
 
   // Update location from the selection screen
@@ -99,6 +106,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: value?.defaultTimeZone,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -112,6 +120,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: value?.defaultTimeZone,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final prefs = await SharedPreferences.getInstance();
@@ -126,6 +135,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: newTimeZone,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -139,6 +149,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: null,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final prefs = await SharedPreferences.getInstance();
@@ -157,6 +168,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: value?.defaultTimeZone,
       twelveHour: twelveHour,
       defaultYear: value?.defaultYear,
+      colorScheme: value?.colorScheme,
     );
     print('inside updateTwelveHour, previous value?.twelveHour: ${value?.twelveHour}, new settings: $settings');
     value = settings;
@@ -169,6 +181,8 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
       defaultTimeZone: value?.defaultTimeZone,
+      defaultYear: value?.defaultYear,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final prefs = await SharedPreferences.getInstance();
@@ -187,6 +201,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
       defaultYear: newYear,
+      colorScheme: value?.colorScheme,
     );
     print('inside updateTwelveHour, previous value?.twelveHour: ${value?.twelveHour}, new settings: $settings');
     value = settings;
@@ -200,11 +215,43 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
       defaultLocation: value?.defaultLocation,
       defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
+      colorScheme: value?.colorScheme,
     );
     value = settings;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('default_solar_year');
   }
+
+  Future<void> updateColorScheme(MyColorScheme newColorScheme) async {
+    print('running updateColorScheme with newYear: $newColorScheme');
+    if (value?.colorScheme == newColorScheme) {
+      print('inside updateColorScheme, about to return because new value matches previous value');
+      return;
+    }
+    final SavedAppSettings settings = SavedAppSettings(
+      defaultLocation: value?.defaultLocation,
+      defaultTimeZone: value?.defaultTimeZone,
+      twelveHour: value?.twelveHour,
+      defaultYear: value?.defaultYear,
+      colorScheme: newColorScheme,
+    );
+    print('inside updateColorScheme, previous value?.colorScheme.\$1: ${value?.colorScheme.$1}, new settings: $settings');
+    value = settings;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('colorScheme', newColorScheme.$1);
+
+  }
+
+    Future<void> clearColorScheme() async {
+    final SavedAppSettings settings = SavedAppSettings(
+      defaultLocation: value?.defaultLocation,
+      defaultTimeZone: value?.defaultTimeZone,
+      twelveHour: value?.twelveHour,
+      defaultYear: value?.defaultYear,
+    );
+    value = settings;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('colorScheme');}
 
   @override
   notifyListeners() {
