@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'dart:math';
+import 'package:sun_strength_app/models/errors.dart';
 
 const kDebugMode = true;
 
@@ -266,7 +267,7 @@ typedef TimedOrbitData =
     Iterable<({double earthRotationAngle, double trueAnomaly})>;
 
 /// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
-/// inside of an [ImageContainer].  This [Future] is called, received, and handled by [HeatMap].
+/// inside of an [ChartImageContainer].  This [Future] is called, received, and handled by [HeatMap].
 ///
 /// The main work of this function is to receive the long, one-dimensional list of [double] sun strength values, reshape them into
 /// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that
@@ -276,13 +277,16 @@ typedef TimedOrbitData =
 /// inner list is a vertical column of pixels.  In those vertical lists of pixels, the bottom-most pixel is first.  The left-most
 /// column of pixels is first.  This ordering is driven by the calculation of solar strength where the morning is at the bottom of
 /// the chart.
-Future<ImageContainer> generateColorMap({
+Future<ui.Image> generateColorImage({
   required Iterable<double> valueIterable,
   required int pixelWidth,
   Colormap? colormap,
+  bool debug = false,
+  bool chart = false,
 }) async {
+  final DateTime t0 = DateTime.now();
   print(
-    'running generateColorMap, chronologicalSunStrength.length: ${valueIterable.length}, pixelWidth: $pixelWidth',
+    'running generateColorMapImage, chronologicalSunStrength.length: ${valueIterable.length}, pixelWidth: $pixelWidth',
   );
 
   const int bytesPerPixel = 4; // RGBA
@@ -321,7 +325,7 @@ Future<ImageContainer> generateColorMap({
     // Calculate the exact target starting byte in row-major order
     int targetByteIndex = (vertIndexReversed * pixelWidth + horIndex) * 4;
     // final bool debug = horIndex == (pixelWidth / 2).toInt();
-    final bool debug = false;
+
     if (debug) {
       print(
         'about to overwrite pixels, strength: $strength, starting at targetByteIndex: $targetByteIndex',
@@ -363,12 +367,79 @@ Future<ImageContainer> generateColorMap({
 
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
-  return ImageContainer(
-    image: frame.image,
+
+  // final DateTime t0 = DateTime.now();
+  final DateTime tFinal = DateTime.now();
+  print(
+    'just finished generateColorImage${chart ? ' for the chart' : ''}, which took ${tFinal.difference(t0).inMilliseconds} milliseconds and started at $t0',
+  );
+  return frame.image;
+}
+
+Future<ChartImageContainer> generateColorImageInContainer({
+  required Iterable<double> valueIterable,
+  required int pixelWidth,
+  Colormap? colormap,
+}) async {
+  final DateTime t0 = DateTime.now();
+  if (valueIterable.length % pixelWidth != 0) {
+    throw InvalidPixelWidth(
+      pixelWidth: pixelWidth,
+      iterableLength: valueIterable.length,
+    );
+  }
+  final int cols = (valueIterable.length / pixelWidth).toInt();
+
+  final ui.Image image = await generateColorImage(
+    valueIterable: valueIterable,
+    pixelWidth: pixelWidth,
+    chart: true,
+  );
+  final DateTime t1 = DateTime.now();
+  final List<List<double>> rawMatrixData = List.generate(
+    pixelWidth,
+    (i) => valueIterable.toList().sublist(i * cols, (i + 1) * cols),
+  );
+  // TODO: Something is wrong here.  The step above is taking a stupid 
+  // long amount of time.  Like 14 seconds.  I don't know if it is the
+  // whole subList() that is a problem or maybe the way I am setting 
+  // up the Iterable.  I suspect that I am passing the full, 
+  // uncalculated Iterable, then running through it to pull out solar
+  // strength, then breaking it up.  I have to find a better way of 
+  // doing that.  Although, even that shouldn't take this long.  It 
+  // only takes about a second or so do the all the orbit and solar
+  // calcs this first time!
+  final DateTime t2 = DateTime.now();
+  final ChartImageContainer output = ChartImageContainer(
+    image: image,
     leapYear: pixelWidth == 366,
     rawMatrixData: rawMatrixData,
   );
+  // final DateTime t0 = DateTime.now();
+  final DateTime tFinal = DateTime.now();
+  print(
+    'just finished generateColorImageInContainer, which took ${tFinal.difference(t0).inMilliseconds} milliseconds and started at $t0.  t1: $t1, t2: $t2, tFinal: $tFinal',
+  );
+  return output;
 }
+
+// /// {@template ImageContainer}
+// ///
+// /// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether
+// /// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
+// ///
+// /// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to
+// /// [ChartWidget] and used to fill out the hover text.
+// ///
+// /// {@endtemplate}
+// class BasicImageContainer {
+//   /// {@macro ImageContainer}
+//   BasicImageContainer({
+//     required this.image,
+//   });
+
+//   final ui.Image image;
+// }
 
 /// {@template ImageContainer}
 ///
@@ -379,9 +450,9 @@ Future<ImageContainer> generateColorMap({
 /// [ChartWidget] and used to fill out the hover text.
 ///
 /// {@endtemplate}
-class ImageContainer {
+class ChartImageContainer {
   /// {@macro ImageContainer}
-  ImageContainer({
+  ChartImageContainer({
     required this.image,
     required this.leapYear,
     required this.rawMatrixData,
@@ -425,4 +496,28 @@ class CurrentIndexNotifier extends ValueNotifier<int> {
 
   @override
   set value(int newValue) => super.value = newValue.clamp(0, 1);
+}
+
+class OrbitAndSolarValues {
+  const OrbitAndSolarValues({
+    required this.hOffsetFromJ2000,
+    required this.earthRotationAngle,
+    required this.meanAnomaly,
+    required this.eccentricAnomaly,
+    required this.trueAnomaly,
+    required this.orbitalRadius,
+    required this.solarElevationAngle,
+    required this.solarAzimuthAngle,
+    required this.solarStrengthsLocalRelativeToGlobalMax,
+  });
+
+  final double hOffsetFromJ2000;
+  final double earthRotationAngle;
+  final double meanAnomaly;
+  final double eccentricAnomaly;
+  final double trueAnomaly;
+  final double orbitalRadius;
+  final double solarElevationAngle;
+  final double solarAzimuthAngle;
+  final double solarStrengthsLocalRelativeToGlobalMax;
 }

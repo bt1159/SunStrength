@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/errors.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:sun_strength_app/screens/color_scale_widget.dart';
@@ -50,7 +51,7 @@ class ChartHomePage extends StatelessWidget {
 /// It is created here and used here only.
 ///
 /// There are two reasons [HeatMap] is stateful.  First, is holds the current K setting, i.e., the frequency band
-/// currently being displayed.  Secondly, being stateful allows it to build the [ImageContainer] as a [Future] since
+/// currently being displayed.  Secondly, being stateful allows it to build the [ChartImageContainer] as a [Future] since
 /// that function is async.  More accurately, building the [ui.Image] the async process.  [HeatMap] handles this by
 /// defining the [Future] during [initState].  Then, it uses a [FutureBuilder] in the widget tree.  Also, note the
 /// overriden [didUpdateWidget] that handles a new [HeatMap] widget and checks if the passed location has changed.
@@ -67,8 +68,7 @@ class HeatMap extends StatefulWidget {
 
 class _HeatMapState extends State<HeatMap> {
   double _currentK = 2;
-  // late Future<ImageContainer?> _chartImageFuture;
-  late Future<(ImageContainer?, ImageContainer?)> combinedFuture;
+  late Future<(ChartImageContainer, ui.Image)> combinedFuture;
   MyColorScheme colorscheme = colorSchemes.first;
 
   /// The function that actually creates the 2D array of solar strength bytes.
@@ -77,40 +77,63 @@ class _HeatMapState extends State<HeatMap> {
   /// Visible: 0.22 <= k <= 0.36
   /// UV-A: 0.36 <= k <= 0.92
   /// UV-C: 2.3 <= k <= 4.6
-  Future<ImageContainer?> createChartImage(double k) async {
+  Future<ChartImageContainer> createChartImage(double k) async {
+    final DateTime t0 = DateTime.now();
     print(
       'running createImage with lat: ${widget.currentChartSettings.location.lat}, lon: ${widget.currentChartSettings.location.lon}, name: ${widget.currentChartSettings.location.name}',
     );
 
     // Generate the Iterable<double> that is all the data points for the chart.
-    final Iterable<double> yearSolarStrengthsLocalRelative =
-        masterFunctionSolarStrengthArray(
-          timeZone: widget.currentChartSettings.timeZone,
-          year: widget.currentChartSettings.year,
-          h: 0,
+    // final Iterable<double> yearSolarStrengthsLocalRelative =
+    //     masterFunctionSolarStrengthArray(
+    //       timeZone: widget.currentChartSettings.timeZone,
+    //       year: widget.currentChartSettings.year,
+    //       h: 0,
+    //       k: k,
+    //       lat: widget.currentChartSettings.location.lat,
+    //       lon: widget.currentChartSettings.location.lon,
+    //     );
+
+    final Iterable<OrbitAndSolarValues> orbitAndSolarValuesIterable =
+        calculateOrbitAndSolarValuesIterable(
           k: k,
+          h: 0,
           lat: widget.currentChartSettings.location.lat,
           lon: widget.currentChartSettings.location.lon,
+          timeZone: widget.currentChartSettings.timeZone,
+          year: widget.currentChartSettings.year,
         );
+
     final int pixelH = 96;
-    final int pixelW = (yearSolarStrengthsLocalRelative.length / pixelH)
-        .toInt();
+    if (orbitAndSolarValuesIterable.length % pixelH != 0) {
+      throw InvalidPixelWidth(
+        pixelWidth: pixelH,
+        iterableLength: orbitAndSolarValuesIterable.length,
+      );
+    }
+    final int pixelW = (orbitAndSolarValuesIterable.length / pixelH).toInt();
 
     // Use the data points and the pixel width the create the actual chart
-    final Future<ImageContainer> output = generateColorMap(
-      valueIterable: yearSolarStrengthsLocalRelative,
+    final Future<ChartImageContainer> output = generateColorImageInContainer(
+      valueIterable: orbitAndSolarValuesIterable.map(
+        (e) => e.solarStrengthsLocalRelativeToGlobalMax,
+      ),
       pixelWidth: pixelW,
       colormap: colorscheme.$2,
     );
 
-    // I need a more robust way to determin leap year or not
-    // return output;
-
     print('about to finish createImage');
+
+    // final DateTime t0 = DateTime.now();
+    final DateTime tFinal = DateTime.now();
+    print(
+      'about to finish createChartImage Future only, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
+    );
     return output;
   }
 
-  Future<ImageContainer?> createScaleImage() async {
+  Future<ui.Image> createScaleImage() async {
+    final DateTime t0 = DateTime.now();
     final int vertHeight = 40;
     final int horWidth = 100;
     Iterable<double> fullList = Iterable<double>.generate(
@@ -121,16 +144,20 @@ class _HeatMapState extends State<HeatMap> {
       },
     );
     print('inside createScaleImage.  About to call generateColorMap');
-    final Future<ImageContainer> output = generateColorMap(
+    final Future<ui.Image> output = generateColorImage(
       valueIterable: fullList,
       pixelWidth: horWidth,
       colormap: colorscheme.$2,
     );
-
+    // final DateTime t0 = DateTime.now();
+    final DateTime tFinal = DateTime.now();
+    print(
+      'about to finish createScaleImage Future only, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
+    );
     return output;
   }
 
-  void changeColorMap(MyColorScheme newMyColorScheme) {
+  void _changeColorScheme(MyColorScheme newMyColorScheme) {
     setState(() {
       colorscheme = newMyColorScheme;
       combinedFuture = (createChartImage(_currentK), createScaleImage()).wait;
@@ -188,15 +215,20 @@ class _HeatMapState extends State<HeatMap> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         constraints: BoxConstraints(maxWidth: 800),
-        child: FutureBuilder<(ImageContainer?, ImageContainer?)>(
+        child: FutureBuilder<(ChartImageContainer, ui.Image)>(
           future: combinedFuture,
           builder:
               (
                 BuildContext context,
-                AsyncSnapshot<(ImageContainer?, ImageContainer?)> snapshot,
+                AsyncSnapshot<(ChartImageContainer, ui.Image)> snapshot,
               ) {
+                final DateTime t0 = DateTime.now();
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   print('snapshot.connectionState == ConnectionState.waiting');
+                  final DateTime tFinal = DateTime.now();
+                  print(
+                    'in future builder, snapshot.connectionState is waiting and about to create CircularProgressIndicator to return, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
+                  );
                   return const Center(
                     child: CircularProgressIndicator(), // Your spinner
                   );
@@ -208,11 +240,15 @@ class _HeatMapState extends State<HeatMap> {
                   );
                 }
                 if (snapshot.hasData) {
+                  // final DateTime t0 = DateTime.now();
+                  final DateTime tFinal = DateTime.now();
+                  print(
+                    'in future builder, snapshot.hasData and about to create Widget tree to return, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
+                  );
+
                   print('snapshot.hasData');
 
-                  if (snapshot.data == null ||
-                      snapshot.data!.$1 == null ||
-                      snapshot.data!.$2 == null) {
+                  if (snapshot.data == null) {
                     return Center(child: Text('No data returned'));
                   } else {
                     return Column(
@@ -224,12 +260,12 @@ class _HeatMapState extends State<HeatMap> {
                             Text(widget.currentChartSettings.location.name),
                             ChartWidget(
                               chartArrayWidget: CustomPaint(
-                                painter: ImagePainter(snapshot.data!.$1!.image),
+                                painter: ImagePainter(snapshot.data!.$1.image),
                               ),
-                              rawMatrixData: snapshot.data!.$1!.rawMatrixData,
+                              rawMatrixData: snapshot.data!.$1.rawMatrixData,
                               nXAxisBuckets: 12,
                               nYAxisBuckets: 6,
-                              leapYear: snapshot.data!.$1!.leapYear,
+                              leapYear: snapshot.data!.$1.leapYear,
                               timeZone: widget.currentChartSettings.timeZone,
                               year: widget.currentChartSettings.year,
                             ),
@@ -237,7 +273,7 @@ class _HeatMapState extends State<HeatMap> {
                         ),
                         ColorScaleWidget(
                           child: CustomPaint(
-                            painter: ImagePainter(snapshot.data!.$2!.image),
+                            painter: ImagePainter(snapshot.data!.$2),
                           ),
                         ),
                         Row(
@@ -316,7 +352,7 @@ class _HeatMapState extends State<HeatMap> {
                           initialSelection: colorscheme,
                           label: const Text('Select Color Scheme'),
                           onSelected: (MyColorScheme? value) {
-                            changeColorMap(value ?? colorSchemes.first);
+                            _changeColorScheme(value ?? colorSchemes.first);
                           },
                           dropdownMenuEntries:
                               List<DropdownMenuEntry<MyColorScheme>>.generate(
@@ -335,6 +371,7 @@ class _HeatMapState extends State<HeatMap> {
                 print(
                   'proceeding to final option after the other three snapshot cases',
                 );
+
                 // Fallback case (should rarely be reached)
                 if (snapshot.data == null) {
                   return const Center(child: Text('No location selected'));
