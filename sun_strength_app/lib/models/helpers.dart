@@ -10,7 +10,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'dart:math';
+// import 'dart:math';
 import 'package:sun_strength_app/models/errors.dart';
 
 const kDebugMode = true;
@@ -23,14 +23,6 @@ double interpolate(
   double ind2,
 ) {
   return (dep1 - dep0) / (ind1 - ind0) * (ind2 - ind0) + dep0;
-}
-
-double radians(double deg) {
-  return deg * pi / 180;
-}
-
-double degrees(double rad) {
-  return rad * 180 / pi;
 }
 
 final Colormap constColorMap = Colormaps.magma;
@@ -277,14 +269,13 @@ typedef TimedOrbitData =
 /// inner list is a vertical column of pixels.  In those vertical lists of pixels, the bottom-most pixel is first.  The left-most
 /// column of pixels is first.  This ordering is driven by the calculation of solar strength where the morning is at the bottom of
 /// the chart.
-Future<ui.Image> generateColorImage({
+Future<({ui.Image image, List<List<double>> rawMatrixData})> generateColorImage({
   required Iterable<double> valueIterable,
   required int pixelWidth,
   Colormap? colormap,
   bool debug = false,
   bool chart = false,
 }) async {
-  final DateTime t0 = DateTime.now();
   print(
     'running generateColorMapImage, chronologicalSunStrength.length: ${valueIterable.length}, pixelWidth: $pixelWidth',
   );
@@ -368,12 +359,7 @@ Future<ui.Image> generateColorImage({
   final ui.Codec codec = await descriptor.instantiateCodec();
   final ui.FrameInfo frame = await codec.getNextFrame();
 
-  // final DateTime t0 = DateTime.now();
-  final DateTime tFinal = DateTime.now();
-  print(
-    'just finished generateColorImage${chart ? ' for the chart' : ''}, which took ${tFinal.difference(t0).inMilliseconds} milliseconds and started at $t0',
-  );
-  return frame.image;
+  return (image: frame.image, rawMatrixData: rawMatrixData);
 }
 
 Future<ChartImageContainer> generateColorImageInContainer({
@@ -381,44 +367,23 @@ Future<ChartImageContainer> generateColorImageInContainer({
   required int pixelWidth,
   Colormap? colormap,
 }) async {
-  final DateTime t0 = DateTime.now();
   if (valueIterable.length % pixelWidth != 0) {
     throw InvalidPixelWidth(
       pixelWidth: pixelWidth,
       iterableLength: valueIterable.length,
     );
   }
-  final int cols = (valueIterable.length / pixelWidth).toInt();
 
-  final ui.Image image = await generateColorImage(
-    valueIterable: valueIterable,
-    pixelWidth: pixelWidth,
-    chart: true,
-  );
-  final DateTime t1 = DateTime.now();
-  final List<List<double>> rawMatrixData = List.generate(
-    pixelWidth,
-    (i) => valueIterable.toList().sublist(i * cols, (i + 1) * cols),
-  );
-  // TODO: Something is wrong here.  The step above is taking a stupid 
-  // long amount of time.  Like 14 seconds.  I don't know if it is the
-  // whole subList() that is a problem or maybe the way I am setting 
-  // up the Iterable.  I suspect that I am passing the full, 
-  // uncalculated Iterable, then running through it to pull out solar
-  // strength, then breaking it up.  I have to find a better way of 
-  // doing that.  Although, even that shouldn't take this long.  It 
-  // only takes about a second or so do the all the orbit and solar
-  // calcs this first time!
-  final DateTime t2 = DateTime.now();
+  final (:image, :rawMatrixData) = await generateColorImage(
+  valueIterable: valueIterable,
+  pixelWidth: pixelWidth,
+  chart: true,
+  colormap: colormap,
+);
   final ChartImageContainer output = ChartImageContainer(
     image: image,
     leapYear: pixelWidth == 366,
     rawMatrixData: rawMatrixData,
-  );
-  // final DateTime t0 = DateTime.now();
-  final DateTime tFinal = DateTime.now();
-  print(
-    'just finished generateColorImageInContainer, which took ${tFinal.difference(t0).inMilliseconds} milliseconds and started at $t0.  t1: $t1, t2: $t2, tFinal: $tFinal',
   );
   return output;
 }

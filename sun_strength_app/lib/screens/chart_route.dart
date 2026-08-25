@@ -6,6 +6,7 @@ import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/errors.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
+import 'package:sun_strength_app/screens/azimuth_widget.dart';
 import 'package:sun_strength_app/screens/color_scale_widget.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/screens/chart_widget.dart';
@@ -78,21 +79,9 @@ class _HeatMapState extends State<HeatMap> {
   /// UV-A: 0.36 <= k <= 0.92
   /// UV-C: 2.3 <= k <= 4.6
   Future<ChartImageContainer> createChartImage(double k) async {
-    final DateTime t0 = DateTime.now();
     print(
       'running createImage with lat: ${widget.currentChartSettings.location.lat}, lon: ${widget.currentChartSettings.location.lon}, name: ${widget.currentChartSettings.location.name}',
     );
-
-    // Generate the Iterable<double> that is all the data points for the chart.
-    // final Iterable<double> yearSolarStrengthsLocalRelative =
-    //     masterFunctionSolarStrengthArray(
-    //       timeZone: widget.currentChartSettings.timeZone,
-    //       year: widget.currentChartSettings.year,
-    //       h: 0,
-    //       k: k,
-    //       lat: widget.currentChartSettings.location.lat,
-    //       lon: widget.currentChartSettings.location.lon,
-    //     );
 
     final Iterable<OrbitAndSolarValues> orbitAndSolarValuesIterable =
         calculateOrbitAndSolarValuesIterable(
@@ -123,17 +112,10 @@ class _HeatMapState extends State<HeatMap> {
     );
 
     print('about to finish createImage');
-
-    // final DateTime t0 = DateTime.now();
-    final DateTime tFinal = DateTime.now();
-    print(
-      'about to finish createChartImage Future only, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
-    );
     return output;
   }
 
   Future<ui.Image> createScaleImage() async {
-    final DateTime t0 = DateTime.now();
     final int vertHeight = 40;
     final int horWidth = 100;
     Iterable<double> fullList = Iterable<double>.generate(
@@ -143,18 +125,14 @@ class _HeatMapState extends State<HeatMap> {
         return horIndex / (horWidth - 1);
       },
     );
-    print('inside createScaleImage.  About to call generateColorMap');
-    final Future<ui.Image> output = generateColorImage(
+
+    final (:image, :rawMatrixData) = await generateColorImage(
       valueIterable: fullList,
       pixelWidth: horWidth,
       colormap: colorscheme.$2,
     );
-    // final DateTime t0 = DateTime.now();
-    final DateTime tFinal = DateTime.now();
-    print(
-      'about to finish createScaleImage Future only, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
-    );
-    return output;
+
+    return image;
   }
 
   void _changeColorScheme(MyColorScheme newMyColorScheme) {
@@ -362,6 +340,10 @@ class _HeatMapState extends State<HeatMap> {
                                   label: colorSchemes[index].$1,
                                 ),
                               ),
+                        ),
+                        Flexible(
+                          fit: FlexFit.tight,
+                          child: const AzimuthWidget(),
                         ),
                       ],
                     );
