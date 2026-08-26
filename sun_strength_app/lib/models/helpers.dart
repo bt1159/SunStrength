@@ -470,7 +470,9 @@ class OrbitAndSolarValues {
     required this.meanAnomaly,
     required this.eccentricAnomaly,
     required this.trueAnomaly,
+    required this.orbitalRadiusMag,
     required this.orbitalRadius,
+    required this.earthRadius,
     required this.solarElevationAngle,
     required this.solarAzimuthAngle,
     required this.solarStrengthsLocalRelativeToGlobalMax,
@@ -481,7 +483,9 @@ class OrbitAndSolarValues {
   final double meanAnomaly;
   final double eccentricAnomaly;
   final double trueAnomaly;
-  final double orbitalRadius;
+  final double orbitalRadiusMag;
+  final Vector3 orbitalRadius;
+  final Vector3 earthRadius;
   final double solarElevationAngle;
   final double solarAzimuthAngle;
   final double solarStrengthsLocalRelativeToGlobalMax;
