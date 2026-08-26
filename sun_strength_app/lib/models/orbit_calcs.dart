@@ -144,6 +144,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
       trueAnomaly: trueAnomaly,
       orbitalRadiusMag: orbitalRadiusMag,
       orbitalRadius: orbitalRadius,
+      earthRadius: earthRadius,
       solarElevationAngle: solarElevationAngle,
       solarAzimuthAngle: solarAzimuthAngle,
       solarStrengthsLocalRelativeToGlobalMax:
