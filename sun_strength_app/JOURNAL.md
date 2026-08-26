@@ -67,6 +67,8 @@ Added am/pm setting.
 - Fixed _getLocation blah blah but still working on _getLatLngforLocation or whatever
 
 # Future work
+## Seperate the last step of the solar calcs so that changing k only changes the solar strength and not EVERYTHING else.
+
 ## Add a note about DST (pop up changes to always be correct local time, but y axis is solar time).
 
 ## Add somewhat of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.

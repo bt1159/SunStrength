@@ -4,10 +4,13 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:sun_strength_app/models/errors.dart';
+import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:color_map/color_map.dart';
 
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that constains the a [_ChartRenderObjectWidget] and also super imposes the hover tooltip when showing.
@@ -16,41 +19,35 @@ class ChartWidget extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
   const ChartWidget({
     super.key,
-    required this.chartArrayWidget,
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
-    required this.leapYear,
-    required this.rawMatrixData,
     required this.year,
     required this.timeZone,
-  }) : nDays = (leapYear ? 366 : 365);
+  });
 
-  final Widget chartArrayWidget;
   final int nXAxisBuckets;
   final int nYAxisBuckets;
-  final bool leapYear;
-  final List<List<double>> rawMatrixData;
-  final int nDays;
   final int year;
   final tz.Location timeZone;
+  bool get leapYear => leapYears.contains(year);
+  int get nDays => leapYear ? 366 : 365;
 
   @override
-  State<ChartWidget> createState() =>
-      _ChartWidgetState();
+  State<ChartWidget> createState() => _ChartWidgetState();
 }
 
-class _ChartWidgetState
-    extends State<ChartWidget> {
+class _ChartWidgetState extends State<ChartWidget> {
   // Tooltip State Variables
   Offset? _hoverBoxPosition;
   String? _tooltipText12;
   String? _tooltipText24;
-  static const Offset toolTipFormattingOffset = Offset(20,20);
+  static const Offset toolTipFormattingOffset = Offset(20, 20);
 
   void _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
     Offset chartWidgetOffsetToParent,
+    final Iterable<Iterable<double>> rawMatrixData,
   ) {
     final double x = chartTextLocalPosition.dx;
     final double y = chartTextLocalPosition.dy;
@@ -64,7 +61,7 @@ class _ChartWidgetState
     final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
 
     // Look up data parameters safely.  First index is day, then time
-    final double value = widget.rawMatrixData[dayIndex][timeIndex];
+    final double value = rawMatrixData.toList()[dayIndex].toList()[timeIndex];
 
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
@@ -74,7 +71,10 @@ class _ChartWidgetState
     ).add(Duration(milliseconds: datetimeDelta));
 
     setState(() {
-      _hoverBoxPosition = chartTextLocalPosition + chartWidgetOffsetToParent + toolTipFormattingOffset;
+      _hoverBoxPosition =
+          chartTextLocalPosition +
+          chartWidgetOffsetToParent +
+          toolTipFormattingOffset;
       _tooltipText12 =
           '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
       _tooltipText24 =
@@ -101,33 +101,69 @@ class _ChartWidgetState
       clipBehavior: Clip.none,
       children: [
         Selector<SavedSettingsNotifier, bool>(
-          selector: (_, savedSettingsNotifier) => savedSettingsNotifier.value?.twelveHour ?? true,
-          builder:(context, twelveHour, child) => _ChartRenderObjectWidget(
-            nXAxisBuckets: widget.nXAxisBuckets,
-            nYAxisBuckets: widget.nYAxisBuckets,
-            leapYear: widget.leapYear,
-            twelveHour: twelveHour,
-            chartArrayWidget: child!,
-          ),
-          child: Builder(
-              builder: (context) {
-                return MouseRegion(
-                  onHover: (event) {
-                    // Find the rendering size of the canvas dynamically
-                    final RenderBox box = context.findRenderObject() as RenderBox;
-                    final BoxParentData? boxParentData =
-                        box.parentData as BoxParentData?;
-                    _handleChartHover(
-                      event.localPosition,
-                      box.size,
-                      boxParentData?.offset ?? Offset(0, 0),
+          selector: (_, savedSettingsNotifier) =>
+              savedSettingsNotifier.value?.twelveHour ?? true,
+          builder: (context, twelveHour, selectorSavedSettingsNotifierChild) =>
+              _ChartRenderObjectWidget(
+                nXAxisBuckets: widget.nXAxisBuckets,
+                nYAxisBuckets: widget.nYAxisBuckets,
+                twelveHour: twelveHour,
+                leapYear: widget.leapYear,
+                chartArrayWidget: selectorSavedSettingsNotifierChild!,
+              ),
+          child: GestureDetector(
+            // onTapDown: (details) =>  ,
+            onTapUp: (details) {
+              final RenderBox box = context.findRenderObject() as RenderBox;
+              final double pxWidth = box.size.width / widget.nDays;
+              final int dayIndex = (details.localPosition.dx / pxWidth)
+                  .floor()
+                  .clamp(0, widget.nDays - 1);
+              context.read<DayIndexNotifier>().value = dayIndex;
+            },
+            child: Consumer<OrbitAndSolarValuesListNotifier>(
+              builder: (context, orbitAndSolarValuesListNotifier, child) {
+                return Selector<SavedSettingsNotifier, Colormap?>(
+                  selector: (_, savedAppSettingsNotifier) =>
+                      savedAppSettingsNotifier.value?.colorScheme.$2,
+                  builder: (context, colormap, child) {
+                    final Iterable<double> valueIterable =
+                        orbitAndSolarValuesListNotifier.value.map(
+                          (e) => e.solarStrengthsLocalRelativeToGlobalMax,
+                        );
+                    final int nDays = (valueIterable.length / 96).toInt();
+                    final Iterable<Iterable<double>> rawMatrixData =
+                        createRawMatrixData(
+                          nDays: nDays,
+                          valueIterable: valueIterable,
+                        );
+                    return MouseRegion(
+                      onHover: (event) {
+                        // Find the rendering size of the canvas dynamically
+                        final RenderBox box =
+                            context.findRenderObject() as RenderBox;
+                        final BoxParentData? boxParentData =
+                            box.parentData as BoxParentData?;
+                        _handleChartHover(
+                          event.localPosition,
+                          box.size,
+                          boxParentData?.offset ?? Offset(0, 0),
+                          rawMatrixData,
+                        );
+                      },
+                      onExit: (_) => _hideTooltip(),
+                      // child: widget.chartArrayWidget,
+                      child: FutureBuilderChartImage(
+                        orbitAndSolarValuesIterable:
+                            orbitAndSolarValuesListNotifier.value,
+                        colormap: colormap,
+                      ),
                     );
                   },
-                  onExit: (_) => _hideTooltip(),
-                  child: widget.chartArrayWidget,
                 );
               },
-            )
+            ),
+          ),
         ),
         // 2. The Floating Tooltip Popup Layer
         if (_hoverBoxPosition != null &&
@@ -158,6 +194,84 @@ class _ChartWidgetState
             ),
           ),
       ],
+    );
+  }
+}
+
+class FutureBuilderChartImage extends StatefulWidget {
+  const FutureBuilderChartImage({
+    super.key,
+    required this.orbitAndSolarValuesIterable,
+    this.colormap,
+  });
+
+  final List<OrbitAndSolarValues> orbitAndSolarValuesIterable;
+  final Colormap? colormap;
+
+  @override
+  State<FutureBuilderChartImage> createState() =>
+      _FutureBuilderChartImageState();
+}
+
+class _FutureBuilderChartImageState extends State<FutureBuilderChartImage> {
+  late Future<ChartImageContainer> futureChartImage;
+
+  /// The function that actually creates the 2D array of solar strength bytes.
+  ///
+  /// Note: k is the value that determines what wavelength of sunlight you are looking at:
+  /// Visible: 0.22 <= k <= 0.36
+  /// UV-A: 0.36 <= k <= 0.92
+  /// UV-C: 2.3 <= k <= 4.6
+  Future<ChartImageContainer> createChartImage() async {
+    final int pixelH = 96;
+    if (widget.orbitAndSolarValuesIterable.length % pixelH != 0) {
+      throw InvalidPixelWidth(
+        pixelWidth: pixelH,
+        iterableLength: widget.orbitAndSolarValuesIterable.length,
+      );
+    }
+    final int pixelW = (widget.orbitAndSolarValuesIterable.length / pixelH)
+        .toInt();
+    final Future<ChartImageContainer> output = generateColorImageInContainer(
+      valueIterable: widget.orbitAndSolarValuesIterable.map(
+        (e) => e.solarStrengthsLocalRelativeToGlobalMax,
+      ),
+      pixelWidth: pixelW,
+      colormap: widget.colormap,
+    );
+    print('about to finish createImage');
+    return output;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    futureChartImage = createChartImage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ChartImageContainer>(
+      future: futureChartImage,
+      builder:
+          (BuildContext context, AsyncSnapshot<ChartImageContainer> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(), // Your spinner
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Snapshot Error: ${snapshot.error}'));
+            }
+            if (snapshot.hasData) {
+              return CustomPaint(painter: ImagePainter(snapshot.data!.image));
+            }
+            if (snapshot.data == null) {
+              return const Center(child: Text('No location selected'));
+            } else {
+              return const Center(child: Text('No Image'));
+            }
+          },
     );
   }
 }
@@ -207,7 +321,10 @@ class _ChartRenderObjectWidget
     // Return a text widget for the specific index
     if (slot.id == 'yAxisLabel') {
       final String labelText =
-          TimeLabelList.fromCountAndTwelveHour(nYAxisBuckets, twelveHour)?.labelList[slot.index!] ??
+          TimeLabelList.fromCountAndTwelveHour(
+            nYAxisBuckets,
+            twelveHour,
+          )?.labelList[slot.index!] ??
           'BadYAxisCount';
       return Text(labelText, textAlign: TextAlign.right);
     }
@@ -473,7 +590,6 @@ class _ChartRenderObject extends RenderBox
       _chartArray!.layout(
         BoxConstraints.tightFor(
           // width: min(600, constraints.maxWidth - maxYAxisLabelWidth),
-          
           width: constraints.maxWidth - maxYAxisLabelWidth,
           height: heatMapHeight,
         ),
@@ -757,37 +873,11 @@ enum TimeLabelList {
     '21:00',
     '24:00',
   ]),
-  sixF(6, false, [
-    '0:00',
-    '4:00',
-    '8:00',
-    '12:00',
-    '16:00',
-    '20:00',
-    '24:00',
-  ]),
-  fourF(4, false, [
-    '0:00',
-    '6:00',
-    '12:00',
-    '18:00',
-    '24:00',
-  ]),
-  threeF(3, false,[
-    '0:00',
-    '8:00',
-    '16:00',
-    '24:00',
-  ]),
-  twoF(2, false,[
-    '0:00',
-    '12:00',
-    '24:00',
-  ]),
-  oneF(1, false, [
-    '0:00',
-    '24:00',
-  ]);
+  sixF(6, false, ['0:00', '4:00', '8:00', '12:00', '16:00', '20:00', '24:00']),
+  fourF(4, false, ['0:00', '6:00', '12:00', '18:00', '24:00']),
+  threeF(3, false, ['0:00', '8:00', '16:00', '24:00']),
+  twoF(2, false, ['0:00', '12:00', '24:00']),
+  oneF(1, false, ['0:00', '24:00']);
 
   const TimeLabelList(this.count, this.twelveHour, this.labelList);
 
@@ -805,4 +895,3 @@ enum TimeLabelList {
     return null; // Handle invalid numbers safely
   }
 }
-

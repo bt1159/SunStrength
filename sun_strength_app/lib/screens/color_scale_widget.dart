@@ -1,15 +1,101 @@
 import 'dart:core';
+import 'dart:ui' as ui;
 // import 'dart:math';
 // import 'package:collection/collection.dart';
+import 'package:color_map/color_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
+import 'package:sun_strength_app/models/helpers.dart';
+import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 // import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 // import 'package:timezone/timezone.dart' as tz;
 // import 'package:intl/intl.dart';
 // import 'package:provider/provider.dart';
 
-class ColorScaleWidget extends SingleChildRenderObjectWidget {
-  const ColorScaleWidget({
+class ColorScaleWidget extends StatelessWidget {
+  const ColorScaleWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        return ColorScaleRenderObjectWidget(
+          child: Selector<SavedSettingsNotifier, Colormap?>(
+            selector: (_, savedAppSettingsNotifier) =>
+                savedAppSettingsNotifier.value?.colorScheme.$2,
+            builder: (context, colormap, child) =>
+                FutureBuilderColorScale(colormap: colormap),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FutureBuilderColorScale extends StatefulWidget {
+  const FutureBuilderColorScale({super.key, required this.colormap});
+
+  final Colormap? colormap;
+
+  @override
+  State<FutureBuilderColorScale> createState() =>
+      _FutureBuilderColorScaleState();
+}
+
+class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
+  late Future<ui.Image> futureChartImage;
+
+  Future<ui.Image> createScaleImage() async {
+    final int vertHeight = 40;
+    final int horWidth = 100;
+    Iterable<double> fullList = Iterable<double>.generate(
+      vertHeight * horWidth,
+      (index) {
+        final int horIndex = (index / vertHeight).floor();
+        return horIndex / (horWidth - 1);
+      },
+    );
+    final (:image, :rawMatrixData) = await generateColorImage(
+      valueIterable: fullList,
+      pixelWidth: horWidth,
+      colormap: widget.colormap,
+    );
+    return image;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    futureChartImage = createScaleImage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ui.Image>(
+      future: futureChartImage,
+      builder: (context, AsyncSnapshot<ui.Image> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Snapshot Error: ${snapshot.error}'));
+        }
+        if (snapshot.hasData) {
+          return CustomPaint(painter: ImagePainter(snapshot.data!));
+        }
+        if (snapshot.data == null) {
+          return const Center(child: Text('No location selected'));
+        } else {
+          return const Center(child: Text('No Image'));
+        }
+      },
+    );
+  }
+}
+
+class ColorScaleRenderObjectWidget extends SingleChildRenderObjectWidget {
+  const ColorScaleRenderObjectWidget({
     super.key,
     super.child,
     this.labelStyle = const TextStyle(fontSize: 12, color: Colors.white),
@@ -149,13 +235,20 @@ class ColorScaleRenderObject extends RenderBox
         ..strokeWidth = 0.5
         ..style = PaintingStyle.stroke;
 
-      final double labelSpacing = (child!.size.width / (_labelValues.length - 1));
+      final double labelSpacing =
+          (child!.size.width / (_labelValues.length - 1));
 
       // Draw vertical lines in bar
       for (int i = 1; i < _labelValues.length - 1; i++) {
         context.canvas.drawLine(
-          Offset(childParentData.offset.dx + labelSpacing * i + offset.dx, offset.dy),
-          Offset(childParentData.offset.dx + labelSpacing * i + offset.dx, offset.dy + _barHeight),
+          Offset(
+            childParentData.offset.dx + labelSpacing * i + offset.dx,
+            offset.dy,
+          ),
+          Offset(
+            childParentData.offset.dx + labelSpacing * i + offset.dx,
+            offset.dy + _barHeight,
+          ),
           gridPaint,
         );
       }

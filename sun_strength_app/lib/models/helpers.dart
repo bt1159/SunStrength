@@ -4,12 +4,13 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 // import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vector_math/vector_math_64.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 // import 'dart:math';
 import 'package:sun_strength_app/models/errors.dart';
 
@@ -258,6 +259,19 @@ class SavedAppSettings {
 typedef TimedOrbitData =
     Iterable<({double earthRotationAngle, double trueAnomaly})>;
 
+Iterable<Iterable<double>> createRawMatrixData({
+  required Iterable<double> valueIterable,
+  required int nDays,
+}) {
+  final int nTimes = (valueIterable.length / nDays).toInt();
+  final Iterable<Iterable<double>> output = Iterable.generate(nDays, (dayIndex) {
+    final int start = dayIndex * nTimes;
+    final int end = start + nTimes;
+    return valueIterable.toList().sublist(start, end).reversed;
+  });
+  return output;
+}
+
 /// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
 /// inside of an [ChartImageContainer].  This [Future] is called, received, and handled by [HeatMap].
 ///
@@ -269,7 +283,8 @@ typedef TimedOrbitData =
 /// inner list is a vertical column of pixels.  In those vertical lists of pixels, the bottom-most pixel is first.  The left-most
 /// column of pixels is first.  This ordering is driven by the calculation of solar strength where the morning is at the bottom of
 /// the chart.
-Future<({ui.Image image, List<List<double>> rawMatrixData})> generateColorImage({
+Future<({ui.Image image, List<List<double>> rawMatrixData})>
+generateColorImage({
   required Iterable<double> valueIterable,
   required int pixelWidth,
   Colormap? colormap,
@@ -375,11 +390,11 @@ Future<ChartImageContainer> generateColorImageInContainer({
   }
 
   final (:image, :rawMatrixData) = await generateColorImage(
-  valueIterable: valueIterable,
-  pixelWidth: pixelWidth,
-  chart: true,
-  colormap: colormap,
-);
+    valueIterable: valueIterable,
+    pixelWidth: pixelWidth,
+    chart: true,
+    colormap: colormap,
+  );
   final ChartImageContainer output = ChartImageContainer(
     image: image,
     leapYear: pixelWidth == 366,
@@ -489,4 +504,108 @@ class OrbitAndSolarValues {
   final double solarElevationAngle;
   final double solarAzimuthAngle;
   final double solarStrengthsLocalRelativeToGlobalMax;
+}
+
+class DayIndexNotifier extends ValueNotifier<int> {
+  DayIndexNotifier(super.value);
+}
+
+/// {@template ImagePainter}
+///
+/// This widget takes an [ui.Image] object as an input actually "paints" that into a widget.
+/// This way, this widget is given a canvas and a size and applies the [image] to that.
+///
+/// {@endtemplate}
+class ImagePainter extends CustomPainter {
+  final ui.Image? image;
+
+  /// {@macro ImagePainter}
+  ImagePainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (image != null) {
+      // 1. Define the full bounds of the raw source image pixels
+      final Rect src = Rect.fromLTWH(
+        0,
+        0,
+        image!.width.toDouble(),
+        image!.height.toDouble(),
+      );
+
+      // 2. Define the full layout bounds allocated to your CustomPaint (600x300)
+      final Rect dst = Rect.fromLTWH(0, 0, size.width, size.height);
+
+      // 3. Create a paint object.
+      // Optional: Set filterQuality to determine how pixels blend when stretched
+      final Paint paint = Paint()
+        ..filterQuality = FilterQuality
+            .medium; // Use .none for crisp pixel blocks, .medium for smooth blending
+
+      // 4. Draw it stretched!
+      canvas.drawImageRect(image!, src, dst, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ImagePainter oldDelegate) {
+    // Optimization: Only repaint if the image object has actually changed
+    return oldDelegate.image != image;
+  }
+}
+
+class OrbitAndSolarValuesListNotifier
+    extends ValueNotifier<List<OrbitAndSolarValues>> {
+  OrbitAndSolarValuesListNotifier(super.value);
+}
+
+const List<int> leapYears = [1996,2004,2008,2012,2016,2020,2024,2028];
+
+
+// TODO: Start here
+class PathMetricsGradientPainter extends CustomPainter {
+  final Path path;
+  final ColorScheme colorScheme; // Or list of colors
+
+  PathMetricsGradientPainter({required this.path, required this.colorScheme});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final metrics = path.computeMetrics();
+
+    for (final metric in metrics) {
+      final double totalLength = metric.length;
+      final double step = 2.0; // Resolution: 2px per step
+
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20.0
+        ..strokeCap = StrokeCap.round;
+
+      for (double d = 0; d < totalLength; d += step) {
+        final nextD = (d + step).clamp(0.0, totalLength);
+        
+        // Calculate normalized fraction [0.0 to 1.0] along the curve length
+        final fraction = d / totalLength;
+
+        // Custom color logic based on distance along curve
+        paint.color = _getColorAtFraction(fraction);
+
+        // Extract segment segment geometry
+        final segmentPath = metric.extractPath(d, nextD);
+        canvas.drawPath(segmentPath, paint);
+      }
+    }
+  }
+
+  Color _getColorAtFraction(double t) {
+    // Example: Dark Red -> Red -> Yellow -> Orange -> Dark Red
+    if (t < 0.25) return Color.lerp(const Color(0xFF300000), Colors.red, t / 0.25)!;
+    if (t < 0.50) return Color.lerp(Colors.red, Colors.yellow, (t - 0.25) / 0.25)!;
+    if (t < 0.75) return Color.lerp(Colors.yellow, Colors.orange, (t - 0.50) / 0.25)!;
+    return Color.lerp(Colors.orange, const Color(0xFF300000), (t - 0.75) / 0.25)!;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

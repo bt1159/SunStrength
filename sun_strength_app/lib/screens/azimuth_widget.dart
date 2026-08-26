@@ -1,11 +1,91 @@
 import 'dart:core';
 import 'dart:math';
+import 'package:color_map/color_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
+import 'package:sun_strength_app/models/helpers.dart';
+import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 
-class AzimuthWidget extends LeafRenderObjectWidget {
+class AzimuthWidget extends StatelessWidget {
   const AzimuthWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<OrbitAndSolarValuesListNotifier, DayIndexNotifier>(
+      builder:
+          (context, orbitAndSolarValuesListNotifier, dayIndexNotifier, child) {
+            final OrbitAndSolarValues orbitAndSolarValues =
+                orbitAndSolarValuesListNotifier.value[dayIndexNotifier.value];
+            return Selector<SavedSettingsNotifier, Colormap?>(
+              selector: (_, savedAppSettingsNotifier) =>
+                  savedAppSettingsNotifier.value?.colorScheme.$2,
+              builder: (context, colormap, child) {
+                return AzimuthRenderObjectWidget(
+                  child: FutureBuilderAzimuthChart(
+                    orbitAndSolarValues: orbitAndSolarValues,
+                    colormap: colormap,
+                  ),
+                );
+              },
+            );
+          },
+    );
+  }
+}
+
+class FutureBuilderAzimuthChart extends StatefulWidget {
+  const FutureBuilderAzimuthChart({
+    super.key,
+    required this.orbitAndSolarValues,
+    this.colormap,
+  });
+
+  final OrbitAndSolarValues orbitAndSolarValues;
+  final Colormap? colormap;
+  @override
+  State<FutureBuilderAzimuthChart> createState() =>
+      _FutureBuilderAzimuthChartState();
+}
+
+class _FutureBuilderAzimuthChartState extends State<FutureBuilderAzimuthChart> {
+  late Future<ChartImageContainer> futureAzimuthImage;
+
+  Future<ChartImageContainer> createAzimuthImage() {}
+
+  @override
+  void initState() {
+    super.initState();
+    futureAzimuthImage = createAzimuthImage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ChartImageContainer>(
+      future: futureAzimuthImage,
+      builder: (context, AsyncSnapshot<ChartImageContainer> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Snapshot Error: ${snapshot.error}'));
+        }
+        if (snapshot.hasData) {
+          return CustomPaint(painter: ImagePainter(snapshot.data!.image));
+        }
+        if (snapshot.data == null) {
+          return const Center(child: Text('No location selected'));
+        } else {
+          return const Center(child: Text('No Image'));
+        }
+      },
+    );
+  }
+}
+
+class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
+  const AzimuthRenderObjectWidget({super.key, super.child});
 
   @override
   AzimuthRenderObject createRenderObject(BuildContext context) {
@@ -13,7 +93,10 @@ class AzimuthWidget extends LeafRenderObjectWidget {
   }
 }
 
-class AzimuthRenderObject extends RenderBox with DebugOverflowIndicatorMixin {
+class AzimuthRenderObject extends RenderBox
+    with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
+  AzimuthRenderObject();
+
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
     final Size drySize = Size(
