@@ -103,20 +103,31 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
     final double eccentricAnomaly = calculateEccentricAnomaly(meanAnomaly);
     final double trueAnomaly = calculateTrueAnomaly(eccentricAnomaly);
     final double orbitalRadiusMag = calculateOrbitalRadiusMag(trueAnomaly);
-    final double orbitalRadius = calculateOrbitalRadius(trueAnomaly);
-    final double solarElevationAngleTrig = calculateSolarElevationAngle(
+    final Vector3 orbitalRadius = calculateOrbitalRadius(trueAnomaly);
+    final double solarElevationAngleTrig = calculateSolarElevationAngleTrig(
       latRad: latRad,
       lonRad: lonRad,
       earthRotationAngle: earthRotationAngle,
       trueAnomaly: trueAnomaly,
       orbitalRadiusMag: orbitalRadiusMag,
     );
+    final double solarElevationAngle = calculateSolarElevationAngle(
+      latRad: latRad,
+      lonRad: lonRad,
+      earthRotationAngle: earthRotationAngle,
+      trueAnomaly: trueAnomaly,
+      orbitalRadiusMag: orbitalRadiusMag,
+      orbitalRadius: orbitalRadius,
+      earthRadius: earthRadius,
+    );
     final double solarAzimuthAngle = calculateSolarAzimuthAngle(
       latRad: latRad,
       lonRad: lonRad,
       earthRotationAngle: earthRotationAngle,
       trueAnomaly: trueAnomaly,
+      orbitalRadiusMag: orbitalRadiusMag,
       orbitalRadius: orbitalRadius,
+      earthRadius: earthRadius,
     );
     final double solarStrengthsLocalRelativeToGlobalMax =
         calculateSolarStrengthRelativeToGlobalMax(
@@ -217,9 +228,9 @@ double calculateSolarElevationAngle({
   required double lonRad,
   required double earthRotationAngle,
   required double trueAnomaly,
+  required double orbitalRadiusMag,  
   required Vector3 orbitalRadius,
   required Vector3 earthRadius,
-  required double orbitalRadiusMag,  
 }) {
   final double oPDotRe = orbitalRadius.dot(earthRadius);
   final double sinTheta = (pow(rEarth, 2) - oPDotRe) / (rEarth * sqrt(pow(rEarth, 2) + pow(orbitalRadiusMag, 2) - 2 * oPDotRe));
@@ -236,22 +247,13 @@ double calculateSolarAzimuthAngle({
   required double lonRad,
   required double earthRotationAngle,
   required double trueAnomaly,
-  required double orbitalRadius,
+  required double orbitalRadiusMag,  
+  required Vector3 orbitalRadius,
+  required Vector3 earthRadius,
 }) {
-  final Vector3 opNeg = Vector3(
-    -(rA + rP) / 2 * cos(trueAnomaly) + (rA - rP) / 2,
-    -sqrt(rA * rP) * sin(trueAnomaly),
-    0,
-  );
-  final Vector3 re = Vector3(
-    rEarth * cos(latRad) * cos(tilt) * cos(earthRotationAngle + lonRad) +
-        rEarth * sin(latRad) * sin(tilt),
-    rEarth * cos(latRad) * sin(earthRotationAngle + lonRad),
-    -rEarth * cos(latRad) * sin(tilt) * cos(earthRotationAngle + lonRad) +
-        rEarth * sin(latRad) * cos(tilt),
-  );
-  final Vector3 rN = reNorthPole - re;
-  final Vector3 rNTang = rN - re * re.dot(rN) / re.length2;
+  final Vector3 opNeg = -orbitalRadius;
+  final Vector3 rN = reNorthPole - earthRadius;
+  final Vector3 rNTang = rN - earthRadius * earthRadius.dot(rN) / pow(rEarth, 2);
   final double cosAlpha =
       (rEarth * opNeg.dot(rNTang)) /
       (sqrt(pow(rEarth, 2) * pow(orbitalRadius, 2) - pow(re.dot(opNeg), 2)) *
