@@ -123,10 +123,10 @@ class _ChartWidgetState extends State<ChartWidget> {
             },
             child: Consumer<OrbitAndSolarValuesListNotifier>(
               builder: (context, orbitAndSolarValuesListNotifier, child) {
-                return Selector<SavedSettingsNotifier, Colormap?>(
+                return Selector<SavedSettingsNotifier, MyColorScheme?>(
                   selector: (_, savedAppSettingsNotifier) =>
-                      savedAppSettingsNotifier.value?.colorScheme.$2,
-                  builder: (context, colormap, child) {
+                      savedAppSettingsNotifier.value?.colorScheme,
+                  builder: (context, colorScheme, child) {
                     final Iterable<double> valueIterable =
                         orbitAndSolarValuesListNotifier.value.map(
                           (e) => e.solarStrengthsLocalRelativeToGlobalMax,
@@ -156,7 +156,7 @@ class _ChartWidgetState extends State<ChartWidget> {
                       child: FutureBuilderChartImage(
                         orbitAndSolarValuesIterable:
                             orbitAndSolarValuesListNotifier.value,
-                        colormap: colormap,
+                        colormap: colorScheme.$2,
                       ),
                     );
                   },
