@@ -158,7 +158,7 @@ class _HeatMapState extends State<HeatMap> {
               create: (_) {
                 final List<OrbitAndSolarValues> orbitAndSolarValuesList =
                     calculateOrbitAndSolarValuesIterable(
-                      k: 2,
+                      k: _currentK,
                       h: 0,
                       lat: widget.currentChartSettings.location.lat,
                       lon: widget.currentChartSettings.location.lon,
