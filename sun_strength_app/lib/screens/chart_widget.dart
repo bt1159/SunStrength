@@ -126,6 +126,9 @@ class _ChartWidgetState extends State<ChartWidget> {
                 return Selector<SavedSettingsNotifier, MyColorScheme?>(
                   selector: (_, savedAppSettingsNotifier) =>
                       savedAppSettingsNotifier.value?.colorScheme,
+                  shouldRebuild: (previous, next) {
+                    return previous.$1 != next.$1;
+                  },
                   builder: (context, colorScheme, child) {
                     final Iterable<double> valueIterable =
                         orbitAndSolarValuesListNotifier.value.map(
