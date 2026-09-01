@@ -57,26 +57,10 @@ class ChartHomePage extends StatelessWidget {
 /// overriden [didUpdateWidget] that handles a new [HeatMap] widget and checks if the passed location has changed.
 ///
 /// {@endtemplate}
-class HeatMap extends StatefulWidget {
+class HeatMap extends StatelessWidget {
   /// {@macro HeatMap}
   const HeatMap({super.key, required this.currentChartSettings});
   final CurrentChartSettings currentChartSettings;
-
-  @override
-  State<HeatMap> createState() => _HeatMapState();
-}
-
-class _HeatMapState extends State<HeatMap> {
-  double _currentK = 2;
-
-  /// Method called by widgets in this build method to change which light frequency/wavelength range
-  /// the chart should show
-  void _updateParameter(double newValue) {
-    print('just started updateParameter');
-    setState(() {
-      _currentK = newValue;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,21 +71,40 @@ class _HeatMapState extends State<HeatMap> {
         constraints: BoxConstraints(maxWidth: 800),
         child: MultiProvider(
           providers: [
+            ChangeNotifierProvider<KNotifier>(create: (_) => KNotifier(2.0)),
             ChangeNotifierProvider<DayIndexNotifier>(
               create: (_) => DayIndexNotifier(null),
             ),
-            ChangeNotifierProvider<OrbitAndSolarValuesListNotifier>(
+            ChangeNotifierProxyProvider<
+              KNotifier,
+              OrbitAndSolarValuesListNotifier
+            >(
               create: (_) {
                 final List<OrbitAndSolarValues> orbitAndSolarValuesList =
                     calculateOrbitAndSolarValuesIterable(
-                      k: _currentK,
+                      k: 2,
                       h: 0,
-                      lat: widget.currentChartSettings.location.lat,
-                      lon: widget.currentChartSettings.location.lon,
-                      timeZone: widget.currentChartSettings.timeZone,
-                      year: widget.currentChartSettings.year,
+                      lat: currentChartSettings.location.lat,
+                      lon: currentChartSettings.location.lon,
+                      timeZone: currentChartSettings.timeZone,
+                      year: currentChartSettings.year,
                     ).toList();
                 return OrbitAndSolarValuesListNotifier(orbitAndSolarValuesList);
+              },
+              update: (context, kNotifier, orbitAndSolarValuesListNotifier) {
+                if (orbitAndSolarValuesListNotifier == null) {
+                  throw 'null previous in ProxyProvider';
+                }
+                final List<OrbitAndSolarValues> orbitAndSolarValuesList =
+                    calculateOrbitAndSolarValuesIterable(
+                      k: kNotifier.value,
+                      h: 0,
+                      lat: currentChartSettings.location.lat,
+                      lon: currentChartSettings.location.lon,
+                      timeZone: currentChartSettings.timeZone,
+                      year: currentChartSettings.year,
+                    ).toList();
+                return orbitAndSolarValuesListNotifier..value = orbitAndSolarValuesList;
               },
             ),
           ],
@@ -111,37 +114,39 @@ class _HeatMapState extends State<HeatMap> {
             children: [
               Column(
                 children: [
-                  Text(widget.currentChartSettings.location.name),
+                  Text(currentChartSettings.location.name),
                   ChartWidget(
                     nXAxisBuckets: 12,
                     nYAxisBuckets: 6,
-                    timeZone: widget.currentChartSettings.timeZone,
-                    year: widget.currentChartSettings.year,
+                    timeZone: currentChartSettings.timeZone,
+                    year: currentChartSettings.year,
                   ),
                 ],
               ),
               const ColorScaleWidget(),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: _currentK == 0.3
-                        ? null
-                        : () => _updateParameter(0.3),
-                    child: Text('Visible light'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _currentK == 0.64
-                        ? null
-                        : () => _updateParameter(0.64),
-                    child: Text('UV-A'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _currentK == 2
-                        ? null
-                        : () => _updateParameter(2),
-                    child: Text('UV-B'),
-                  ),
-                ],
+              Consumer<KNotifier>(
+                builder: (context, kNotifer, child) => Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: kNotifer.value == 0.3
+                          ? null
+                          : () => kNotifer.value = 0.3,
+                      child: Text('Visible light'),
+                    ),
+                    ElevatedButton(
+                      onPressed: kNotifer.value == 0.64
+                          ? null
+                          : () => kNotifer.value = 0.64,
+                      child: Text('UV-A'),
+                    ),
+                    ElevatedButton(
+                      onPressed: kNotifer.value == 2
+                          ? null
+                          : () => kNotifer.value = 2,
+                      child: Text('UV-B'),
+                    ),
+                  ],
+                ),
               ),
               Row(
                 children: [
@@ -151,13 +156,13 @@ class _HeatMapState extends State<HeatMap> {
                                 .read<SavedSettingsNotifier>()
                                 .value
                                 ?.defaultLocation ==
-                            widget.currentChartSettings.location
+                            currentChartSettings.location
                         ? null
                         : () async {
                             await context
                                 .read<SavedSettingsNotifier>()
                                 .updateLocation(
-                                  widget.currentChartSettings.location,
+                                  currentChartSettings.location,
                                 );
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -217,7 +222,9 @@ class _HeatMapState extends State<HeatMap> {
                 selector: (_, dayIndexNotifier) =>
                     dayIndexNotifier.value != null,
                 builder: (context, valueNotNull, child) {
-                  print('Inside the selector that determines whether to build the azimuth chart, dayIndex is ${valueNotNull ? 'not ' : ''}null');
+                  print(
+                    'Inside the selector that determines whether to build the azimuth chart, dayIndex is ${valueNotNull ? 'not ' : ''}null',
+                  );
                   return valueNotNull ? child! : Container();
                 },
                 child: const Flexible(

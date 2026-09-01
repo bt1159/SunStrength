@@ -21,11 +21,12 @@ class ColorScaleWidget extends StatelessWidget {
     return Builder(
       builder: (context) {
         return ColorScaleRenderObjectWidget(
-          child: Selector<SavedSettingsNotifier, Colormap?>(
+          child: Selector<SavedSettingsNotifier, MyColorScheme?>(
             selector: (_, savedAppSettingsNotifier) =>
-                savedAppSettingsNotifier.value?.colorScheme.$2,
-            builder: (context, colormap, child) =>
-                FutureBuilderColorScale(colormap: colormap),
+                savedAppSettingsNotifier.value?.colorScheme,
+            shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
+            builder: (context, colorScheme, child) =>
+                FutureBuilderColorScale(colormap: colorScheme?.$2),
           ),
         );
       },
@@ -49,14 +50,14 @@ class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
   Future<ui.Image> createScaleImage() async {
     final int vertHeight = 40;
     final int horWidth = 100;
-    List<OrbitAndSolarValues> orbitAndSolarValuesList = List<OrbitAndSolarValues>.generate(
-      vertHeight * horWidth,
-      (index) {
-        final int horIndex = (index / vertHeight).floor();
-        final double strength = horIndex / (horWidth - 1);
-        return OrbitAndSolarValues.strengthOnly(solarStrengthsLocalRelativeToGlobalMax: strength);
-      },
-    );
+    List<OrbitAndSolarValues> orbitAndSolarValuesList =
+        List<OrbitAndSolarValues>.generate(vertHeight * horWidth, (index) {
+          final int horIndex = (index / vertHeight).floor();
+          final double strength = horIndex / (horWidth - 1);
+          return OrbitAndSolarValues.strengthOnly(
+            solarStrengthsLocalRelativeToGlobalMax: strength,
+          );
+        });
     final (:image, :rawMatrixData) = await generateColorImage(
       orbitAndSolarValuesList: orbitAndSolarValuesList,
       pixelWidth: horWidth,
@@ -69,6 +70,26 @@ class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
   void initState() {
     super.initState();
     futureChartImage = createScaleImage();
+  }
+
+  /// This override is required because the only place where
+  /// [widget.orbitAndSolarValuesIterable] and [widget.colormap] are
+  /// referenced are in [createChartImage].  Since they are not referenced
+  /// in the build method, changing those values (i.e., changing the
+  /// configuration widget) will not run the build() method.
+  @override
+  void didUpdateWidget(covariant FutureBuilderColorScale oldWidget) {
+    String? oldColorMapString = oldWidget.colormap == null
+        ? null
+        : ColorMapPicker.getName(oldWidget.colormap!);
+    String? newColorMapString = widget.colormap == null
+        ? null
+        : ColorMapPicker.getName(widget.colormap!);
+    if (oldColorMapString != newColorMapString) {
+      futureChartImage = createScaleImage();
+    }
+
+    super.didUpdateWidget(oldWidget);
   }
 
   @override

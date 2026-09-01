@@ -1,4 +1,15 @@
 # Daily log
+## 2026-09-01
+I am out of date with this log.  I have finally gotten the azimath angle visual basically working.  Currently, I am having numerous issues with some things not updating.  Clicking the button to update k does nothing.  Changing the color scheme changes some things, I think, but definitely not everything.
+
+Current issues:
+- hideToolTip keeps running.  After EVERY hover.  (solved by uncommenting IgnorePointer wrapped around tooltip)
+- azimuth color scheme loaded to wrong scheme.  (solved by correcting colorValuesFromMap call to use colormap that was passed to it)
+- Clicking a button to change k runs some functions, but the chart doesn't change.  Im not sure what exactly runs (solved.  The orbit data was being created in a CNP's create method, which referenced a value held in the stateful widget.  When the k value changed, it reran the build method, but Flutter did not recreate the provider.  So, this was changed so that k is served by a ValueNotifer and the orbit data is now a ChangeNotifierProxyProvider depending on that ValueNotifier.  Also, that widget is no longer stateful).
+- When I clicked the button to change color scheme (i.e., the dropdown) stuff ran.  It looks like the saved settings updated, but nothing re painted.  Even when I got the azimuth chart to repaint by cliking another day, the color is still wrong.  (solved by fixing one call to the function that actually converts doubles to colors where it ignored the colormap passed to it.  The other places were solved by adding didUpdateWidget overrides for statefulwidgets.  This was because the colormap was passed to the widget, but the only place where it was referenced was in an update function rather than in the build() method itself.  So, when updating the widget, it would rerun the build method but not recreate update method.)
+
+Next, I want to make the azimuth chart decent looking (compass point/lines and some marking of hours).  Also, add some way to move the tooltip to the top when the cursor is too low
+
 ## 2026-08-18
 Improved structure of CurrentIndexProvider instead of ad hoc ValueNotifier.
 

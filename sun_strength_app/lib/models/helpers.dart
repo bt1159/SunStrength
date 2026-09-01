@@ -296,7 +296,7 @@ generateColorImage({
   bool chart = false,
 }) async {
   print(
-    'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth',
+    'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
   );
 
   const int bytesPerPixel = 4; // RGBA
@@ -393,6 +393,8 @@ Future<ChartImageContainer> generateColorImageInContainer({
       iterableLength: orbitAndSolarValuesList.length,
     );
   }
+
+  print('running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}');
 
   final (:image, :rawMatrixData) = await generateColorImage(
     orbitAndSolarValuesList: orbitAndSolarValuesList,
@@ -586,7 +588,7 @@ class CustomPathRibbonPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('Running paint in CustomPathRibbonPainter');
+    print('Running paint in CustomPathRibbonPainter, colormap: $colormap');
     if (points.length < 2) return;
 
     final double boundingCircleRadius = min(size.width, size.height) / 2;
@@ -596,8 +598,8 @@ class CustomPathRibbonPainter extends CustomPainter {
 
     final halfWidth = strokeWidth / 2;
 
-    final List<Color> colors = positiveStrengths.map((e) {
-      final Vector4 colorVector = colorValuesFromMap(e);
+    final List<Color> colors = positiveStrengths.map((strength) {
+      final Vector4 colorVector = colorValuesFromMap(strength, false, colormap);
       final Color color = Color.fromARGB(
         colorVector.w.toInt(),
         colorVector.x.toInt(),
@@ -707,7 +709,7 @@ class PathMetricsGradientPainter extends CustomPainter {
 
         if (strengthAtStep < 0) continue;
 
-        final Vector4 colorVector = colorValuesFromMap(strengthAtStep);
+        final Vector4 colorVector = colorValuesFromMap(strengthAtStep, false, colormap);
         final Color color = Color.fromARGB(
           colorVector.w.toInt(),
           colorVector.x.toInt(),
@@ -735,10 +737,12 @@ class PathMetricsGradientPainter extends CustomPainter {
   }
 }
 
-
-
 typedef TooltipInfo = ({
   Offset hoverBoxPosition,
   String tooltipText12,
   String tooltipText24,
 });
+
+class KNotifier extends ValueNotifier<double> {
+  KNotifier([super.value = 2]);
+}

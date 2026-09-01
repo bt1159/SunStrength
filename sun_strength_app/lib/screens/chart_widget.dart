@@ -40,7 +40,7 @@ class ChartWidget extends StatefulWidget {
 class _ChartWidgetState extends State<ChartWidget> {
   int ticks = DateTime.now().millisecondsSinceEpoch;
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
-  static const Offset toolTipFormattingOffset = Offset(0, 0);
+  static const Offset toolTipFormattingOffset = Offset(0, 40);
   // static const Offset toolTipFormattingOffset = Offset(20, 20);
 
   void _handleChartHover(
@@ -80,9 +80,6 @@ class _ChartWidgetState extends State<ChartWidget> {
     );
   }
 
-  // TODO: Check if _hideTooltip is being called every time _handleChartHover is called.  Otherwise, why 
-  // else is the tooltip disappearing right away?  Maybe this entire widget is rebuilding, which resets the 
-  // tooltip
   void _hideTooltip() {
     print('running hideTooltip');
     if (_tooltipNotifier.value != null) _tooltipNotifier.value = null;
@@ -124,19 +121,20 @@ class _ChartWidgetState extends State<ChartWidget> {
               return Selector<SavedSettingsNotifier, MyColorScheme?>(
                 selector: (_, savedAppSettingsNotifier) =>
                     savedAppSettingsNotifier.value?.colorScheme,
-                  shouldRebuild: (previous, next) {
-                    return previous.$1 != next.$1;
-                  },
+                shouldRebuild: (previous, next) {
+                  return previous?.$1 != next?.$1;
+                },
                 builder: (context, colorScheme, child) {
-                  print('Running builder just under color map selector in chart');
+                  print(
+                    'Running builder just under color map selector in chart, colorScheme: ${colorScheme == null ? 'null' : ColorMapPicker.getName(colorScheme.$2)}}',
+                  );
                   List<OrbitAndSolarValues> orbitAndSolarValuesList =
                       orbitAndSolarValuesListNotifier.value;
                   Offset localPosition = Offset(0, 0);
-                  // TODO: I could make this a little more efficient by remembering the dayIndex 
-                  // from hover.  That way, when I click, I could just pass the day index 
+                  // TODO: I could make this a little more efficient by remembering the dayIndex
+                  // from hover.  That way, when I click, I could just pass the day index
                   // rather than having to calculate it again.
-                  return 
-                  MouseRegion(
+                  return MouseRegion(
                     onHover: (event) {
                       localPosition = event.localPosition;
                       final RenderBox box =
@@ -148,14 +146,12 @@ class _ChartWidgetState extends State<ChartWidget> {
                       );
                     },
                     onExit: (_) => _hideTooltip(),
-                    child: 
-                    GestureDetector(
+                    child: GestureDetector(
                       onTap: () {
                         print('running GestureDetector.onTapUp');
                         final RenderBox box =
                             context.findRenderObject() as RenderBox;
-                        final double pxWidth =
-                            box.size.width / widget.nDays;
+                        final double pxWidth = box.size.width / widget.nDays;
                         final int dayIndex = (localPosition.dx / pxWidth)
                             .floor()
                             .clamp(0, widget.nDays - 1);
@@ -167,13 +163,13 @@ class _ChartWidgetState extends State<ChartWidget> {
                       child: FutureBuilderChartImage(
                         orbitAndSolarValuesIterable:
                             orbitAndSolarValuesListNotifier.value,
-                        colormap: colorScheme.$2,
+                        colormap: colorScheme?.$2,
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
         // 2. The Floating Tooltip Popup Layer
@@ -181,19 +177,19 @@ class _ChartWidgetState extends State<ChartWidget> {
           valueListenable: _tooltipNotifier,
           builder: (context, tooltipInfo, child) {
             if (tooltipInfo != null) {
-              print('running ValueListenableBuilder.build with tooltipInfo != null');
+              print(
+                'running ValueListenableBuilder.build with tooltipInfo != null',
+              );
               return Positioned(
                 // Position it dynamically relative to the cursor position!
-                left: tooltipInfo
-                    .hoverBoxPosition
-                    .dx, // Offset slightly to clear the cursor graphic
+                left: tooltipInfo.hoverBoxPosition.dx,
+                // Offset slightly to clear the cursor graphic
                 top: tooltipInfo.hoverBoxPosition.dy,
-                child: 
-                // IgnorePointer(
-                //   // Prevents the tooltip box from stealing mouse focus
-                //   child: 
-                  Container(
-                    padding: const EdgeInsets.all(8),
+                child: IgnorePointer(
+                  // Prevents the tooltip box from stealing mouse focus
+                  child: Container(
+                    // padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(0),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(4),
@@ -212,11 +208,12 @@ class _ChartWidgetState extends State<ChartWidget> {
                       ),
                     ),
                   ),
-                // ),
+                ),
               );
             } else {
-              
-              print('running ValueListenableBuilder.build with tooltipInfo == null');
+              print(
+                'running ValueListenableBuilder.build with tooltipInfo == null',
+              );
               return Container();
             }
           },
@@ -251,6 +248,9 @@ class _FutureBuilderChartImageState extends State<FutureBuilderChartImage> {
   /// UV-A: 0.36 <= k <= 0.92
   /// UV-C: 2.3 <= k <= 4.6
   Future<ChartImageContainer> createChartImage() async {
+    print(
+      'running createChartImage, colormap: ${widget.colormap == null ? 'null' : ColorMapPicker.getName(widget.colormap!)}}',
+    );
     final int pixelH = 96;
     if (widget.orbitAndSolarValuesIterable.length % pixelH != 0) {
       throw InvalidPixelWidth(
@@ -275,8 +275,33 @@ class _FutureBuilderChartImageState extends State<FutureBuilderChartImage> {
     futureChartImage = createChartImage();
   }
 
+  /// This override is required because the only place where 
+  /// [widget.orbitAndSolarValuesIterable] and [widget.colormap] are 
+  /// referenced are in [createChartImage].  Since they are not referenced 
+  /// in the build method, changing those values (i.e., changing the 
+  /// configuration widget) will not run the build() method.
+  @override
+  void didUpdateWidget(covariant FutureBuilderChartImage oldWidget) {
+    if (oldWidget.orbitAndSolarValuesIterable !=
+        widget.orbitAndSolarValuesIterable) {
+      futureChartImage = createChartImage();
+    } else {
+      String? oldColorMapString = oldWidget.colormap == null
+          ? null
+          : ColorMapPicker.getName(oldWidget.colormap!);
+      String? newColorMapString = widget.colormap == null
+          ? null
+          : ColorMapPicker.getName(widget.colormap!);
+      if (oldColorMapString != newColorMapString) {
+        futureChartImage = createChartImage();
+      }
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('running _FutureBuilderChartImageState.build');
     return FutureBuilder<ChartImageContainer>(
       future: futureChartImage,
       builder:

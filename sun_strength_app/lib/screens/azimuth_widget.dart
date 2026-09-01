@@ -24,10 +24,11 @@ class AzimuthWidget extends StatelessWidget {
               startingMasterIndex,
               startingMasterIndex + 96,
             );
-        return Selector<SavedSettingsNotifier, Colormap?>(
+        return Selector<SavedSettingsNotifier, MyColorScheme?>(
           selector: (_, savedAppSettingsNotifier) =>
-              savedAppSettingsNotifier.value?.colorScheme.$2,
-          builder: (context, colormap, child) {
+              savedAppSettingsNotifier.value?.colorScheme,
+              shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
+          builder: (context, myColorScheme, child) {
             print(
               'Running Builder under Selector<SavedSettingsNotifier, Colormap?> inside azimuth widget',
             );
@@ -37,7 +38,7 @@ class AzimuthWidget extends StatelessWidget {
                 child: BuilderAzimuthChart(
                   orbitAndSolarValuesListSingleDay:
                       orbitAndSolarValuesListSingleDay,
-                  colormap: colormap,
+                  colormap: myColorScheme?.$2,
                 ),
               ),
             );
@@ -60,7 +61,7 @@ class BuilderAzimuthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('Running BuilderAzimuthChart.build');
+    print('Running BuilderAzimuthChart.build, colormap: $colormap');
 
     // final double startingHOffsetFromJ2000 =
     //     orbitAndSolarValuesListSingleDay.first.hOffsetFromJ2000;
