@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:color_map/color_map.dart';
 
+// TODO: Why is this not rebuilding or responding to multiple CNPs.  Changing the colormap or k does not Force a rebuild or at least a re-paint.
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that constains the a [_ChartRenderObjectWidget] and also super imposes the hover tooltip when showing.
 /// {@endtemplate}
@@ -37,17 +38,16 @@ class ChartWidget extends StatefulWidget {
 }
 
 class _ChartWidgetState extends State<ChartWidget> {
-  // Tooltip State Variables
-  Offset? _hoverBoxPosition;
-  String? _tooltipText12;
-  String? _tooltipText24;
-  static const Offset toolTipFormattingOffset = Offset(20, 20);
+  int ticks = DateTime.now().millisecondsSinceEpoch;
+  late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
+  static const Offset toolTipFormattingOffset = Offset(0, 0);
+  // static const Offset toolTipFormattingOffset = Offset(20, 20);
 
   void _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
-    Offset chartWidgetOffsetToParent,
-    final Iterable<Iterable<double>> rawMatrixData,
+    // Offset chartWidgetOffsetToParent,
+    List<OrbitAndSolarValues> orbitAndSolarValuesList,
   ) {
     final double x = chartTextLocalPosition.dx;
     final double y = chartTextLocalPosition.dy;
@@ -59,46 +59,54 @@ class _ChartWidgetState extends State<ChartWidget> {
     // Determine the exact row and column indices
     final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
     final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
-
     // Look up data parameters safely.  First index is day, then time
-    final double value = rawMatrixData.toList()[dayIndex].toList()[timeIndex];
-
+    final double value = orbitAndSolarValuesList[dayIndex * 96 + timeIndex]
+        .solarStrengthsLocalRelativeToGlobalMax;
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
     final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
       widget.timeZone,
       widget.year,
     ).add(Duration(milliseconds: datetimeDelta));
-
-    setState(() {
-      _hoverBoxPosition =
+    _tooltipNotifier.value = (
+      hoverBoxPosition:
           chartTextLocalPosition +
-          chartWidgetOffsetToParent +
-          toolTipFormattingOffset;
-      _tooltipText12 =
-          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
-      _tooltipText24 =
-          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}';
-    });
+          // chartWidgetOffsetToParent +
+          toolTipFormattingOffset,
+      tooltipText12:
+          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}',
+      tooltipText24:
+          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}',
+    );
   }
 
+  // TODO: Check if _hideTooltip is being called every time _handleChartHover is called.  Otherwise, why 
+  // else is the tooltip disappearing right away?  Maybe this entire widget is rebuilding, which resets the 
+  // tooltip
   void _hideTooltip() {
-    if (_hoverBoxPosition != null) {
-      setState(() {
-        _hoverBoxPosition = null;
-        _tooltipText12 = null;
-        _tooltipText24 = null;
-      });
-    }
+    print('running hideTooltip');
+    if (_tooltipNotifier.value != null) _tooltipNotifier.value = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tooltipNotifier = ValueNotifier<TooltipInfo?>(null);
+  }
+
+  @override
+  void dispose() {
+    _tooltipNotifier.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     print(
-      'running _PublicChartRenderObjectWidgetState.build, ${_hoverBoxPosition == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}',
+      'running _PublicChartRenderObjectWidgetState.build, ${_tooltipNotifier.value == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}',
     );
     return Stack(
-      clipBehavior: Clip.none,
+      clipBehavior: Clip.hardEdge,
       children: [
         Selector<SavedSettingsNotifier, bool>(
           selector: (_, savedSettingsNotifier) =>
@@ -111,51 +119,51 @@ class _ChartWidgetState extends State<ChartWidget> {
                 leapYear: widget.leapYear,
                 chartArrayWidget: selectorSavedSettingsNotifierChild!,
               ),
-          child: GestureDetector(
-            // onTapDown: (details) =>  ,
-            onTapUp: (details) {
-              final RenderBox box = context.findRenderObject() as RenderBox;
-              final double pxWidth = box.size.width / widget.nDays;
-              final int dayIndex = (details.localPosition.dx / pxWidth)
-                  .floor()
-                  .clamp(0, widget.nDays - 1);
-              context.read<DayIndexNotifier>().value = dayIndex;
-            },
-            child: Consumer<OrbitAndSolarValuesListNotifier>(
-              builder: (context, orbitAndSolarValuesListNotifier, child) {
-                return Selector<SavedSettingsNotifier, MyColorScheme?>(
-                  selector: (_, savedAppSettingsNotifier) =>
-                      savedAppSettingsNotifier.value?.colorScheme,
+          child: Consumer<OrbitAndSolarValuesListNotifier>(
+            builder: (context, orbitAndSolarValuesListNotifier, child) {
+              return Selector<SavedSettingsNotifier, MyColorScheme?>(
+                selector: (_, savedAppSettingsNotifier) =>
+                    savedAppSettingsNotifier.value?.colorScheme,
                   shouldRebuild: (previous, next) {
                     return previous.$1 != next.$1;
                   },
-                  builder: (context, colorScheme, child) {
-                    final Iterable<double> valueIterable =
-                        orbitAndSolarValuesListNotifier.value.map(
-                          (e) => e.solarStrengthsLocalRelativeToGlobalMax,
-                        );
-                    final int nDays = (valueIterable.length / 96).toInt();
-                    final Iterable<Iterable<double>> rawMatrixData =
-                        createRawMatrixData(
-                          nDays: nDays,
-                          valueIterable: valueIterable,
-                        );
-                    return MouseRegion(
-                      onHover: (event) {
-                        // Find the rendering size of the canvas dynamically
+                builder: (context, colorScheme, child) {
+                  print('Running builder just under color map selector in chart');
+                  List<OrbitAndSolarValues> orbitAndSolarValuesList =
+                      orbitAndSolarValuesListNotifier.value;
+                  Offset localPosition = Offset(0, 0);
+                  // TODO: I could make this a little more efficient by remembering the dayIndex 
+                  // from hover.  That way, when I click, I could just pass the day index 
+                  // rather than having to calculate it again.
+                  return 
+                  MouseRegion(
+                    onHover: (event) {
+                      localPosition = event.localPosition;
+                      final RenderBox box =
+                          context.findRenderObject() as RenderBox;
+                      _handleChartHover(
+                        event.localPosition,
+                        box.size,
+                        orbitAndSolarValuesList,
+                      );
+                    },
+                    onExit: (_) => _hideTooltip(),
+                    child: 
+                    GestureDetector(
+                      onTap: () {
+                        print('running GestureDetector.onTapUp');
                         final RenderBox box =
                             context.findRenderObject() as RenderBox;
-                        final BoxParentData? boxParentData =
-                            box.parentData as BoxParentData?;
-                        _handleChartHover(
-                          event.localPosition,
-                          box.size,
-                          boxParentData?.offset ?? Offset(0, 0),
-                          rawMatrixData,
+                        final double pxWidth =
+                            box.size.width / widget.nDays;
+                        final int dayIndex = (localPosition.dx / pxWidth)
+                            .floor()
+                            .clamp(0, widget.nDays - 1);
+                        print(
+                          'about to update DayIndexNotifier value: $dayIndex',
                         );
+                        context.read<DayIndexNotifier>().value = dayIndex;
                       },
-                      onExit: (_) => _hideTooltip(),
-                      // child: widget.chartArrayWidget,
                       child: FutureBuilderChartImage(
                         orbitAndSolarValuesIterable:
                             orbitAndSolarValuesListNotifier.value,
@@ -169,33 +177,50 @@ class _ChartWidgetState extends State<ChartWidget> {
           ),
         ),
         // 2. The Floating Tooltip Popup Layer
-        if (_hoverBoxPosition != null &&
-            _tooltipText12 != null &&
-            _tooltipText24 != null)
-          Positioned(
-            // Position it dynamically relative to the cursor position!
-            left: _hoverBoxPosition!
-                .dx, // Offset slightly to clear the cursor graphic
-            top: _hoverBoxPosition!.dy,
-            child: IgnorePointer(
-              // Prevents the tooltip box from stealing mouse focus
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Selector<SavedSettingsNotifier, bool>(
-                  selector: (_, savedSettingsNotifier) =>
-                      savedSettingsNotifier.value?.twelveHour ?? true,
-                  builder: (_, twelveHour, _) => Text(
-                    twelveHour ? _tooltipText12! : _tooltipText24!,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+        ValueListenableBuilder<TooltipInfo?>(
+          valueListenable: _tooltipNotifier,
+          builder: (context, tooltipInfo, child) {
+            if (tooltipInfo != null) {
+              print('running ValueListenableBuilder.build with tooltipInfo != null');
+              return Positioned(
+                // Position it dynamically relative to the cursor position!
+                left: tooltipInfo
+                    .hoverBoxPosition
+                    .dx, // Offset slightly to clear the cursor graphic
+                top: tooltipInfo.hoverBoxPosition.dy,
+                child: 
+                // IgnorePointer(
+                //   // Prevents the tooltip box from stealing mouse focus
+                //   child: 
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Selector<SavedSettingsNotifier, bool>(
+                      selector: (_, savedSettingsNotifier) =>
+                          savedSettingsNotifier.value?.twelveHour ?? true,
+                      builder: (_, twelveHour, _) => Text(
+                        twelveHour
+                            ? tooltipInfo.tooltipText12
+                            : tooltipInfo.tooltipText24,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                // ),
+              );
+            } else {
+              
+              print('running ValueListenableBuilder.build with tooltipInfo == null');
+              return Container();
+            }
+          },
+        ),
       ],
     );
   }
@@ -236,9 +261,7 @@ class _FutureBuilderChartImageState extends State<FutureBuilderChartImage> {
     final int pixelW = (widget.orbitAndSolarValuesIterable.length / pixelH)
         .toInt();
     final Future<ChartImageContainer> output = generateColorImageInContainer(
-      valueIterable: widget.orbitAndSolarValuesIterable.map(
-        (e) => e.solarStrengthsLocalRelativeToGlobalMax,
-      ),
+      orbitAndSolarValuesList: widget.orbitAndSolarValuesIterable,
       pixelWidth: pixelW,
       colormap: widget.colormap,
     );

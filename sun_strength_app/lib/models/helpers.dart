@@ -1,6 +1,8 @@
 // import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:convert';
+import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
@@ -29,7 +31,7 @@ double interpolate(
 final Colormap constColorMap = Colormaps.magma;
 // final Colormap colormap = Colormaps.inferno;
 
-// Outputs a vector with four [double] values from 0 to 255 representing r, g, b, a
+/// Outputs a vector with four [double] values from 0 to 255 representing r, g, b, a.  [strength] must be between 0 and 1, inclusive.
 Vector4 colorValuesFromMap(
   double strength, [
   bool debug = false,
@@ -264,7 +266,9 @@ Iterable<Iterable<double>> createRawMatrixData({
   required int nDays,
 }) {
   final int nTimes = (valueIterable.length / nDays).toInt();
-  final Iterable<Iterable<double>> output = Iterable.generate(nDays, (dayIndex) {
+  final Iterable<Iterable<double>> output = Iterable.generate(nDays, (
+    dayIndex,
+  ) {
     final int start = dayIndex * nTimes;
     final int end = start + nTimes;
     return valueIterable.toList().sublist(start, end).reversed;
@@ -279,24 +283,24 @@ Iterable<Iterable<double>> createRawMatrixData({
 /// the correct rows and columns, then convert them into the correct color bytes, and then create an [ui.Image] from that
 /// two-dimensional list of color bytes.
 ///
-/// Note: [valueIterable] should be order as if it were a Iterable&ltIterable&ltdouble&gt&gt that has been flattened where each
+/// Note: [orbitAndSolarValuesList] should be order as if it were a Iterable&ltIterable&ltdouble&gt&gt that has been flattened where each
 /// inner list is a vertical column of pixels.  In those vertical lists of pixels, the bottom-most pixel is first.  The left-most
 /// column of pixels is first.  This ordering is driven by the calculation of solar strength where the morning is at the bottom of
 /// the chart.
 Future<({ui.Image image, List<List<double>> rawMatrixData})>
 generateColorImage({
-  required Iterable<double> valueIterable,
+  required List<OrbitAndSolarValues> orbitAndSolarValuesList,
   required int pixelWidth,
   Colormap? colormap,
   bool debug = false,
   bool chart = false,
 }) async {
   print(
-    'running generateColorMapImage, chronologicalSunStrength.length: ${valueIterable.length}, pixelWidth: $pixelWidth',
+    'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth',
   );
 
   const int bytesPerPixel = 4; // RGBA
-  final int pixelHeight = (valueIterable.length / pixelWidth).toInt();
+  final int pixelHeight = (orbitAndSolarValuesList.length / pixelWidth).toInt();
 
   // 1. Allocate the final flat byte buffer upfront.
   final Uint8List pixelBuffer = Uint8List(
@@ -318,7 +322,8 @@ generateColorImage({
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
-  for (double strength in valueIterable) {
+  for (final OrbitAndSolarValues orbitAndSolarValues in orbitAndSolarValuesList) {
+    final double strength = orbitAndSolarValues.solarStrengthsLocalRelativeToGlobalMax;
     // For rawMatrixData, x will index the outer list, or day, and y will index each inner list, or time.
     if (vertIndex == 0) {
       horIndex++;
@@ -378,19 +383,19 @@ generateColorImage({
 }
 
 Future<ChartImageContainer> generateColorImageInContainer({
-  required Iterable<double> valueIterable,
+  required List<OrbitAndSolarValues> orbitAndSolarValuesList,
   required int pixelWidth,
   Colormap? colormap,
 }) async {
-  if (valueIterable.length % pixelWidth != 0) {
+  if (orbitAndSolarValuesList.length % pixelWidth != 0) {
     throw InvalidPixelWidth(
       pixelWidth: pixelWidth,
-      iterableLength: valueIterable.length,
+      iterableLength: orbitAndSolarValuesList.length,
     );
   }
 
   final (:image, :rawMatrixData) = await generateColorImage(
-    valueIterable: valueIterable,
+    orbitAndSolarValuesList: orbitAndSolarValuesList,
     pixelWidth: pixelWidth,
     chart: true,
     colormap: colormap,
@@ -493,6 +498,18 @@ class OrbitAndSolarValues {
     required this.solarStrengthsLocalRelativeToGlobalMax,
   });
 
+  OrbitAndSolarValues.strengthOnly({required this.solarStrengthsLocalRelativeToGlobalMax}):
+    hOffsetFromJ2000 = 0,
+    earthRotationAngle = 0,
+    meanAnomaly = 0,
+    eccentricAnomaly = 0,
+    trueAnomaly = 0,
+    orbitalRadiusMag = 0,
+    orbitalRadius = Vector3.zero(),
+    earthRadius = Vector3.zero(),
+    solarElevationAngle = 0,
+    solarAzimuthAngle = 0;
+
   final double hOffsetFromJ2000;
   final double earthRotationAngle;
   final double meanAnomaly;
@@ -506,7 +523,7 @@ class OrbitAndSolarValues {
   final double solarStrengthsLocalRelativeToGlobalMax;
 }
 
-class DayIndexNotifier extends ValueNotifier<int> {
+class DayIndexNotifier extends ValueNotifier<int?> {
   DayIndexNotifier(super.value);
 }
 
@@ -554,58 +571,174 @@ class ImagePainter extends CustomPainter {
   }
 }
 
+class CustomPathRibbonPainter extends CustomPainter {
+  final List<Offset> points;
+  final List<double> positiveStrengths;
+  final Colormap colormap;
+  final double strokeWidth;
+
+  CustomPathRibbonPainter({
+    required this.points,
+    required this.colormap,
+    required this.positiveStrengths,
+    this.strokeWidth = 4.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    print('Running paint in CustomPathRibbonPainter');
+    if (points.length < 2) return;
+
+    final double boundingCircleRadius = min(size.width, size.height) / 2;
+    final Offset centerOffset = Offset(size.width / 2, size.height / 2);
+    final List<Offset> vertices = [];
+    final List<Color> vertexColors = [];
+
+    final halfWidth = strokeWidth / 2;
+
+    final List<Color> colors = positiveStrengths.map((e) {
+      final Vector4 colorVector = colorValuesFromMap(e);
+      final Color color = Color.fromARGB(
+        colorVector.w.toInt(),
+        colorVector.x.toInt(),
+        colorVector.y.toInt(),
+        colorVector.z.toInt(),
+      );
+      return color;
+    }).toList();
+
+    for (int i = 0; i < points.length - 1; i++) {
+      // size
+      final Offset p1 = (points[i]) * boundingCircleRadius + centerOffset;
+      final Offset p2 = (points[i + 1]) * boundingCircleRadius + centerOffset;
+
+      // Calculate direction and perpendicular unit normal vector
+      final Offset dir = p2 - p1;
+      final double dist = dir.distance;
+      if (dist == 0) continue;
+
+      final Offset normal = Offset(-dir.dy / dist, dir.dx / dist) * halfWidth;
+
+      // Calculate 4 corners of the ribbon segment quad
+      final Offset p1Left = p1 + normal;
+      final Offset p1Right = p1 - normal;
+      final Offset p2Left = p2 + normal;
+      final Offset p2Right = p2 - normal;
+
+      // Add 2 triangles for the quad (p1L, p1R, p2L) and (p2L, p1R, p2R)
+      vertices.addAll([p1Left, p1Right, p2Left, p2Left, p1Right, p2Right]);
+
+      // Assign colors corresponding to points i and i+1
+      final Color c1 = colors[i];
+      final Color c2 = colors[i + 1];
+      vertexColors.addAll([c1, c1, c2, c2, c1, c2]);
+    }
+
+    final ui.Vertices rawVertices = ui.Vertices(
+      VertexMode.triangles,
+      vertices,
+      colors: vertexColors,
+    );
+
+    // Single GPU draw call for the whole ribbon
+    canvas.drawVertices(rawVertices, BlendMode.srcOver, Paint());
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPathRibbonPainter oldDelegate) => true;
+}
+
 class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
   OrbitAndSolarValuesListNotifier(super.value);
 }
 
-const List<int> leapYears = [1996,2004,2008,2012,2016,2020,2024,2028];
+const List<int> leapYears = [1996, 2004, 2008, 2012, 2016, 2020, 2024, 2028];
 
-
-// TODO: Start here
+/// {@template PathMetricsGradientPainter}
+/// CustomPainter that paints the multi-colored line for solar azimuth and strength.
+///
+/// Note: make sure to filter the path and strengths so that only positive strengths
+/// and their associated paths are sent.  Otherwise, no error will occur, but it will
+/// be inefficient.
+///
+/// {@endtemplate}
 class PathMetricsGradientPainter extends CustomPainter {
   final Path path;
-  final ColorScheme colorScheme; // Or list of colors
+  final List<double> positiveStrengths;
+  final Colormap colormap;
 
-  PathMetricsGradientPainter({required this.path, required this.colorScheme});
+  PathMetricsGradientPainter({
+    required this.path,
+    required this.colormap,
+    required this.positiveStrengths,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final metrics = path.computeMetrics();
+    final PathMetrics metrics = path.computeMetrics();
 
-    for (final metric in metrics) {
+    // Loop though each contour where a contour goes from one time data point to the next
+    for (final PathMetric metric in metrics) {
+      final double startingStrength = positiveStrengths[metric.contourIndex];
+      final double endingStrength = positiveStrengths[metric.contourIndex + 1];
+
+      if (startingStrength < 0 && endingStrength < 0) continue;
+
       final double totalLength = metric.length;
       final double step = 2.0; // Resolution: 2px per step
 
-      final paint = Paint()
+      final Paint paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 20.0
         ..strokeCap = StrokeCap.round;
 
+      // Loop through however many steps make up a single countour.  Each step will have a
+      // constant color based on the fraction of the length of this contour of the start
+      // of this step.
       for (double d = 0; d < totalLength; d += step) {
-        final nextD = (d + step).clamp(0.0, totalLength);
-        
+        final double nextD = (d + step).clamp(0.0, totalLength);
+
         // Calculate normalized fraction [0.0 to 1.0] along the curve length
-        final fraction = d / totalLength;
+        final double fraction = d / totalLength;
+        final double strengthAtStep =
+            lerpDouble(startingStrength, endingStrength, fraction) ??
+            startingStrength;
 
-        // Custom color logic based on distance along curve
-        paint.color = _getColorAtFraction(fraction);
+        if (strengthAtStep < 0) continue;
 
-        // Extract segment segment geometry
-        final segmentPath = metric.extractPath(d, nextD);
+        final Vector4 colorVector = colorValuesFromMap(strengthAtStep);
+        final Color color = Color.fromARGB(
+          colorVector.w.toInt(),
+          colorVector.x.toInt(),
+          colorVector.y.toInt(),
+          colorVector.z.toInt(),
+        );
+
+        paint.color = color;
+
+        // Extract segment geometry
+        final Path segmentPath = metric.extractPath(d, nextD);
         canvas.drawPath(segmentPath, paint);
       }
     }
   }
 
-  Color _getColorAtFraction(double t) {
-    // Example: Dark Red -> Red -> Yellow -> Orange -> Dark Red
-    if (t < 0.25) return Color.lerp(const Color(0xFF300000), Colors.red, t / 0.25)!;
-    if (t < 0.50) return Color.lerp(Colors.red, Colors.yellow, (t - 0.25) / 0.25)!;
-    if (t < 0.75) return Color.lerp(Colors.yellow, Colors.orange, (t - 0.50) / 0.25)!;
-    return Color.lerp(Colors.orange, const Color(0xFF300000), (t - 0.75) / 0.25)!;
-  }
-
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant PathMetricsGradientPainter oldDelegate) {
+    // Optimization: Only repaint if the image object has actually changed
+    final bool hasAnythingChanged =
+        path != oldDelegate.path ||
+        positiveStrengths != oldDelegate.positiveStrengths ||
+        colormap != oldDelegate.colormap;
+    return hasAnythingChanged;
+  }
 }
+
+
+
+typedef TooltipInfo = ({
+  Offset hoverBoxPosition,
+  String tooltipText12,
+  String tooltipText24,
+});

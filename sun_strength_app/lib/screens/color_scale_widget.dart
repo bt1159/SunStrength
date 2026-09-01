@@ -49,15 +49,16 @@ class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
   Future<ui.Image> createScaleImage() async {
     final int vertHeight = 40;
     final int horWidth = 100;
-    Iterable<double> fullList = Iterable<double>.generate(
+    List<OrbitAndSolarValues> orbitAndSolarValuesList = List<OrbitAndSolarValues>.generate(
       vertHeight * horWidth,
       (index) {
         final int horIndex = (index / vertHeight).floor();
-        return horIndex / (horWidth - 1);
+        final double strength = horIndex / (horWidth - 1);
+        return OrbitAndSolarValues.strengthOnly(solarStrengthsLocalRelativeToGlobalMax: strength);
       },
     );
     final (:image, :rawMatrixData) = await generateColorImage(
-      valueIterable: fullList,
+      orbitAndSolarValuesList: orbitAndSolarValuesList,
       pixelWidth: horWidth,
       colormap: widget.colormap,
     );

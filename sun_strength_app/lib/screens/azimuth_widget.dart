@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
-import 'package:vector_math/vector_math_64.dart' as vector;
+// import 'package:vector_math/vector_math_64.dart' as vector;
 
 class AzimuthWidget extends StatelessWidget {
   const AzimuthWidget({super.key});
@@ -14,72 +14,95 @@ class AzimuthWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer2<OrbitAndSolarValuesListNotifier, DayIndexNotifier>(
-      builder:
-          (context, orbitAndSolarValuesListNotifier, dayIndexNotifier, child) {
-            final OrbitAndSolarValues orbitAndSolarValues =
-                orbitAndSolarValuesListNotifier.value[dayIndexNotifier.value];
-            return Selector<SavedSettingsNotifier, Colormap?>(
-              selector: (_, savedAppSettingsNotifier) =>
-                  savedAppSettingsNotifier.value?.colorScheme.$2,
-              builder: (context, colormap, child) {
-                return AzimuthRenderObjectWidget(
-                  child: FutureBuilderAzimuthChart(
-                    orbitAndSolarValues: orbitAndSolarValues,
-                    colormap: colormap,
-                  ),
-                );
-              },
+      builder: (context, orbitAndSolarValuesListNotifier, dayIndexNotifier, child) {
+        print(
+          'Consumer2<OrbitAndSolarValuesListNotifier, DayIndexNotifier> has been triggered insidde azimuth widget',
+        );
+        final int startingMasterIndex = 96 * dayIndexNotifier.value!;
+        final List<OrbitAndSolarValues> orbitAndSolarValuesListSingleDay =
+            orbitAndSolarValuesListNotifier.value.sublist(
+              startingMasterIndex,
+              startingMasterIndex + 96,
+            );
+        return Selector<SavedSettingsNotifier, Colormap?>(
+          selector: (_, savedAppSettingsNotifier) =>
+              savedAppSettingsNotifier.value?.colorScheme.$2,
+          builder: (context, colormap, child) {
+            print(
+              'Running Builder under Selector<SavedSettingsNotifier, Colormap?> inside azimuth widget',
+            );
+            return Padding(
+              padding: const EdgeInsets.all(40.0),
+              child: AzimuthRenderObjectWidget(
+                child: BuilderAzimuthChart(
+                  orbitAndSolarValuesListSingleDay:
+                      orbitAndSolarValuesListSingleDay,
+                  colormap: colormap,
+                ),
+              ),
             );
           },
+        );
+      },
     );
   }
 }
 
-class FutureBuilderAzimuthChart extends StatefulWidget {
-  const FutureBuilderAzimuthChart({
+class BuilderAzimuthChart extends StatelessWidget {
+  const BuilderAzimuthChart({
     super.key,
-    required this.orbitAndSolarValues,
+    required this.orbitAndSolarValuesListSingleDay,
     this.colormap,
   });
 
-  final OrbitAndSolarValues orbitAndSolarValues;
+  final List<OrbitAndSolarValues> orbitAndSolarValuesListSingleDay;
   final Colormap? colormap;
-  @override
-  State<FutureBuilderAzimuthChart> createState() =>
-      _FutureBuilderAzimuthChartState();
-}
-
-class _FutureBuilderAzimuthChartState extends State<FutureBuilderAzimuthChart> {
-  late Future<ChartImageContainer> futureAzimuthImage;
-
-  Future<ChartImageContainer> createAzimuthImage() {}
-
-  @override
-  void initState() {
-    super.initState();
-    futureAzimuthImage = createAzimuthImage();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<ChartImageContainer>(
-      future: futureAzimuthImage,
-      builder: (context, AsyncSnapshot<ChartImageContainer> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Snapshot Error: ${snapshot.error}'));
-        }
-        if (snapshot.hasData) {
-          return CustomPaint(painter: ImagePainter(snapshot.data!.image));
-        }
-        if (snapshot.data == null) {
-          return const Center(child: Text('No location selected'));
-        } else {
-          return const Center(child: Text('No Image'));
-        }
-      },
+    print('Running BuilderAzimuthChart.build');
+
+    // final double startingHOffsetFromJ2000 =
+    //     orbitAndSolarValuesListSingleDay.first.hOffsetFromJ2000;
+    final Iterable<OrbitAndSolarValues> visibleSunOnlyData =
+        orbitAndSolarValuesListSingleDay.where(
+          (element) => element.solarElevationAngle > 0.0001,
+        );
+
+    final List<double> azAngles = visibleSunOnlyData
+        .map((e) => e.solarAzimuthAngle)
+        .toList();
+    final List<double> elAngles = visibleSunOnlyData
+        .map((e) => e.solarElevationAngle)
+        .toList();
+
+    final List<Offset> solarDataOffsets = visibleSunOnlyData
+        .map(
+          (e) => Offset(
+            sin(e.solarAzimuthAngle) * cos(e.solarElevationAngle),
+
+            -cos(e.solarAzimuthAngle) * cos(e.solarElevationAngle),
+          ),
+        )
+        .toList();
+
+    final List<double> solarDataStrengths = visibleSunOnlyData
+        .map((e) => e.solarStrengthsLocalRelativeToGlobalMax)
+        .toList();
+    print(
+      'orbitAndSolarValuesListSingleDay.length: ${orbitAndSolarValuesListSingleDay.length}',
+    );
+    print('azAngles: $azAngles');
+    print('elAngles: $elAngles');
+    print('solarDataOffsets: $solarDataOffsets');
+    print('solarDataStrengths: $solarDataStrengths');
+
+    return CustomPaint(
+      painter: CustomPathRibbonPainter(
+        points: solarDataOffsets,
+        colormap: colormap ?? constColorMap,
+        positiveStrengths: solarDataStrengths,
+      ),
     );
   }
 }
@@ -89,8 +112,14 @@ class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
 
   @override
   AzimuthRenderObject createRenderObject(BuildContext context) {
+    print('Running createRenderObject inside AzimuthRenderObjectWidget');
     return AzimuthRenderObject();
   }
+
+  // @override
+  // void updateRenderObject(BuildContext context, covariant AzimuthRenderObject renderObject) {
+
+  // }
 }
 
 class AzimuthRenderObject extends RenderBox
@@ -109,72 +138,24 @@ class AzimuthRenderObject extends RenderBox
   @override
   void performLayout() {
     size = computeDryLayout(constraints);
+    child?.layout(BoxConstraints.tight(size));
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final List<({double hIndex, double azimuth, double elevation})> solarData =
-        [
-          (
-            hIndex: 7 * 4 + 1,
-            azimuth: vector.radians(100),
-            elevation: vector.radians(15),
-          ),
-          (
-            hIndex: 9 * 4 + 1,
-            azimuth: vector.radians(150),
-            elevation: vector.radians(60),
-          ),
-          (
-            hIndex: 11 * 4 + 1,
-            azimuth: vector.radians(180),
-            elevation: vector.radians(65),
-          ),
-          (
-            hIndex: 13 * 4 + 1,
-            azimuth: vector.radians(210),
-            elevation: vector.radians(60),
-          ),
-          (
-            hIndex: 15 * 4 + 1,
-            azimuth: vector.radians(260),
-            elevation: vector.radians(15),
-          ),
-        ];
-
+    print('Running paint inside AzimuthRenderObject');
     final Offset center = offset + Offset(size.width / 2, size.height / 2);
-    final int padding = 40;
-    final double circleRadius = size.width / 2 - padding;
-
-    final Iterable<({double hIndex, double x, double y})> solarDataPlotted =
-        solarData.map(
-          (e) => (
-            hIndex: e.hIndex / 4,
-            x: circleRadius * sin(e.azimuth) * cos(e.elevation) + center.dx,
-            y: -circleRadius * cos(e.azimuth) * cos(e.elevation) + center.dy,
-          ),
-        );
+    final double circleRadius = size.width / 2;
 
     final Paint circlePaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
 
-    final Paint pathPaint = Paint()
-      ..color = Colors.yellow
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    Path solarPath = Path();
-    for (final (index, solarDataPlottedSingle) in solarDataPlotted.indexed) {
-      if (index == 0) {
-        solarPath.moveTo(solarDataPlottedSingle.x, solarDataPlottedSingle.y);
-      } else {
-        solarPath.lineTo(solarDataPlottedSingle.x, solarDataPlottedSingle.y);
-      }
-    }
-
     context.canvas.drawCircle(center, circleRadius, circlePaint);
-    context.canvas.drawPath(solarPath, pathPaint);
+    // child?.paint(context, offset);
+    if (child != null) {
+      context.paintChild(child!, offset);
+    }
   }
 }

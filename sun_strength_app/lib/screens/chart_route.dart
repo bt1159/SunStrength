@@ -69,70 +69,6 @@ class HeatMap extends StatefulWidget {
 class _HeatMapState extends State<HeatMap> {
   double _currentK = 2;
 
-  // /// The function that actually creates the 2D array of solar strength bytes.
-  // ///
-  // /// Note: k is the value that determines what wavelength of sunlight you are looking at:
-  // /// Visible: 0.22 <= k <= 0.36
-  // /// UV-A: 0.36 <= k <= 0.92
-  // /// UV-C: 2.3 <= k <= 4.6
-  // Future<ChartImageContainer> createChartImage(double k) async {
-  //   print(
-  //     'running createImage with lat: ${widget.currentChartSettings.location.lat}, lon: ${widget.currentChartSettings.location.lon}, name: ${widget.currentChartSettings.location.name}',
-  //   );
-
-  //   final Iterable<OrbitAndSolarValues> orbitAndSolarValuesIterable =
-  //       calculateOrbitAndSolarValuesIterable(
-  //         k: k,
-  //         h: 0,
-  //         lat: widget.currentChartSettings.location.lat,
-  //         lon: widget.currentChartSettings.location.lon,
-  //         timeZone: widget.currentChartSettings.timeZone,
-  //         year: widget.currentChartSettings.year,
-  //       );
-
-  //   final int pixelH = 96;
-  //   if (orbitAndSolarValuesIterable.length % pixelH != 0) {
-  //     throw InvalidPixelWidth(
-  //       pixelWidth: pixelH,
-  //       iterableLength: orbitAndSolarValuesIterable.length,
-  //     );
-  //   }
-  //   final int pixelW = (orbitAndSolarValuesIterable.length / pixelH).toInt();
-
-  //   // Use the data points and the pixel width the create the actual chart
-  //   final Future<ChartImageContainer> output = generateColorImageInContainer(
-  //     valueIterable: orbitAndSolarValuesIterable.map(
-  //       (e) => e.solarStrengthsLocalRelativeToGlobalMax,
-  //     ),
-  //     pixelWidth: pixelW,
-  //     colormap: colorscheme.$2,
-  //   );
-
-  //   print('about to finish createImage');
-  //   return output;
-  // }
-
-  // Future<ui.Image> createScaleImage() async {
-  //   final int vertHeight = 40;
-  //   final int horWidth = 100;
-  //   Iterable<double> fullList = Iterable<double>.generate(
-  //     vertHeight * horWidth,
-  //     (index) {
-  //       final int horIndex = (index / vertHeight).floor();
-  //       return horIndex / (horWidth - 1);
-  //     },
-  //   );
-
-  //   final (:image, :rawMatrixData) = await generateColorImage(
-  //     valueIterable: fullList,
-  //     pixelWidth: horWidth,
-  //     colormap: colorscheme.$2,
-  //   );
-
-  //   return image;
-  // }
-
-
   /// Method called by widgets in this build method to change which light frequency/wavelength range
   /// the chart should show
   void _updateParameter(double newValue) {
@@ -152,7 +88,7 @@ class _HeatMapState extends State<HeatMap> {
         child: MultiProvider(
           providers: [
             ChangeNotifierProvider<DayIndexNotifier>(
-              create: (_) => DayIndexNotifier(0),
+              create: (_) => DayIndexNotifier(null),
             ),
             ChangeNotifierProvider<OrbitAndSolarValuesListNotifier>(
               create: (_) {
@@ -277,7 +213,18 @@ class _HeatMapState extends State<HeatMap> {
                           ),
                     ),
               ),
-              Flexible(fit: FlexFit.tight, child: const AzimuthWidget()),
+              Selector<DayIndexNotifier, bool>(
+                selector: (_, dayIndexNotifier) =>
+                    dayIndexNotifier.value != null,
+                builder: (context, valueNotNull, child) {
+                  print('Inside the selector that determines whether to build the azimuth chart, dayIndex is ${valueNotNull ? 'not ' : ''}null');
+                  return valueNotNull ? child! : Container();
+                },
+                child: const Flexible(
+                  fit: FlexFit.tight,
+                  child: AzimuthWidget(),
+                ),
+              ),
             ],
           ),
         ),

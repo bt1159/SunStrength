@@ -103,8 +103,11 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
     final double eccentricAnomaly = calculateEccentricAnomaly(meanAnomaly);
     final double trueAnomaly = calculateTrueAnomaly(eccentricAnomaly);
     final double orbitalRadiusMag = calculateOrbitalRadiusMag(trueAnomaly);
-final  Vector3 earthRadius = calculateEarthRadius(
-  latRad: latRad, lonRad: lonRad, earthRotationAngle: earthRotationAngle);
+    final Vector3 earthRadius = calculateEarthRadius(
+      latRad: latRad,
+      lonRad: lonRad,
+      earthRotationAngle: earthRotationAngle,
+    );
     final Vector3 orbitalRadius = calculateOrbitalRadius(trueAnomaly);
     // final double solarElevationAngleTrig = calculateSolarElevationAngleTrig(
     //   latRad: latRad,
@@ -159,7 +162,6 @@ final  Vector3 earthRadius = calculateEarthRadius(
     'just did all the orbit calcs, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
   );
 
-
   return output;
 }
 
@@ -185,20 +187,22 @@ double calculateTrueAnomaly(double eccentricAnomaly) =>
 double calculateOrbitalRadiusMag(double trueAnomaly) =>
     2 * rA * rP / (rA * (1 + cos(trueAnomaly)) + rP * (1 - cos(trueAnomaly)));
 
-  Vector3 calculateEarthRadius({
+Vector3 calculateEarthRadius({
   required double latRad,
-  required double lonRad, required double earthRotationAngle}) => Vector3(
-    rEarth * cos(latRad) * cos(tilt) * cos(earthRotationAngle + lonRad) +
-        rEarth * sin(latRad) * sin(tilt),
-    rEarth * cos(latRad) * sin(earthRotationAngle + lonRad),
-    -rEarth * cos(latRad) * sin(tilt) * cos(earthRotationAngle + lonRad) +
-        rEarth * sin(latRad) * cos(tilt),
-  );
+  required double lonRad,
+  required double earthRotationAngle,
+}) => Vector3(
+  rEarth * cos(latRad) * cos(tilt) * cos(earthRotationAngle + lonRad) +
+      rEarth * sin(latRad) * sin(tilt),
+  rEarth * cos(latRad) * sin(earthRotationAngle + lonRad),
+  -rEarth * cos(latRad) * sin(tilt) * cos(earthRotationAngle + lonRad) +
+      rEarth * sin(latRad) * cos(tilt),
+);
 
 Vector3 calculateOrbitalRadius(double trueAnomaly) => Vector3(
   ((rA + rP) / 2) * cos(trueAnomaly) - ((rA - rP) / 2),
   sqrt(rA * rP) * sin(trueAnomaly),
-  0
+  0,
 );
 
 double calculateSolarElevationAngleTrig({
@@ -231,12 +235,14 @@ double calculateSolarElevationAngle({
   required double lonRad,
   required double earthRotationAngle,
   required double trueAnomaly,
-  required double orbitalRadiusMag,  
+  required double orbitalRadiusMag,
   required Vector3 orbitalRadius,
   required Vector3 earthRadius,
 }) {
   final double oPDotRe = orbitalRadius.dot(earthRadius);
-  final double sinTheta = (pow(rEarth, 2) - oPDotRe) / (rEarth * sqrt(pow(rEarth, 2) + pow(orbitalRadiusMag, 2) - 2 * oPDotRe));
+  final double sinTheta =
+      (pow(rEarth, 2) - oPDotRe) /
+      (rEarth * sqrt(pow(rEarth, 2) + pow(orbitalRadiusMag, 2) - 2 * oPDotRe));
   final double theta = asin(sinTheta.clamp(-1.0, 1.0));
   return theta;
 }
@@ -246,40 +252,39 @@ double calculateSolarAzimuthAngle({
   required double lonRad,
   required double earthRotationAngle,
   required double trueAnomaly,
-  required double orbitalRadiusMag,  
+  required double orbitalRadiusMag,
   required Vector3 orbitalRadius,
   required Vector3 earthRadius,
 }) {
   final Vector3 opNeg = -orbitalRadius;
   final Vector3 rN = reNorthPole - earthRadius;
-  final Vector3 rNTang = rN - earthRadius * earthRadius.dot(rN) / pow(rEarth, 2).toDouble();
+  final Vector3 rNTang =
+      rN - earthRadius * earthRadius.dot(rN) / pow(rEarth, 2).toDouble();
   final double cosAlpha =
       (rEarth * opNeg.dot(rNTang)) /
-      (sqrt(pow(rEarth, 2) * pow(orbitalRadiusMag, 2) - pow(earthRadius.dot(opNeg), 2)) *
+      (sqrt(
+            pow(rEarth, 2) * pow(orbitalRadiusMag, 2) -
+                pow(earthRadius.dot(opNeg), 2),
+          ) *
           rNTang.length);
-  final double alpha = acos(cosAlpha.clamp(-1.0, 1.0));
+  final double alphaRaw = acos(cosAlpha.clamp(-1.0, 1.0));
+
+
+  // Since cosine is symmetrical about x = 0, if we stopped here and used 
+  // alphaRaw, we would only get results between 0 and 180.  Instead, we use 
+  // sign to determine whether the angle should be 0 to 180 or 180 to 360.
+  final double sign = 
+    earthRadius.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
+    earthRadius.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
+    earthRadius.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
+  final double alpha;
+  if (sign < 0) {
+    alpha = 2 * pi - alphaRaw;
+  } else {
+    alpha = alphaRaw;
+  }
+
   return alpha;
-
-  // Compute O_perp without allocating extra vectors for cross products
-  // O_perp = O - ( (O . E) / (E . E) ) * E
-  // final double scale = opNeg.dot(re) / eDotE;
-  // final Vector3 oPerp = Vector3(
-  //   opNeg.x - re.x * scale,
-  //   opNeg.y - re.y * scale,
-  //   opNeg.z - re.z * scale,
-  // );
-
-  // final double oPerpSq = oPerp.dot(oPerp);
-  // final double nSq = rNTang.dot(rNTang);
-
-  // final double denSq = oPerpSq * nSq;
-  // if (denSq < 1e-24) return 0.0; // O is parallel to E, or N is zero
-
-  // // Single sqrt call via combined denominator
-  // final double cosTheta = oPerp.dot(rNTang) / sqrt(denSq);
-
-  // // Clamp to prevent precision errors returning > 1.0 or < -1.0
-  // return cosTheta.clamp(-1.0, 1.0);
 }
 
 double calculateSolarStrengthRelativeToGlobalMax({
@@ -288,13 +293,11 @@ double calculateSolarStrengthRelativeToGlobalMax({
   required double h,
 }) {
   if (solarElevationAngle <= 0) return 0;
-  final double airMassSeaLevel = 1 /
-            (cos(pi / 2 - solarElevationAngle) +
-                0.50572 *
-                    pow(
-                      96.07995 - degrees(pi / 2 - solarElevationAngle),
-                      -1.6364,
-                    ));
+  final double airMassSeaLevel =
+      1 /
+      (cos(pi / 2 - solarElevationAngle) +
+          0.50572 *
+              pow(96.07995 - degrees(pi / 2 - solarElevationAngle), -1.6364));
   final double localSolarStrengthFactor = airMassSeaLevel >= 38
       ? 0
       : exp(-k * airMassSeaLevel * exp(-h / 8.5));
