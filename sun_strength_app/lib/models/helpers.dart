@@ -578,11 +578,13 @@ class CustomPathRibbonPainter extends CustomPainter {
   final List<double> positiveStrengths;
   final Colormap colormap;
   final double strokeWidth;
+  final Color appBackgroundColor;
 
   CustomPathRibbonPainter({
     required this.points,
     required this.colormap,
     required this.positiveStrengths,
+    required this.appBackgroundColor,
     this.strokeWidth = 4.0,
   });
 
@@ -590,9 +592,91 @@ class CustomPathRibbonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     print('Running paint in CustomPathRibbonPainter, colormap: $colormap');
     if (points.length < 2) return;
-
+    
     final double boundingCircleRadius = min(size.width, size.height) / 2;
     final Offset centerOffset = Offset(size.width / 2, size.height / 2);
+
+    
+   final double a1 = 1.1;
+   final double a2 = 0.25;
+   final double a3 = 0.15;
+   final double a4 = 1.1;
+   final double a5 = 1.07;
+   final double sqrt2 = sqrt(2);
+
+    final nonCardingalPaint = Paint()
+      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.3)!
+      ..style = PaintingStyle.fill;
+    final cardinalBackPaint = Paint()
+      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.3)!
+      ..style = PaintingStyle.fill;
+    final cardinalForePaint = Paint()
+      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
+      ..style = PaintingStyle.fill;
+   
+   // Black non-cardinal points
+   final nonCardinalPath = Path()
+      ..moveTo(centerOffset.dx + a5 * boundingCircleRadius / sqrt2, centerOffset.dy - a5 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx + a5 * a3 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx + a5 * boundingCircleRadius / sqrt2, centerOffset.dy + a5 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx, centerOffset.dy + a5 * a3 * boundingCircleRadius)
+      ..lineTo(centerOffset.dx - a5 * boundingCircleRadius / sqrt2, centerOffset.dy + a5 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx - a5 * a3 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx - a5 * boundingCircleRadius / sqrt2, centerOffset.dy - a5 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx, centerOffset.dy - a5 * a3 * boundingCircleRadius)
+	  ..close();
+
+    canvas.drawPath(nonCardinalPath, nonCardingalPaint);
+   
+    // Black cardinal background
+	final cardinalPath = Path()
+      ..moveTo(centerOffset.dx, centerOffset.dy - a4 * a1 * boundingCircleRadius)
+      ..lineTo(centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx + a4 * a1 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
+      ..lineTo(centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(centerOffset.dx - a4 * a1 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2)
+      ..close();
+
+    canvas.drawPath(cardinalPath, cardinalBackPaint);
+
+    // White Facets
+
+    final northWhite = Path()
+      ..moveTo(centerOffset.dx, centerOffset.dy)
+      ..lineTo(centerOffset.dx, centerOffset.dy - a1 * boundingCircleRadius)
+      ..lineTo(centerOffset.dx - a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a2 * boundingCircleRadius / sqrt2)
+      ..close();
+
+    canvas.drawPath(northWhite, cardinalForePaint);
+	
+    final eastWhite = Path()
+      ..moveTo(centerOffset.dx, centerOffset.dy)
+      ..lineTo(centerOffset.dx + a1 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx + a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a2 * boundingCircleRadius / sqrt2)
+      ..close();
+
+    canvas.drawPath(eastWhite, cardinalForePaint);
+	
+    final southWhite = Path()
+      ..moveTo(centerOffset.dx, centerOffset.dy)
+      ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
+      ..lineTo(centerOffset.dx + a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a2 * boundingCircleRadius / sqrt2)
+      ..close();
+
+    canvas.drawPath(southWhite, cardinalForePaint);
+	
+    final westWhite = Path()
+      ..moveTo(centerOffset.dx, centerOffset.dy)
+      ..lineTo(centerOffset.dx - a1 * boundingCircleRadius, centerOffset.dy)
+      ..lineTo(centerOffset.dx - a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a2 * boundingCircleRadius / sqrt2)
+      ..close();
+
+    canvas.drawPath(westWhite, cardinalForePaint);
+
+
     final List<Offset> vertices = [];
     final List<Color> vertexColors = [];
 

@@ -103,6 +103,7 @@ class BuilderAzimuthChart extends StatelessWidget {
         points: solarDataOffsets,
         colormap: colormap ?? constColorMap,
         positiveStrengths: solarDataStrengths,
+        appBackgroundColor: Theme.of(context).colorScheme.surface,
       ),
     );
   }
@@ -114,7 +115,7 @@ class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
   @override
   AzimuthRenderObject createRenderObject(BuildContext context) {
     print('Running createRenderObject inside AzimuthRenderObjectWidget');
-    return AzimuthRenderObject();
+    return AzimuthRenderObject(appBackgroundColor: Theme.of(context).colorScheme.surface);
   }
 
   // @override
@@ -125,7 +126,9 @@ class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
 
 class AzimuthRenderObject extends RenderBox
     with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
-  AzimuthRenderObject();
+  AzimuthRenderObject({required this.appBackgroundColor});
+
+  final Color appBackgroundColor;
 
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
@@ -149,7 +152,7 @@ class AzimuthRenderObject extends RenderBox
     final double circleRadius = size.width / 2;
 
     final Paint circlePaint = Paint()
-      ..color = Colors.white
+      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
 

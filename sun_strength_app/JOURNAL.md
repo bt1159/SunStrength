@@ -1,4 +1,7 @@
 # Daily log
+## 2026-09-02
+
+
 ## 2026-09-01
 I am out of date with this log.  I have finally gotten the azimath angle visual basically working.  Currently, I am having numerous issues with some things not updating.  Clicking the button to update k does nothing.  Changing the color scheme changes some things, I think, but definitely not everything.
 
