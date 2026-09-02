@@ -40,7 +40,7 @@ class AzimuthWidget extends StatelessWidget {
                   child: BuilderAzimuthChart(
                     orbitAndSolarValuesListSingleDay:
                         orbitAndSolarValuesListSingleDay,
-                    colormap: myColorScheme?.$2,
+                    colorScheme: myColorScheme,
                   ),
                 ),
               // ),
@@ -56,15 +56,15 @@ class BuilderAzimuthChart extends StatelessWidget {
   const BuilderAzimuthChart({
     super.key,
     required this.orbitAndSolarValuesListSingleDay,
-    this.colormap,
+    this.colorScheme,
   });
 
   final List<OrbitAndSolarValues> orbitAndSolarValuesListSingleDay;
-  final Colormap? colormap;
+  final MyColorScheme? colorScheme;
 
   @override
   Widget build(BuildContext context) {
-    print('Running BuilderAzimuthChart.build, colormap: $colormap');
+    print('Running BuilderAzimuthChart.build, colormap: ${colorScheme?.$1}');
 
     // final double startingHOffsetFromJ2000 =
     //     orbitAndSolarValuesListSingleDay.first.hOffsetFromJ2000;
@@ -104,7 +104,7 @@ class BuilderAzimuthChart extends StatelessWidget {
     return CustomPaint(
       painter: CustomPathRibbonPainter(
         points: solarDataOffsets,
-        colormap: colormap ?? constColorMap,
+        colorScheme: colorScheme ?? constMyColorScheme,
         positiveStrengths: solarDataStrengths,
         appBackgroundColor: Theme.of(context).colorScheme.surface,
       ),

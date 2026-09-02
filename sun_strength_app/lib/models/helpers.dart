@@ -28,7 +28,8 @@ double interpolate(
   return (dep1 - dep0) / (ind1 - ind0) * (ind2 - ind0) + dep0;
 }
 
-final Colormap constColorMap = Colormaps.magma;
+final MyColorScheme constMyColorScheme = colorSchemes.first;
+// final Colormap constColorMap = Colormaps.magma;
 // final Colormap colormap = Colormaps.inferno;
 
 /// Outputs a vector with four [double] values from 0 to 255 representing r, g, b, a.  [strength] must be between 0 and 1, inclusive.
@@ -38,7 +39,7 @@ Vector4 colorValuesFromMap(
   Colormap? colormap,
 ]) {
   // void colorTest(double strength) {
-  final Colormap localColorMap = colormap ?? constColorMap;
+  final Colormap localColorMap = colormap ?? constMyColorScheme.$2;
   final Vector4 vector = localColorMap(strength);
   final double r = vector.x * 255;
   final double g = vector.y * 255;
@@ -479,6 +480,13 @@ final MyColorSchemes colorSchemes = [
   ('gist_heat', Colormaps.gist_heat),
   ('hot', Colormaps.hot),
 ];
+final List<(List<double>,List<Color>)> myColorSchemesDiscrete = List.generate(colorSchemes.length, (index) {
+  final List<double> values = List.generate(15, (innerIndex) => innerIndex / 15);
+  final List<Vector4> colorVectors = List.generate(15, (innerIndex) => colorValuesFromMap(innerIndex / 15, false, colorSchemes[index].$2));
+  final List<Color> colors = colorVectors.map((e) => Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt())).toList();
+  return (values, colors);
+});
+
 
 class CurrentIndexNotifier extends ValueNotifier<int> {
   CurrentIndexNotifier() : super(0);
@@ -581,13 +589,13 @@ class ImagePainter extends CustomPainter {
 class CustomPathRibbonPainter extends CustomPainter {
   final List<Offset> points;
   final List<double> positiveStrengths;
-  final Colormap colormap;
+  final MyColorScheme colorScheme;
   final double strokeWidth;
   final Color appBackgroundColor;
 
   CustomPathRibbonPainter({
     required this.points,
-    required this.colormap,
+    required this.colorScheme,
     required this.positiveStrengths,
     required this.appBackgroundColor,
     this.strokeWidth = 4.0,
@@ -595,7 +603,7 @@ class CustomPathRibbonPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('Running paint in CustomPathRibbonPainter, colormap: $colormap');
+    print('Running paint in CustomPathRibbonPainter, colormap: ${colorScheme.$1}');
     if (points.length < 2) return;
 
     final double boundingCircleRadius = min(size.width, size.height) / 2;
@@ -603,12 +611,16 @@ class CustomPathRibbonPainter extends CustomPainter {
 
     /// Ratio of tip radius for cardinal points to circle
     final double a1 = 1.1;
+
     /// Ratio that compares the width of cardinal points (indirectly) to circle
     final double a2 = 0.25;
+
     /// Ratio that compares the width of non-cardinal points (indirectly) to circle
     final double a3 = 0.15;
+
     /// Scaling ratio to make cardinal points "stroke" background image larger than the facets
     final double a4 = 1.1;
+
     /// Scaling ratio to make non-cardinal points "stroke" background image larger than the facets
     final double a5 = 1.07;
     final double sqrt2 = sqrt(2);
@@ -754,52 +766,99 @@ class CustomPathRibbonPainter extends CustomPainter {
 
     final halfWidth = strokeWidth / 2;
 
-    final List<Color> colors = positiveStrengths.map((strength) {
-      final Vector4 colorVector = colorValuesFromMap(strength, false, colormap);
-      final Color color = Color.fromARGB(
-        colorVector.w.toInt(),
-        colorVector.x.toInt(),
-        colorVector.y.toInt(),
-        colorVector.z.toInt(),
-      );
-      return color;
-    }).toList();
+    final Path ribbonPath = Path();
 
-    for (int i = 0; i < points.length - 1; i++) {
-      // size
-      final Offset p1 = (points[i]) * boundingCircleRadius + centerOffset;
-      final Offset p2 = (points[i + 1]) * boundingCircleRadius + centerOffset;
+    ribbonPath.moveTo(points[0].dx, points[0].dy);
 
-      // Calculate direction and perpendicular unit normal vector
-      final Offset dir = p2 - p1;
-      final double dist = dir.distance;
-      if (dist == 0) continue;
+    if (points.length == 2) {
+      ribbonPath.lineTo(points[1].dx, points[1].dy);
+    } else {
+      // Tension factor (0.0 = sharp linear, 0.5 = natural Catmull-Rom curve)
+      const double tension = 0.5;
 
-      final Offset normal = Offset(-dir.dy / dist, dir.dx / dist) * halfWidth;
+      for (int i = 0; i < points.length - 1; i++) {
+        final Offset p0 = i > 0 ? points[i - 1] : points[i];
+        final Offset p1 = points[i];
+        final Offset p2 = points[i + 1];
+        final Offset p3 = i < points.length - 2 ? points[i + 2] : p2;
 
-      // Calculate 4 corners of the ribbon segment quad
-      final Offset p1Left = p1 + normal;
-      final Offset p1Right = p1 - normal;
-      final Offset p2Left = p2 + normal;
-      final Offset p2Right = p2 - normal;
+        // Calculate control points based on surrounding vectors
+        final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
+        final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
 
-      // Add 2 triangles for the quad (p1L, p1R, p2L) and (p2L, p1R, p2R)
-      vertices.addAll([p1Left, p1Right, p2Left, p2Left, p1Right, p2Right]);
-
-      // Assign colors corresponding to points i and i+1
-      final Color c1 = colors[i];
-      final Color c2 = colors[i + 1];
-      vertexColors.addAll([c1, c1, c2, c2, c1, c2]);
+        ribbonPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      }
     }
 
-    final ui.Vertices rawVertices = ui.Vertices(
-      VertexMode.triangles,
-      vertices,
-      colors: vertexColors,
+final int colorSchemeIndex = colorSchemes.indexWhere((element) => element.$1 == colorScheme.$1);
+
+    final RadialGradient solarGradient = RadialGradient(
+      center: Alignment.center,
+      radius: 1.0, // Relative to the Rect provided in createShader
+      colors: myColorSchemesDiscrete[colorSchemeIndex].$2,
+      stops: myColorSchemesDiscrete[colorSchemeIndex].$1, // Adjust these to fine-tune the transition
     );
 
-    // Single GPU draw call for the whole ribbon
-    canvas.drawVertices(rawVertices, BlendMode.srcOver, Paint());
+    // 4. Set up the Paint object
+    final Paint ribbonPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth =
+          6.0 // Set to your desired ribbon thickness
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..shader = solarGradient.createShader(
+        Rect.fromCircle(center: centerOffset, radius: boundingCircleRadius),
+      );
+
+    // 5. Draw it
+    canvas.drawPath(ribbonPath, ribbonPaint);
+
+    // final List<Color> colors = positiveStrengths.map((strength) {
+    //   final Vector4 colorVector = colorValuesFromMap(strength, false, colormap);
+    //   final Color color = Color.fromARGB(
+    //     colorVector.w.toInt(),
+    //     colorVector.x.toInt(),
+    //     colorVector.y.toInt(),
+    //     colorVector.z.toInt(),
+    //   );
+    //   return color;
+    // }).toList();
+
+    // for (int i = 0; i < points.length - 1; i++) {
+    //   // size
+    //   final Offset p1 = (points[i]) * boundingCircleRadius + centerOffset;
+    //   final Offset p2 = (points[i + 1]) * boundingCircleRadius + centerOffset;
+
+    //   // Calculate direction and perpendicular unit normal vector
+    //   final Offset dir = p2 - p1;
+    //   final double dist = dir.distance;
+    //   if (dist == 0) continue;
+
+    //   final Offset normal = Offset(-dir.dy / dist, dir.dx / dist) * halfWidth;
+
+    //   // Calculate 4 corners of the ribbon segment quad
+    //   final Offset p1Left = p1 + normal;
+    //   final Offset p1Right = p1 - normal;
+    //   final Offset p2Left = p2 + normal;
+    //   final Offset p2Right = p2 - normal;
+
+    //   // Add 2 triangles for the quad (p1L, p1R, p2L) and (p2L, p1R, p2R)
+    //   vertices.addAll([p1Left, p1Right, p2Left, p2Left, p1Right, p2Right]);
+
+    //   // Assign colors corresponding to points i and i+1
+    //   final Color c1 = colors[i];
+    //   final Color c2 = colors[i + 1];
+    //   vertexColors.addAll([c1, c1, c2, c2, c1, c2]);
+    // }
+
+    // final ui.Vertices rawVertices = ui.Vertices(
+    //   VertexMode.triangles,
+    //   vertices,
+    //   colors: vertexColors,
+    // );
+
+    // // Single GPU draw call for the whole ribbon
+    // canvas.drawVertices(rawVertices, BlendMode.srcOver, Paint());
   }
 
   @override
