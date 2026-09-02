@@ -322,8 +322,10 @@ generateColorImage({
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
-  for (final OrbitAndSolarValues orbitAndSolarValues in orbitAndSolarValuesList) {
-    final double strength = orbitAndSolarValues.solarStrengthsLocalRelativeToGlobalMax;
+  for (final OrbitAndSolarValues orbitAndSolarValues
+      in orbitAndSolarValuesList) {
+    final double strength =
+        orbitAndSolarValues.solarStrengthsLocalRelativeToGlobalMax;
     // For rawMatrixData, x will index the outer list, or day, and y will index each inner list, or time.
     if (vertIndex == 0) {
       horIndex++;
@@ -394,7 +396,9 @@ Future<ChartImageContainer> generateColorImageInContainer({
     );
   }
 
-  print('running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}');
+  print(
+    'running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
+  );
 
   final (:image, :rawMatrixData) = await generateColorImage(
     orbitAndSolarValuesList: orbitAndSolarValuesList,
@@ -500,17 +504,18 @@ class OrbitAndSolarValues {
     required this.solarStrengthsLocalRelativeToGlobalMax,
   });
 
-  OrbitAndSolarValues.strengthOnly({required this.solarStrengthsLocalRelativeToGlobalMax}):
-    hOffsetFromJ2000 = 0,
-    earthRotationAngle = 0,
-    meanAnomaly = 0,
-    eccentricAnomaly = 0,
-    trueAnomaly = 0,
-    orbitalRadiusMag = 0,
-    orbitalRadius = Vector3.zero(),
-    earthRadius = Vector3.zero(),
-    solarElevationAngle = 0,
-    solarAzimuthAngle = 0;
+  OrbitAndSolarValues.strengthOnly({
+    required this.solarStrengthsLocalRelativeToGlobalMax,
+  }) : hOffsetFromJ2000 = 0,
+       earthRotationAngle = 0,
+       meanAnomaly = 0,
+       eccentricAnomaly = 0,
+       trueAnomaly = 0,
+       orbitalRadiusMag = 0,
+       orbitalRadius = Vector3.zero(),
+       earthRadius = Vector3.zero(),
+       solarElevationAngle = 0,
+       solarAzimuthAngle = 0;
 
   final double hOffsetFromJ2000;
   final double earthRotationAngle;
@@ -592,17 +597,21 @@ class CustomPathRibbonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     print('Running paint in CustomPathRibbonPainter, colormap: $colormap');
     if (points.length < 2) return;
-    
+
     final double boundingCircleRadius = min(size.width, size.height) / 2;
     final Offset centerOffset = Offset(size.width / 2, size.height / 2);
 
-    
-   final double a1 = 1.1;
-   final double a2 = 0.25;
-   final double a3 = 0.15;
-   final double a4 = 1.1;
-   final double a5 = 1.07;
-   final double sqrt2 = sqrt(2);
+    /// Ratio of tip radius for cardinal points to circle
+    final double a1 = 1.1;
+    /// Ratio that compares the width of cardinal points (indirectly) to circle
+    final double a2 = 0.25;
+    /// Ratio that compares the width of non-cardinal points (indirectly) to circle
+    final double a3 = 0.15;
+    /// Scaling ratio to make cardinal points "stroke" background image larger than the facets
+    final double a4 = 1.1;
+    /// Scaling ratio to make non-cardinal points "stroke" background image larger than the facets
+    final double a5 = 1.07;
+    final double sqrt2 = sqrt(2);
 
     final nonCardingalPaint = Paint()
       ..color = Color.lerp(Colors.black, appBackgroundColor, 0.3)!
@@ -614,37 +623,82 @@ class CustomPathRibbonPainter extends CustomPainter {
       ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
       ..style = PaintingStyle.fill;
 
-      final Paint circlePaint = Paint()
+    final Paint circlePaint = Paint()
       ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
 
     canvas.drawCircle(centerOffset, boundingCircleRadius, circlePaint);
-   
-   // Black non-cardinal points
-   final nonCardinalPath = Path()
-      ..moveTo(centerOffset.dx + a5 * boundingCircleRadius / sqrt2, centerOffset.dy - a5 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx + a5 * a3 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx + a5 * boundingCircleRadius / sqrt2, centerOffset.dy + a5 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx, centerOffset.dy + a5 * a3 * boundingCircleRadius)
-      ..lineTo(centerOffset.dx - a5 * boundingCircleRadius / sqrt2, centerOffset.dy + a5 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx - a5 * a3 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx - a5 * boundingCircleRadius / sqrt2, centerOffset.dy - a5 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx, centerOffset.dy - a5 * a3 * boundingCircleRadius)
-	  ..close();
+
+    // Black non-cardinal points
+    final nonCardinalPath = Path()
+      ..moveTo(
+        centerOffset.dx + a5 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a5 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx + a5 * a3 * boundingCircleRadius,
+        centerOffset.dy,
+      )
+      ..lineTo(
+        centerOffset.dx + a5 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a5 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx,
+        centerOffset.dy + a5 * a3 * boundingCircleRadius,
+      )
+      ..lineTo(
+        centerOffset.dx - a5 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a5 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx - a5 * a3 * boundingCircleRadius,
+        centerOffset.dy,
+      )
+      ..lineTo(
+        centerOffset.dx - a5 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a5 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx,
+        centerOffset.dy - a5 * a3 * boundingCircleRadius,
+      )
+      ..close();
 
     canvas.drawPath(nonCardinalPath, nonCardingalPaint);
-   
+
     // Black cardinal background
-	final cardinalPath = Path()
-      ..moveTo(centerOffset.dx, centerOffset.dy - a4 * a1 * boundingCircleRadius)
-      ..lineTo(centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx + a4 * a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2)
+    final cardinalPath = Path()
+      ..moveTo(
+        centerOffset.dx,
+        centerOffset.dy - a4 * a1 * boundingCircleRadius,
+      )
+      ..lineTo(
+        centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx + a4 * a1 * boundingCircleRadius,
+        centerOffset.dy,
+      )
+      ..lineTo(
+        centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2,
+      )
       ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
-      ..lineTo(centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2)
-      ..lineTo(centerOffset.dx - a4 * a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(
+        centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2,
+      )
+      ..lineTo(
+        centerOffset.dx - a4 * a1 * boundingCircleRadius,
+        centerOffset.dy,
+      )
+      ..lineTo(
+        centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2,
+      )
       ..close();
 
     canvas.drawPath(cardinalPath, cardinalBackPaint);
@@ -654,35 +708,46 @@ class CustomPathRibbonPainter extends CustomPainter {
     final northWhite = Path()
       ..moveTo(centerOffset.dx, centerOffset.dy)
       ..lineTo(centerOffset.dx, centerOffset.dy - a1 * boundingCircleRadius)
-      ..lineTo(centerOffset.dx - a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(
+        centerOffset.dx - a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a2 * boundingCircleRadius / sqrt2,
+      )
       ..close();
 
     canvas.drawPath(northWhite, cardinalForePaint);
-	
+
     final eastWhite = Path()
       ..moveTo(centerOffset.dx, centerOffset.dy)
       ..lineTo(centerOffset.dx + a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx + a2 * boundingCircleRadius / sqrt2, centerOffset.dy - a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(
+        centerOffset.dx + a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy - a2 * boundingCircleRadius / sqrt2,
+      )
       ..close();
 
     canvas.drawPath(eastWhite, cardinalForePaint);
-	
+
     final southWhite = Path()
       ..moveTo(centerOffset.dx, centerOffset.dy)
       ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
-      ..lineTo(centerOffset.dx + a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(
+        centerOffset.dx + a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a2 * boundingCircleRadius / sqrt2,
+      )
       ..close();
 
     canvas.drawPath(southWhite, cardinalForePaint);
-	
+
     final westWhite = Path()
       ..moveTo(centerOffset.dx, centerOffset.dy)
       ..lineTo(centerOffset.dx - a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(centerOffset.dx - a2 * boundingCircleRadius / sqrt2, centerOffset.dy + a2 * boundingCircleRadius / sqrt2)
+      ..lineTo(
+        centerOffset.dx - a2 * boundingCircleRadius / sqrt2,
+        centerOffset.dy + a2 * boundingCircleRadius / sqrt2,
+      )
       ..close();
 
     canvas.drawPath(westWhite, cardinalForePaint);
-
 
     final List<Offset> vertices = [];
     final List<Color> vertexColors = [];
@@ -800,7 +865,11 @@ class PathMetricsGradientPainter extends CustomPainter {
 
         if (strengthAtStep < 0) continue;
 
-        final Vector4 colorVector = colorValuesFromMap(strengthAtStep, false, colormap);
+        final Vector4 colorVector = colorValuesFromMap(
+          strengthAtStep,
+          false,
+          colormap,
+        );
         final Color color = Color.fromARGB(
           colorVector.w.toInt(),
           colorVector.x.toInt(),
