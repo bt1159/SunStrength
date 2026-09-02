@@ -34,13 +34,16 @@ class AzimuthWidget extends StatelessWidget {
             );
             return Padding(
               padding: const EdgeInsets.all(40.0),
-              child: AzimuthRenderObjectWidget(
-                child: BuilderAzimuthChart(
-                  orbitAndSolarValuesListSingleDay:
-                      orbitAndSolarValuesListSingleDay,
-                  colormap: myColorScheme?.$2,
+              // child: AzimuthRenderObjectWidget(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: BuilderAzimuthChart(
+                    orbitAndSolarValuesListSingleDay:
+                        orbitAndSolarValuesListSingleDay,
+                    colormap: myColorScheme?.$2,
+                  ),
                 ),
-              ),
+              // ),
             );
           },
         );
@@ -109,57 +112,57 @@ class BuilderAzimuthChart extends StatelessWidget {
   }
 }
 
-class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
-  const AzimuthRenderObjectWidget({super.key, super.child});
+// class AzimuthRenderObjectWidget extends SingleChildRenderObjectWidget {
+//   const AzimuthRenderObjectWidget({super.key, super.child});
 
-  @override
-  AzimuthRenderObject createRenderObject(BuildContext context) {
-    print('Running createRenderObject inside AzimuthRenderObjectWidget');
-    return AzimuthRenderObject(appBackgroundColor: Theme.of(context).colorScheme.surface);
-  }
+//   @override
+//   AzimuthRenderObject createRenderObject(BuildContext context) {
+//     print('Running createRenderObject inside AzimuthRenderObjectWidget');
+//     return AzimuthRenderObject(appBackgroundColor: Theme.of(context).colorScheme.surface);
+//   }
 
-  // @override
-  // void updateRenderObject(BuildContext context, covariant AzimuthRenderObject renderObject) {
+//   // @override
+//   // void updateRenderObject(BuildContext context, covariant AzimuthRenderObject renderObject) {
 
-  // }
-}
+//   // }
+// }
 
-class AzimuthRenderObject extends RenderBox
-    with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
-  AzimuthRenderObject({required this.appBackgroundColor});
+// class AzimuthRenderObject extends RenderBox
+//     with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
+//   AzimuthRenderObject({required this.appBackgroundColor});
 
-  final Color appBackgroundColor;
+//   final Color appBackgroundColor;
 
-  @override
-  Size computeDryLayout(covariant BoxConstraints constraints) {
-    final Size drySize = Size(
-      min(constraints.maxWidth, constraints.maxHeight),
-      min(constraints.maxWidth, constraints.maxHeight),
-    );
-    return drySize;
-  }
+//   @override
+//   Size computeDryLayout(covariant BoxConstraints constraints) {
+//     final Size drySize = Size(
+//       min(constraints.maxWidth, constraints.maxHeight),
+//       min(constraints.maxWidth, constraints.maxHeight),
+//     );
+//     return drySize;
+//   }
 
-  @override
-  void performLayout() {
-    size = computeDryLayout(constraints);
-    child?.layout(BoxConstraints.tight(size));
-  }
+//   @override
+//   void performLayout() {
+//     size = computeDryLayout(constraints);
+//     child?.layout(BoxConstraints.tight(size));
+//   }
 
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    print('Running paint inside AzimuthRenderObject');
-    final Offset center = offset + Offset(size.width / 2, size.height / 2);
-    final double circleRadius = size.width / 2;
+//   @override
+//   void paint(PaintingContext context, Offset offset) {
+//     print('Running paint inside AzimuthRenderObject');
+//     final Offset center = offset + Offset(size.width / 2, size.height / 2);
+//     final double circleRadius = size.width / 2;
 
-    final Paint circlePaint = Paint()
-      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
+//     final Paint circlePaint = Paint()
+//       ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
+//       ..strokeWidth = 4
+//       ..style = PaintingStyle.stroke;
 
-    context.canvas.drawCircle(center, circleRadius, circlePaint);
-    // child?.paint(context, offset);
-    if (child != null) {
-      context.paintChild(child!, offset);
-    }
-  }
-}
+//     context.canvas.drawCircle(center, circleRadius, circlePaint);
+//     // child?.paint(context, offset);
+//     if (child != null) {
+//       context.paintChild(child!, offset);
+//     }
+//   }
+// }

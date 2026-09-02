@@ -613,6 +613,13 @@ class CustomPathRibbonPainter extends CustomPainter {
     final cardinalForePaint = Paint()
       ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
       ..style = PaintingStyle.fill;
+
+      final Paint circlePaint = Paint()
+      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawCircle(centerOffset, boundingCircleRadius, circlePaint);
    
    // Black non-cardinal points
    final nonCardinalPath = Path()
