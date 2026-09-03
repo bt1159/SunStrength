@@ -109,164 +109,147 @@ class HeatMap extends StatelessWidget {
             ),
           ],
           builder: (context, child) {
-            return ListView(              
-              // spacing: 20,
-              // crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExpansionTile(
-                  backgroundColor: Color.lerp(Theme.of(context).colorScheme.surface, Color.fromARGB(255,255,255,255),0.25),
-                  title: Text(
-                    'How does this chart work?',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.zero, side: BorderSide.none),
+            return SingleChildScrollView(
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  spacing: 20,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Padding(padding: const EdgeInsets.all(16.0)),
-                    Text(
-                      'This chart shows the strength of the sun at every moment throughout '
-                      'an entire year.  As you look across the chart from left to right, you '
-                      'go from one day to the next, so the far left is January 1st.  As you go '
-                      'up in the chart, from the bottom to the top, you go from the beginning '
-                      'to the end of a single day.  You can hover your cursor over the chart '
-                      'to see the time and date of any specific point and the strength of the '
-                      'sun at that point.\n\n'
-                      'The "strength" of the sun is always shown as a percentage of the '
-                      'strongest sun strength the Earth ever gets, in other words when the sun '
-                      'is straight up in the sky at the equator.\n\n'
-                      'You may be suprised by how many places on Earth routinely get over 90% '
-                      'of that max strength, but it\'s true!\n\n\n\n',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Column(
+                      children: [
+                        Text(
+                          currentChartSettings.location.name,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        Text(
+                          currentChartSettings.year.toString(),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        ChartWidget(
+                          nXAxisBuckets: 12,
+                          nYAxisBuckets: 6,
+                          timeZone: currentChartSettings.timeZone,
+                          year: currentChartSettings.year,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Text(
-                      currentChartSettings.location.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      currentChartSettings.year.toString(),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    ChartWidget(
-                      nXAxisBuckets: 12,
-                      nYAxisBuckets: 6,
-                      timeZone: currentChartSettings.timeZone,
-                      year: currentChartSettings.year,
-                    ),
-                  ],
-                ),
-                const ColorScaleWidget(),
-                Consumer<KNotifier>(
-                  builder: (context, kNotifer, child) => Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: kNotifer.value == 0.3
-                            ? null
-                            : () => kNotifer.value = 0.3,
-                        child: Text('Visible light'),
+                    const ColorScaleWidget(),
+                    Consumer<KNotifier>(
+                      builder: (context, kNotifer, child) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton(
+                            onPressed: kNotifer.value == 0.3
+                                ? null
+                                : () => kNotifer.value = 0.3,
+                            child: Text('Visible light'),
+                          ),
+                          ElevatedButton(
+                            onPressed: kNotifer.value == 0.64
+                                ? null
+                                : () => kNotifer.value = 0.64,
+                            child: Text('UV-A'),
+                          ),
+                          ElevatedButton(
+                            onPressed: kNotifer.value == 2
+                                ? null
+                                : () => kNotifer.value = 2,
+                            child: Text('UV-B'),
+                          ),
+                        ],
                       ),
-                      ElevatedButton(
-                        onPressed: kNotifer.value == 0.64
-                            ? null
-                            : () => kNotifer.value = 0.64,
-                        child: Text('UV-A'),
-                      ),
-                      ElevatedButton(
-                        onPressed: kNotifer.value == 2
-                            ? null
-                            : () => kNotifer.value = 2,
-                        child: Text('UV-B'),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed:
-                          context
-                                  .read<SavedSettingsNotifier>()
-                                  .value
-                                  ?.defaultLocation ==
-                              currentChartSettings.location
-                          ? null
-                          : () async {
-                              await context
-                                  .read<SavedSettingsNotifier>()
-                                  .updateLocation(
-                                    currentChartSettings.location,
-                                  );
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                      'Location saved as default',
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 2),
-                                    width:
-                                        200, // Narrows the width to look like a toast
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                );
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed:
+                              context
+                                      .read<SavedSettingsNotifier>()
+                                      .value
+                                      ?.defaultLocation ==
+                                  currentChartSettings.location
+                              ? null
+                              : () async {
+                                  await context
+                                      .read<SavedSettingsNotifier>()
+                                      .updateLocation(
+                                        currentChartSettings.location,
+                                      );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text(
+                                          'Location saved as default',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 2),
+                                        width:
+                                            200, // Narrows the width to look like a toast
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                          child: const Text('Save as default location'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () =>
+                              context.read<CurrentIndexNotifier>().value = 1,
+                          child: Text('Change location'),
+                        ),
+                      ],
+                    ),
+                    Selector<SavedSettingsNotifier, MyColorScheme?>(
+                      selector: (_, savedSettingsNotifier) =>
+                          savedSettingsNotifier.value?.colorScheme,
+                      builder: (context, colorScheme, child) =>
+                          DropdownMenu<MyColorScheme>(
+                            initialSelection: colorScheme,
+                            label: const Text('Select Color Scheme'),
+                            onSelected: (MyColorScheme? value) {
+                              if (value == null) {
+                                context
+                                    .read<SavedSettingsNotifier>()
+                                    .clearColorScheme();
+                              } else {
+                                context
+                                    .read<SavedSettingsNotifier>()
+                                    .updateColorScheme(value);
                               }
                             },
-                      child: const Text('Save as default location'),
+                            dropdownMenuEntries:
+                                List<DropdownMenuEntry<MyColorScheme>>.generate(
+                                  colorSchemes.length,
+                                  (index) => DropdownMenuEntry<MyColorScheme>(
+                                    value: colorSchemes[index],
+                                    label: colorSchemes[index].$1,
+                                  ),
+                                ),
+                          ),
                     ),
-                    ElevatedButton(
-                      onPressed: () =>
-                          context.read<CurrentIndexNotifier>().value = 1,
-                      child: Text('Change location'),
+                    Selector<DayIndexNotifier, bool>(
+                      selector: (_, dayIndexNotifier) =>
+                          dayIndexNotifier.value != null,
+                      builder: (context, valueNotNull, child) {
+                        print(
+                          'Inside the selector that determines whether to build the azimuth chart, dayIndex is ${valueNotNull ? 'not ' : ''}null',
+                        );
+                        return valueNotNull ? child! : Container();
+                      },
+                      child: const Flexible(
+                        fit: FlexFit.tight,
+                        child: AzimuthWidget(),
+                      ),
                     ),
                   ],
                 ),
-                Selector<SavedSettingsNotifier, MyColorScheme?>(
-                  selector: (_, savedSettingsNotifier) =>
-                      savedSettingsNotifier.value?.colorScheme,
-                  builder: (context, colorScheme, child) =>
-                      DropdownMenu<MyColorScheme>(
-                        initialSelection: colorScheme,
-                        label: const Text('Select Color Scheme'),
-                        onSelected: (MyColorScheme? value) {
-                          if (value == null) {
-                            context
-                                .read<SavedSettingsNotifier>()
-                                .clearColorScheme();
-                          } else {
-                            context
-                                .read<SavedSettingsNotifier>()
-                                .updateColorScheme(value);
-                          }
-                        },
-                        dropdownMenuEntries:
-                            List<DropdownMenuEntry<MyColorScheme>>.generate(
-                              colorSchemes.length,
-                              (index) => DropdownMenuEntry<MyColorScheme>(
-                                value: colorSchemes[index],
-                                label: colorSchemes[index].$1,
-                              ),
-                            ),
-                      ),
-                ),
-                Selector<DayIndexNotifier, bool>(
-                  selector: (_, dayIndexNotifier) =>
-                      dayIndexNotifier.value != null,
-                  builder: (context, valueNotNull, child) {
-                    print(
-                      'Inside the selector that determines whether to build the azimuth chart, dayIndex is ${valueNotNull ? 'not ' : ''}null',
-                    );
-                    return valueNotNull ? child! : Container();
-                  },
-                  child: const Flexible(
-                    fit: FlexFit.tight,
-                    child: AzimuthWidget(),
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),

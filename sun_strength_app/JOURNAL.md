@@ -3,6 +3,7 @@
 I am finally going to address some visual issues.  Ideas:
 X labeling the year
 X a drop down with some explanation of the chart itself
+- change the overall horizontal alignment.  Reference the google or edge start page.  The app bar can be far left with actions far right, but the content should be centered.
 - explanation of the UV bands
 - change the value to percentage and call it strength
 - make the location name label bigger
@@ -135,3 +136,9 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 ## Add the ability to change the number of vertical lines
 
 ## Add the ability to search by zip code
+
+## Add some sort of back button on location screen if there already is a saved or current location (whichever one makes sense)
+
+## Ensure modern horizontal alignment throughout app: title bars, menus, etc. are left, main page content is centered.  A block of text doesn't have to be ceneter justified, that's weird.  But there should be a main content box that is centered and text can be left justified in that.
+
+## Make azimuth stop resizing as long as it is below the chart's min width.  Instead, just let it scroll.

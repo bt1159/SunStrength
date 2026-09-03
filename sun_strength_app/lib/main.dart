@@ -60,6 +60,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
         darkTheme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
@@ -149,7 +150,7 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
         appBar: [
           AppBar(
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-            title: const Text('UV strength'),
+            title: const Text('Sun strength'),
             actions: [
               IconButton(
                 onPressed: () => showDialog(
@@ -157,8 +158,8 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                   builder: (context) => AlertDialog(
                     title: const Text('Information'),
                     content: SizedBox(
-                      width: 300,
-                      height: 300,
+                      width: 600,
+                      // height: 300,
                       child: Text(
                         'This chart shows the strength of the sun at every moment throughout '
                         'an entire year.  As you look across the chart from left to right, you '
