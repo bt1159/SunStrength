@@ -1,6 +1,17 @@
 # Daily log
-## 2026-09-02
+## 2026-09-03
+I am finally going to address some visual issues.  Ideas:
+X labeling the year
+X a drop down with some explanation of the chart itself
+- explanation of the UV bands
+- change the value to percentage and call it strength
+- make the location name label bigger
+- in the map, don't zoom when you click.  Also, check what happens when you type something in and hit enter. It should definitely move there but probably not zoom, or at least not as much.
 
+## 2026-09-02
+Major bug: there is some latitude below which I get an error.  It says it is an index error where it index should be less than 256.
+
+Another issue is that, for Phoenixville, the azimuth never seems to get "hot" enough.  I'll bet it is a problem with the scale.  I have a linear color scale, but strength is not linear.  It should get toward 0.9 strength much quicker and then flatten out.
 
 ## 2026-09-01
 I am out of date with this log.  I have finally gotten the azimath angle visual basically working.  Currently, I am having numerous issues with some things not updating.  Clicking the button to update k does nothing.  Changing the color scheme changes some things, I think, but definitely not everything.
@@ -80,6 +91,15 @@ Added am/pm setting.
 - Trying to get autocomplete working.  Making a big change in approach to JSInterop.  Now, as soon as I get a response, I am using .dartify() to recursively convert all JS obects to native Dart objects.  Then, I can just code like normal.
 - Fixed _getLocation blah blah but still working on _getLatLngforLocation or whatever
 
+## Testing
+I really should learn about the various types of testing possible with Flutter.  Widget testing, etc.  This would be a good thing for me to learn in general, but it would also likely make my experience developing this app much faster.
+
+# Notes
+## Testing
+### Mocking (mocktail)
+You don't mock thing you are trying to test.  You mock things that need to be instantiated, accessed, etc. in order to create & use the thing you are trying to test.  If you make an object, and that object needs to access some API, for instance, you could Mock the object that handles the API call.  Then you use the when(() = {}) and similar to set up how the Mocked object should respond.  That way, you can feed your object a realistic response when it tried to call the API and instead calls the Mocked API.
+
+
 # Future work
 ## Seperate the last step of the solar calcs so that changing k only changes the solar strength and not EVERYTHING else.
 
@@ -112,10 +132,6 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 
 ## Make the pop up look better.  First, reference the above 24 vs. 12 hour display.  Just use local time (without the UTCC offset).  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
 
-## Testing
-I really should learn about the various types of testing possible with Flutter.  Widget testing, etc.  This would be a good thing for me to learn in general, but it would also likely make my experience developing this app much faster.
+## Add the ability to change the number of vertical lines
 
-# Notes
-## Testing
-### Mocking (mocktail)
-You don't mock thing you are trying to test.  You mock things that need to be instantiated, accessed, etc. in order to create & use the thing you are trying to test.  If you make an object, and that object needs to access some API, for instance, you could Mock the object that handles the API call.  Then you use the when(() = {}) and similar to set up how the Mocked object should respond.  That way, you can feed your object a realistic response when it tried to call the API and instead calls the Mocked API.
+## Add the ability to search by zip code

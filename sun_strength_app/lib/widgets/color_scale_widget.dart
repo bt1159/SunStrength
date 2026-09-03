@@ -1,17 +1,11 @@
 import 'dart:core';
 import 'dart:ui' as ui;
-// import 'dart:math';
-// import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
-// import 'package:sun_strength_app/models/saved_settings_notifier.dart';
-// import 'package:timezone/timezone.dart' as tz;
-// import 'package:intl/intl.dart';
-// import 'package:provider/provider.dart';
 
 class ColorScaleWidget extends StatelessWidget {
   const ColorScaleWidget({super.key});

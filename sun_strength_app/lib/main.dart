@@ -1,4 +1,3 @@
-// flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
 import 'package:flutter/material.dart';
 import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
@@ -151,8 +150,46 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
           AppBar(
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             title: const Text('UV strength'),
+            actions: [
+              IconButton(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Information'),
+                    content: SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: Text(
+                        'This chart shows the strength of the sun at every moment throughout '
+                        'an entire year.  As you look across the chart from left to right, you '
+                        'go from one day to the next, so the far left is January 1st.  As you go '
+                        'up in the chart, from the bottom to the top, you go from the beginning '
+                        'to the end of a single day.  You can hover your cursor over the chart '
+                        'to see the time and date of any specific point and the strength of the '
+                        'sun at that point.\n\n'
+                        'The "strength" of the sun is always shown as a percentage of the '
+                        'strongest sun strength the Earth ever gets, in other words when the sun '
+                        'is straight up in the sky at the equator.\n\n'
+                        'You may be suprised by how many places on Earth routinely get over 90% '
+                        'of that max strength, but it\'s true!\n\n\n\n',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Ok'),
+                      ),
+                    ],
+                  ),
+                ),
+                icon: Icon(Icons.info),
+              ),
+            ],
           ),
-          AppBar(title: const Text("Select Your Location")),
+          AppBar(
+            title: const Text("Select Your Location")
+          ),
         ][currentIndexNotifier.value],
         drawer: Drawer(
           child: ListView(
@@ -226,7 +263,8 @@ class _YearPickerTileState extends State<YearPickerTile> {
           actions: [
             TextButton(
               onPressed: () {
-                if (currentYear.year != context.read<SavedSettingsNotifier>().value?.defaultYear) {
+                if (currentYear.year !=
+                    context.read<SavedSettingsNotifier>().value?.defaultYear) {
                   context.read<SavedSettingsNotifier>().updateYear(
                     currentYear.year,
                   );

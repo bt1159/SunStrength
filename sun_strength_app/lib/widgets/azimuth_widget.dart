@@ -1,12 +1,9 @@
 import 'dart:core';
 import 'dart:math';
-import 'package:color_map/color_map.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
-// import 'package:vector_math/vector_math_64.dart' as vector;
 
 class AzimuthWidget extends StatelessWidget {
   const AzimuthWidget({super.key});

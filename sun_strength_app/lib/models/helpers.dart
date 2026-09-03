@@ -1,4 +1,3 @@
-// import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:convert';
@@ -7,13 +6,11 @@ import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'dart:ffi';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
-// import 'dart:math';
 import 'package:sun_strength_app/models/errors.dart';
 
 const kDebugMode = true;
@@ -480,13 +477,31 @@ final MyColorSchemes colorSchemes = [
   ('gist_heat', Colormaps.gist_heat),
   ('hot', Colormaps.hot),
 ];
-final List<(List<double>,List<Color>)> myColorSchemesDiscrete = List.generate(colorSchemes.length, (index) {
-  final List<double> values = List.generate(15, (innerIndex) => innerIndex / 15);
-  final List<Vector4> colorVectors = List.generate(15, (innerIndex) => colorValuesFromMap(innerIndex / 15, false, colorSchemes[index].$2));
-  final List<Color> colors = colorVectors.map((e) => Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt())).toList();
-  return (values, colors);
-});
-
+final List<(List<double>, List<Color>)> myColorSchemesDiscrete = List.generate(
+  colorSchemes.length,
+  (index) {
+    final List<double> values = List.generate(
+      15,
+      (innerIndex) => innerIndex / 15,
+    );
+    final List<Vector4> colorVectors = List.generate(
+      15,
+      (innerIndex) =>
+          colorValuesFromMap(sqrt(1 - pow((15 - innerIndex) / 15, 2)), false, colorSchemes[index].$2),
+    );
+    final List<Color> colors = colorVectors
+        .map(
+          (e) => Color.fromARGB(
+            e.w.toInt(),
+            e.x.toInt(),
+            e.y.toInt(),
+            e.z.toInt(),
+          ),
+        )
+        .toList();
+    return (values, colors);
+  },
+);
 
 class CurrentIndexNotifier extends ValueNotifier<int> {
   CurrentIndexNotifier() : super(0);
@@ -603,7 +618,9 @@ class CustomPathRibbonPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('Running paint in CustomPathRibbonPainter, colormap: ${colorScheme.$1}');
+    print(
+      'Running paint in CustomPathRibbonPainter, colormap: ${colorScheme.$1}',
+    );
     if (points.length < 2) return;
 
     final double boundingCircleRadius = min(size.width, size.height) / 2;
@@ -761,26 +778,27 @@ class CustomPathRibbonPainter extends CustomPainter {
 
     canvas.drawPath(westWhite, cardinalForePaint);
 
-    final List<Offset> vertices = [];
-    final List<Color> vertexColors = [];
-
-    final halfWidth = strokeWidth / 2;
+    final List<Offset> correctedPoints = points
+        .map((e) => (e) * boundingCircleRadius + centerOffset)
+        .toList();
 
     final Path ribbonPath = Path();
 
-    ribbonPath.moveTo(points[0].dx, points[0].dy);
+    ribbonPath.moveTo(correctedPoints[0].dx, correctedPoints[0].dy);
 
-    if (points.length == 2) {
-      ribbonPath.lineTo(points[1].dx, points[1].dy);
+    if (correctedPoints.length == 2) {
+      ribbonPath.lineTo(correctedPoints[1].dx, correctedPoints[1].dy);
     } else {
       // Tension factor (0.0 = sharp linear, 0.5 = natural Catmull-Rom curve)
       const double tension = 0.5;
 
-      for (int i = 0; i < points.length - 1; i++) {
-        final Offset p0 = i > 0 ? points[i - 1] : points[i];
-        final Offset p1 = points[i];
-        final Offset p2 = points[i + 1];
-        final Offset p3 = i < points.length - 2 ? points[i + 2] : p2;
+      for (int i = 0; i < correctedPoints.length - 1; i++) {
+        final Offset p0 = i > 0 ? correctedPoints[i - 1] : correctedPoints[i];
+        final Offset p1 = correctedPoints[i];
+        final Offset p2 = correctedPoints[i + 1];
+        final Offset p3 = i < correctedPoints.length - 2
+            ? correctedPoints[i + 2]
+            : p2;
 
         // Calculate control points based on surrounding vectors
         final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
@@ -790,20 +808,22 @@ class CustomPathRibbonPainter extends CustomPainter {
       }
     }
 
-final int colorSchemeIndex = colorSchemes.indexWhere((element) => element.$1 == colorScheme.$1);
+    final int colorSchemeIndex = colorSchemes.indexWhere(
+      (element) => element.$1 == colorScheme.$1,
+    );
 
     final RadialGradient solarGradient = RadialGradient(
       center: Alignment.center,
-      radius: 1.0, // Relative to the Rect provided in createShader
-      colors: myColorSchemesDiscrete[colorSchemeIndex].$2,
-      stops: myColorSchemesDiscrete[colorSchemeIndex].$1, // Adjust these to fine-tune the transition
+      radius: 0.5, // Relative to the Rect provided in createShader
+      colors: myColorSchemesDiscrete[colorSchemeIndex].$2.reversed.toList(),
+      stops: myColorSchemesDiscrete[colorSchemeIndex]
+          .$1,
     );
 
     // 4. Set up the Paint object
     final Paint ribbonPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth =
-          6.0 // Set to your desired ribbon thickness
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..shader = solarGradient.createShader(

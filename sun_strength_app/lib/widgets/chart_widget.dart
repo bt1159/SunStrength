@@ -1,4 +1,3 @@
-// flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
 import 'dart:core';
 import 'dart:math';
 import 'package:collection/collection.dart';
@@ -74,9 +73,9 @@ class _ChartWidgetState extends State<ChartWidget> {
           // chartWidgetOffsetToParent +
           toolTipFormattingOffset,
       tooltipText12:
-          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}',
+          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${(value * 100).toStringAsFixed(0)}%',
       tooltipText24:
-          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${value.toStringAsFixed(2)}',
+          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${(value * 100).toStringAsFixed(0)}%',
     );
   }
 

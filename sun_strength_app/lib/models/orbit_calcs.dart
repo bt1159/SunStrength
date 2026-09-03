@@ -1,5 +1,4 @@
 import 'dart:math';
-// import 'package:flutter/gestures.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:vector_math/vector_math_64.dart';
