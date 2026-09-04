@@ -160,20 +160,36 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                     content: SizedBox(
                       width: 600,
                       // height: 300,
-                      child: Text(
-                        'This chart shows the strength of the sun at every moment throughout '
-                        'an entire year.  As you look across the chart from left to right, you '
-                        'go from one day to the next, so the far left is January 1st.  As you go '
-                        'up in the chart, from the bottom to the top, you go from the beginning '
-                        'to the end of a single day.  You can hover your cursor over the chart '
-                        'to see the time and date of any specific point and the strength of the '
-                        'sun at that point.\n\n'
-                        'The "strength" of the sun is always shown as a percentage of the '
-                        'strongest sun strength the Earth ever gets, in other words when the sun '
-                        'is straight up in the sky at the equator.\n\n'
-                        'You may be suprised by how many places on Earth routinely get over 90% '
-                        'of that max strength, but it\'s true!\n\n\n\n',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      child: Column(
+                        children: [
+                          Text('Heatmap chart', style: Theme.of(context).textTheme.headlineMedium),
+                          Text(
+                            'This chart shows the strength of the sun at every moment throughout '
+                            'an entire year.  As you look across the chart from left to right, you '
+                            'go from one day to the next, so the far left is January 1st.  As you go '
+                            'up in the chart, from the bottom to the top, you go from the beginning '
+                            'to the end of a single day.  You can hover your cursor over the chart '
+                            'to see the time and date of any specific point and the strength of the '
+                            'sun at that point.\n\n'
+                            'The "strength" of the sun is always shown as a percentage of the '
+                            'strongest sun strength the Earth ever gets, in other words when the sun '
+                            'is straight up in the sky at the equator.\n\n'
+                            'You may be suprised by how many places on Earth routinely get over 90% '
+                            'of that max strength, but it\'s true!',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          SizedBox(height: 10),                          
+                          Text('Direction of the sun, the bottom chart', style: Theme.of(context).textTheme.headlineMedium),
+                          Text(
+                            'The bottom chart primarily shows where the sun will be at any point '
+                            'during one specific day.  The circular chart works like a compass, so if '
+                            'it shows the sun at the far left edge at a certain time, that means the '
+                            'sun will be due East in the sky when it rises.  As the sun gets higher in '
+                            'the sky, it moves toward the center.  Basically, it\'s a bit like looking '
+                            'down from a bird\'s eye view.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
                     ),
                     actions: [
