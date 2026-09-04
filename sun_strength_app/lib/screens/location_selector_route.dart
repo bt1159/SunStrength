@@ -1,3 +1,4 @@
+import 'package:geolocator/geolocator.dart';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -8,7 +9,9 @@ import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'dart:async';
 import 'package:google_maps/google_maps_places.dart' as gmaps_places;
+// import 'package:google_maps/google_maps_places.dart';
 import 'package:google_maps/google_maps_core.dart' as gmaps;
+// import 'package:google_maps/google_maps.dart';
 import 'package:google_maps/google_maps_geocoding.dart' as gmaps_geo;
 
 class LocationSelectionScreen extends StatefulWidget {
@@ -22,7 +25,7 @@ class LocationSelectionScreen extends StatefulWidget {
 class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   final String apiKey =
       "AIzaSyA4jGoTQ5Gn_zW5xuXeMmb5BdYlAWG8_Bs"; // Use same key as index.html
-
+  late final gmaps_places.AutocompleteService service;
   final TextEditingController _searchController = TextEditingController();
   GoogleMapController? _mapController;
 
@@ -33,6 +36,9 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   @override
   void initState() {
     super.initState();
+
+    // 1. Initialize the standard Autocomplete service
+    service = gmaps_places.AutocompleteService();
     final Location? currentAppLocation = context
         .read<CurrentLocationNotifier>()
         .value
@@ -59,10 +65,12 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // Jumps the map view smoothly to the target coordinate
-  void _moveMapTo(LatLng position) {
+  // TODO: Add a check here so that, if the [position] is already in view, don't move
+  Future<void> _moveMapTo(LatLng position) async {
+    double currentZoomeLevel = await _mapController?.getZoomLevel() ?? 0;
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: position, zoom: 15),
+        CameraPosition(target: position, zoom: currentZoomeLevel),
       ),
     );
   }
@@ -71,90 +79,67 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Future<List<Map<String, String>>?> _getAutocompleteSuggestions(
     String input,
   ) async {
-    if (input.isEmpty) {
-      print('inside _getAutocompleteSuggestions, input is empty');
+    if (input.trim().isEmpty) {
       return null;
     }
-    print('inside _getAutocompleteSuggestions, input is NOT empty');
 
     try {
-      // 1. Prepare and send the Google Maps Autocomplete request across the JS bridge
-      final gmaps_places.AutocompleteRequest request =
-          gmaps_places.AutocompleteRequest()..input = input;
+      // 2. Set up the request
+      final request = gmaps_places.AutocompletionRequest()..input = input;
+      final gmaps.LatLng centerLatLng = gmaps.LatLng(
+        _currentPosition.latLng.latitude,
+        _currentPosition.latLng.longitude,
+      );
+      if (_mapController != null) {
+        LatLngBounds visibleRegion = await _mapController!.getVisibleRegion();
+        LatLng farLeft =
+            visibleRegion.southwest; // Bottom-left or far-left corner
+        LatLng farRight =
+            visibleRegion.northeast; // Top-right or far-right corner
 
-      // 2. Await the JS Promise and cast it to a generic JS value (JSAny)
-      final JSAny? jsResponseAny =
-          await (gmaps_places
-                      .AutocompleteSuggestion.fetchAutocompleteSuggestions(
-                    request,
-                  )
-                  as JSPromise<JSAny?>)
-              .toDart;
+        // TODO: I can get rid of a dependence by just calculating this myself.
+        double distanceInMeters = Geolocator.distanceBetween(
+          farLeft.latitude,
+          farLeft.longitude,
+          farLeft
+              .latitude, // Keep latitude constant to measure horizontal width
+          farRight.longitude,
+        );
 
-      if (jsResponseAny == null) return [];
+        request.locationBias = gmaps.CircleLiteral(
+          center: centerLatLng,
+          radius:
+              distanceInMeters, // 50,000 meters = 50 km (approx. the size of Atlantic County and surroundings)
+        );
+      }
 
-      // 3. Flatten the top-level response into a native Dart Map to read the list key safely
-      final dynamic dartResponse = jsResponseAny.dartify();
-      if (dartResponse is! Map) return [];
+      // 3. THE MAGIC FIX: If the input is a 5-digit number, force it to search cities/regions.
+      if (RegExp(r'^\d{5}$').hasMatch(input.trim())) {
+        request.types = ['(regions)'];
+      }
 
-      // 4. Extract the list of raw underlying suggestions
-      final dynamic rawSuggestions = dartResponse['suggestions'];
-      if (rawSuggestions is! List) return [];
+      // 4. Await the modern Promise!
+      // getPlacePredictions now returns a JSPromise that resolves to an AutocompleteResponse
+      final gmaps_places.AutocompleteResponse response =
+          // await (service.getPlacePredictions(request) as JSPromise).toDart;
+          await service.getPlacePredictions(request);
+
+      // If no response or no predictions, return empty list
+      if (response.predictions.isEmpty) {
+        return [];
+      }
 
       final List<Map<String, String>> results = [];
 
-      // 5. Iterate through each suggestion item
-      for (final dynamic suggestion in rawSuggestions) {
-        // Force-cast the item to a JSObject since Google Maps items bypass simple dartify structures
-        final JSObject suggestionObj = suggestion as JSObject;
-
-        // Extract the nested 'placePrediction' JS object if it exists
-        if (suggestionObj.hasProperty('placePrediction'.toJS).toDart) {
-          final JSObject? placePrediction =
-              suggestionObj['placePrediction'] as JSObject?;
-
-          if (placePrediction != null) {
-            String textResult = '';
-            String placeIdResult = '';
-
-            // 6. Safely extract the readable description string
-            if (placePrediction.hasProperty('text'.toJS).toDart) {
-              final JSAny? rawTextValue = placePrediction['text'];
-              if (rawTextValue != null) {
-                final dynamic dartText = rawTextValue.dartify();
-
-                // Google Maps 'text' properties can arrive as raw strings or nested objects (e.g. {string: "..."})
-                if (dartText is Map) {
-                  textResult =
-                      dartText['string']?.toString() ??
-                      dartText['text']?.toString() ??
-                      '';
-                } else {
-                  textResult = dartText?.toString() ?? '';
-                }
-              }
-            }
-
-            // 7. Safely extract the matching Place ID string
-            if (placePrediction.hasProperty('placeId'.toJS).toDart) {
-              final JSAny? rawPlaceId = placePrediction['placeId'];
-              if (rawPlaceId != null) {
-                placeIdResult = rawPlaceId.dartify()?.toString() ?? '';
-              }
-            }
-
-            // 8. Package the results for Flutter TypeAhead consumption
-            results.add(<String, String>{
-              'description': textResult,
-              'place_id': placeIdResult,
-            });
-          }
-        }
+      // 6. Loop through and extract what TypeAheadField needs
+      for (final p in response.predictions) {
+        results.add({'description': p.description, 'place_id': p.placeId});
       }
 
       return results;
     } catch (e) {
-      // Return empty list silently if any unexpected error occurs during network / parsing routines
+      // Catch network errors or API quota limits silently so the UI doesn't crash
+      print('Error fetching autocomplete suggestions: $e');
       return [];
     }
   }
@@ -324,7 +309,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               name: _searchController.text,
             );
             _updateMarker(newLocation);
-            _moveMapTo(tappedPosition);
+            // _moveMapTo(tappedPosition);
 
             print('Finishing GoogleMap.onTap()');
           },
@@ -355,7 +340,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                 // Calls Google API as user types
                 suggestionsCallback: (search) =>
                     _getAutocompleteSuggestions(search),
-
                 // Renders the dropdown items
                 itemBuilder: (context, suggestion) {
                   return ListTile(

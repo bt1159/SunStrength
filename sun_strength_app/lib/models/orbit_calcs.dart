@@ -108,13 +108,6 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
       earthRotationAngle: earthRotationAngle,
     );
     final Vector3 orbitalRadius = calculateOrbitalRadius(trueAnomaly);
-    // final double solarElevationAngleTrig = calculateSolarElevationAngleTrig(
-    //   latRad: latRad,
-    //   lonRad: lonRad,
-    //   earthRotationAngle: earthRotationAngle,
-    //   trueAnomaly: trueAnomaly,
-    //   orbitalRadiusMag: orbitalRadiusMag,
-    // );
     final double solarElevationAngle = calculateSolarElevationAngle(
       latRad: latRad,
       lonRad: lonRad,
@@ -162,6 +155,18 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
   );
 
   return output;
+}
+
+Iterable<OrbitAndSolarValues> recalculateOrbitAndSolarValuesIterableNewK({
+  required double k,
+  required double h,
+  required Iterable<OrbitAndSolarValues> oldValues,
+}) {
+  final Iterable<OrbitAndSolarValues> newValues = oldValues.map((e) {
+    final double updatedSolarStrengthRelativeToGlobalMax = calculateSolarStrengthRelativeToGlobalMax(k: k, solarElevationAngle: e.solarElevationAngle, h: h);    
+    return e.copyWith(solarStrengthsLocalRelativeToGlobalMax: updatedSolarStrengthRelativeToGlobalMax);
+  });
+  return newValues;
 }
 
 double calculateERA(double hOffsetFromJ2000) =>
@@ -268,14 +273,13 @@ double calculateSolarAzimuthAngle({
           rNTang.length);
   final double alphaRaw = acos(cosAlpha.clamp(-1.0, 1.0));
 
-
-  // Since cosine is symmetrical about x = 0, if we stopped here and used 
-  // alphaRaw, we would only get results between 0 and 180.  Instead, we use 
+  // Since cosine is symmetrical about x = 0, if we stopped here and used
+  // alphaRaw, we would only get results between 0 and 180.  Instead, we use
   // sign to determine whether the angle should be 0 to 180 or 180 to 360.
-  final double sign = 
-    earthRadius.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
-    earthRadius.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
-    earthRadius.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
+  final double sign =
+      earthRadius.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
+      earthRadius.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
+      earthRadius.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
   final double alpha;
   if (sign < 0) {
     alpha = 2 * pi - alphaRaw;

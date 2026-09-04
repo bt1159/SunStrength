@@ -70,12 +70,12 @@ class BuilderAzimuthChart extends StatelessWidget {
           (element) => element.solarElevationAngle > 0.0001,
         );
 
-    final List<double> azAngles = visibleSunOnlyData
-        .map((e) => e.solarAzimuthAngle)
-        .toList();
-    final List<double> elAngles = visibleSunOnlyData
-        .map((e) => e.solarElevationAngle)
-        .toList();
+    // final List<double> azAngles = visibleSunOnlyData
+    //     .map((e) => e.solarAzimuthAngle)
+    //     .toList();
+    // final List<double> elAngles = visibleSunOnlyData
+    //     .map((e) => e.solarElevationAngle)
+    //     .toList();
 
     final List<Offset> solarDataOffsets = visibleSunOnlyData
         .map(
@@ -90,13 +90,13 @@ class BuilderAzimuthChart extends StatelessWidget {
     final List<double> solarDataStrengths = visibleSunOnlyData
         .map((e) => e.solarStrengthsLocalRelativeToGlobalMax)
         .toList();
-    print(
-      'orbitAndSolarValuesListSingleDay.length: ${orbitAndSolarValuesListSingleDay.length}',
-    );
-    print('azAngles: $azAngles');
-    print('elAngles: $elAngles');
-    print('solarDataOffsets: $solarDataOffsets');
-    print('solarDataStrengths: $solarDataStrengths');
+    // print(
+    //   'orbitAndSolarValuesListSingleDay.length: ${orbitAndSolarValuesListSingleDay.length}',
+    // );
+    // print('azAngles: $azAngles');
+    // print('elAngles: $elAngles');
+    // print('solarDataOffsets: $solarDataOffsets');
+    // print('solarDataStrengths: $solarDataStrengths');
 
     return CustomPaint(
       painter: CustomPathRibbonPainter(

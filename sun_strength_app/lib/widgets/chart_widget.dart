@@ -73,9 +73,9 @@ class _ChartWidgetState extends State<ChartWidget> {
           // chartWidgetOffsetToParent +
           toolTipFormattingOffset,
       tooltipText12:
-          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nValue: ${(value * 100).toStringAsFixed(0)}%',
+          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
       tooltipText24:
-          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nValue: ${(value * 100).toStringAsFixed(0)}%',
+          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
     );
   }
 

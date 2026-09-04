@@ -3,11 +3,11 @@
 I am finally going to address some visual issues.  Ideas:
 X labeling the year
 X a drop down with some explanation of the chart itself
-- change the overall horizontal alignment.  Reference the google or edge start page.  The app bar can be far left with actions far right, but the content should be centered.
+X change the overall horizontal alignment.  Reference the google or edge start page.  The app bar can be far left with actions far right, but the content should be centered.
 - explanation of the UV bands
-- change the value to percentage and call it strength
-- make the location name label bigger
-- in the map, don't zoom when you click.  Also, check what happens when you type something in and hit enter. It should definitely move there but probably not zoom, or at least not as much.
+X change the value to percentage and call it strength
+X make the location name label bigger
+X in the map, don't zoom when you click.  Also, check what happens when you type something in and hit enter. It should definitely move there but probably not zoom, or at least not as much.
 
 ## 2026-09-02
 Major bug: there is some latitude below which I get an error.  It says it is an index error where it index should be less than 256.
@@ -102,13 +102,9 @@ You don't mock thing you are trying to test.  You mock things that need to be in
 
 
 # Future work
-## Seperate the last step of the solar calcs so that changing k only changes the solar strength and not EVERYTHING else.
-
 ## Add a note about DST (pop up changes to always be correct local time, but y axis is solar time).
 
 ## Add somewhat of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
-
-## Add year selection somewhere
 
 ## I need to actually build out my buttons for directly updating the default settings.
 
@@ -121,11 +117,7 @@ There is some API that has been deprecated.   I think it is the thing that actua
 ## Google Maps JavaScript API error in console
 I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXeMmb5BdYlAWG8_Bs&libraries=places:2457 Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading
 
-## Change zooming behavior so that, when map is clicked.  Map does not automatically zoom in a bunch.
-
 ## Some locations seem to think there are only 364 days in the year.  Yellowknife, Canada in 2026 for example.
-
-## Add a scale for the color map.
 
 ## Add a note explaining the "relative" value.
 
@@ -135,10 +127,8 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 
 ## Add the ability to change the number of vertical lines
 
-## Add the ability to search by zip code
-
 ## Add some sort of back button on location screen if there already is a saved or current location (whichever one makes sense)
 
-## Ensure modern horizontal alignment throughout app: title bars, menus, etc. are left, main page content is centered.  A block of text doesn't have to be ceneter justified, that's weird.  But there should be a main content box that is centered and text can be left justified in that.
+## Instead of Consumer for the date for the azimuth chart, consider pushing those titles into AzimuthChart widget
 
-## Make azimuth stop resizing as long as it is below the chart's min width.  Instead, just let it scroll.
+## debugDumpRenderTree()?

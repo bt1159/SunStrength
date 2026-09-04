@@ -304,16 +304,16 @@ generateColorImage({
   final Uint8List pixelBuffer = Uint8List(
     pixelWidth * pixelHeight * bytesPerPixel,
   );
-  print(
-    'inside generateColorMap, just created pixelBuffer with length, ${pixelBuffer.length}',
-  );
+  // print(
+  //   'inside generateColorMap, just created pixelBuffer with length, ${pixelBuffer.length}',
+  // );
   final List<List<double>> rawMatrixData = List.generate(
     pixelWidth,
     (_) => List.filled(pixelHeight, 0.0),
   );
-  print(
-    'inside generateColorMap, just created rawMatrixData with length, ${rawMatrixData.length} and inside legnth: ${rawMatrixData.first.length}',
-  );
+  // print(
+  //   'inside generateColorMap, just created rawMatrixData with length, ${rawMatrixData.length} and inside legnth: ${rawMatrixData.first.length}',
+  // );
 
   int horIndex = -1;
   int vertIndex = 0;
@@ -361,9 +361,9 @@ generateColorImage({
     }
   }
 
-  print(
-    'inside generateColorMap, just finished assigning data to rawMatrixData and pixelBuffer',
-  );
+  // print(
+  //   'inside generateColorMap, just finished assigning data to rawMatrixData and pixelBuffer',
+  // );
 
   // 3. Hand the perfectly ordered buffer over to the engine
   final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
@@ -486,8 +486,11 @@ final List<(List<double>, List<Color>)> myColorSchemesDiscrete = List.generate(
     );
     final List<Vector4> colorVectors = List.generate(
       15,
-      (innerIndex) =>
-          colorValuesFromMap(sqrt(1 - pow((15 - innerIndex) / 15, 2)), false, colorSchemes[index].$2),
+      (innerIndex) => colorValuesFromMap(
+        sqrt(1 - pow((15 - innerIndex) / 15, 2)),
+        false,
+        colorSchemes[index].$2,
+      ),
     );
     final List<Color> colors = colorVectors
         .map(
@@ -526,6 +529,34 @@ class OrbitAndSolarValues {
     required this.solarAzimuthAngle,
     required this.solarStrengthsLocalRelativeToGlobalMax,
   });
+
+  OrbitAndSolarValues copyWith({
+    double? hOffsetFromJ2000,
+    double? earthRotationAngle,
+    double? meanAnomaly,
+    double? eccentricAnomaly,
+    double? trueAnomaly,
+    double? orbitalRadiusMag,
+    Vector3? orbitalRadius,
+    Vector3? earthRadius,
+    double? solarElevationAngle,
+    double? solarAzimuthAngle,
+    double? solarStrengthsLocalRelativeToGlobalMax,
+  }) => OrbitAndSolarValues(
+    hOffsetFromJ2000: hOffsetFromJ2000 ?? this.hOffsetFromJ2000,
+    earthRotationAngle: earthRotationAngle ?? this.earthRotationAngle,
+    meanAnomaly: meanAnomaly ?? this.meanAnomaly,
+    eccentricAnomaly: eccentricAnomaly ?? this.eccentricAnomaly,
+    trueAnomaly: trueAnomaly ?? this.trueAnomaly,
+    orbitalRadiusMag: orbitalRadiusMag ?? this.orbitalRadiusMag,
+    orbitalRadius: orbitalRadius ?? this.orbitalRadius,
+    earthRadius: earthRadius ?? this.earthRadius,
+    solarElevationAngle: solarElevationAngle ?? this.solarElevationAngle,
+    solarAzimuthAngle: solarAzimuthAngle ?? this.solarAzimuthAngle,
+    solarStrengthsLocalRelativeToGlobalMax:
+        solarStrengthsLocalRelativeToGlobalMax ??
+        this.solarStrengthsLocalRelativeToGlobalMax,
+  );
 
   OrbitAndSolarValues.strengthOnly({
     required this.solarStrengthsLocalRelativeToGlobalMax,
@@ -816,8 +847,7 @@ class CustomPathRibbonPainter extends CustomPainter {
       center: Alignment.center,
       radius: 0.5, // Relative to the Rect provided in createShader
       colors: myColorSchemesDiscrete[colorSchemeIndex].$2.reversed.toList(),
-      stops: myColorSchemesDiscrete[colorSchemeIndex]
-          .$1,
+      stops: myColorSchemesDiscrete[colorSchemeIndex].$1,
     );
 
     // 4. Set up the Paint object
@@ -887,7 +917,10 @@ class CustomPathRibbonPainter extends CustomPainter {
 
 class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
-  OrbitAndSolarValuesListNotifier(super.value);
+  OrbitAndSolarValuesListNotifier(super.value, {required this.lastK, required this.lastcurrentChartSettings});
+
+  int lastK;
+  CurrentChartSettings? lastcurrentChartSettings;
 }
 
 const List<int> leapYears = [1996, 2004, 2008, 2012, 2016, 2020, 2024, 2028];
