@@ -294,9 +294,9 @@ generateColorImage({
   bool debug = false,
   bool chart = false,
 }) async {
-  print(
-    'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
-  );
+  // print(
+  //   'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
+  // );
 
   const int bytesPerPixel = 4; // RGBA
   final int pixelHeight = (orbitAndSolarValuesList.length / pixelWidth).toInt();
@@ -395,9 +395,9 @@ Future<ChartImageContainer> generateColorImageInContainer({
     );
   }
 
-  print(
-    'running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
-  );
+  // print(
+  //   'running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
+  // );
 
   final (:image, :rawMatrixData) = await generateColorImage(
     orbitAndSolarValuesList: orbitAndSolarValuesList,
@@ -475,7 +475,7 @@ double solarStrengthsLocalRelativeToGlobalMax({
   required double k,
   required double h,
   required double theta,
-}) => exp(k * (1 - exp(-h / 8.5)/(cos(pi/2 - theta) + 0.50572 * pow(6.07995 + degrees(theta), -1.6364))));
+}) => exp(k * (1 - exp(-h / 8.5)/(cos(pi/2 - theta) + 0.50572 * pow(6.07995 + degrees(theta), -1.6364)))).clamp(0.0, 1.0);
 
 typedef MyColorScheme = (String name, Colormap colormap);
 typedef MyColorSchemes = List<MyColorScheme>;
@@ -491,15 +491,17 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
   (index) {
     final List<double> values = List.generate(
       15,
-      (innerIndex) => innerIndex / 15,
+      (innerIndex) => innerIndex / 14,
     );
     final List<Vector4> colorVectors = List.generate(
       15,
-      (innerIndex) => colorValuesFromMap(
-        solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: (pi / 2) * (innerIndex / 15)),
+      (innerIndex) {        
+        return colorValuesFromMap(
+        solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: acos(innerIndex / 14)),
         false,
         colorSchemes[index].$2,
-      ),
+      );
+      },
     );
     final List<Color> colors = colorVectors
         .map(
@@ -856,7 +858,7 @@ class CustomPathRibbonPainter extends CustomPainter {
     final RadialGradient solarGradient = RadialGradient(
       center: Alignment.center,
       radius: 0.5, // Relative to the Rect provided in createShader
-      colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2.reversed.toList(),
+      colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2,
       stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
     );
 
@@ -872,53 +874,6 @@ class CustomPathRibbonPainter extends CustomPainter {
 
     // 5. Draw it
     canvas.drawPath(ribbonPath, ribbonPaint);
-
-    // final List<Color> colors = positiveStrengths.map((strength) {
-    //   final Vector4 colorVector = colorValuesFromMap(strength, false, colormap);
-    //   final Color color = Color.fromARGB(
-    //     colorVector.w.toInt(),
-    //     colorVector.x.toInt(),
-    //     colorVector.y.toInt(),
-    //     colorVector.z.toInt(),
-    //   );
-    //   return color;
-    // }).toList();
-
-    // for (int i = 0; i < points.length - 1; i++) {
-    //   // size
-    //   final Offset p1 = (points[i]) * boundingCircleRadius + centerOffset;
-    //   final Offset p2 = (points[i + 1]) * boundingCircleRadius + centerOffset;
-
-    //   // Calculate direction and perpendicular unit normal vector
-    //   final Offset dir = p2 - p1;
-    //   final double dist = dir.distance;
-    //   if (dist == 0) continue;
-
-    //   final Offset normal = Offset(-dir.dy / dist, dir.dx / dist) * halfWidth;
-
-    //   // Calculate 4 corners of the ribbon segment quad
-    //   final Offset p1Left = p1 + normal;
-    //   final Offset p1Right = p1 - normal;
-    //   final Offset p2Left = p2 + normal;
-    //   final Offset p2Right = p2 - normal;
-
-    //   // Add 2 triangles for the quad (p1L, p1R, p2L) and (p2L, p1R, p2R)
-    //   vertices.addAll([p1Left, p1Right, p2Left, p2Left, p1Right, p2Right]);
-
-    //   // Assign colors corresponding to points i and i+1
-    //   final Color c1 = colors[i];
-    //   final Color c2 = colors[i + 1];
-    //   vertexColors.addAll([c1, c1, c2, c2, c1, c2]);
-    // }
-
-    // final ui.Vertices rawVertices = ui.Vertices(
-    //   VertexMode.triangles,
-    //   vertices,
-    //   colors: vertexColors,
-    // );
-
-    // // Single GPU draw call for the whole ribbon
-    // canvas.drawVertices(rawVertices, BlendMode.srcOver, Paint());
   }
 
   @override

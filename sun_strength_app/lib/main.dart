@@ -38,22 +38,18 @@ class MyApp extends StatelessWidget {
         >(
           create: (_) => CurrentLocationNotifier(),
           update: (_, savedLocationNotifier, previous) {
-            final CurrentLocationNotifier? updatedWidget;
-            if (!(previous?.savedChartSettingsLoaded ?? false) &&
+            if (previous == null) {
+              throw 'previous CurrentLocationNotifier is null';
+            }
+            if (!previous.savedChartSettingsLoaded &&
                 savedLocationNotifier.isInitialized &&
                 savedLocationNotifier.value != null) {
-              updatedWidget = previous
-                ?..updateWithInitialSaved(
-                  newLocation: savedLocationNotifier.value?.defaultLocation,
-                  newYear: savedLocationNotifier.value?.defaultYear,
-                );
+              return previous..updateWithInitialSaved(
+                newLocation: savedLocationNotifier.value?.defaultLocation,
+                newYear: savedLocationNotifier.value?.defaultYear,
+              );
             } else {
-              updatedWidget = previous;
-            }
-            if (updatedWidget != null) {
-              return updatedWidget;
-            } else {
-              throw ('No widget returned');
+              return previous;
             }
           },
         ),
@@ -77,13 +73,13 @@ class MyApp extends StatelessWidget {
             if (!savedSettingsNotifier.isInitialized) return previous;
             // If SavedSettingsNotifier was already initialized the last time this update ran, don't do anything
             if (previous.savedSettingsIsInitialized) return previous;
-            // This is the first update from SavedSettingsNotifier, so make change if needed and record initializtion
+            // This is the first update from SavedSettingsNotifier, start by recording initializtion
             previous.savedSettingsIsInitialized = true;
 
             // If there already is a location selected, presumably because we are well past the initial load OR
             // the default has been loaded and it is NOT null, which means that current location has been
             // updated or is about to be, just go to the chart page.
-            // TODO: Why do I check for non null default location?  If there is one, that means is has been
+            // TODO: Why do I check for non null default location?  If there is one, that means it has been
             // loaded, and current location notifier should have been called.  The only reason that would be
             // true but current location notifier value is null would be if the user somehow wiped the current
             // location (not sure if that is possible) or if the current location notifier just hasn't loaded
@@ -162,7 +158,10 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                         constraints: BoxConstraints(maxWidth: 600),
                         child: Column(
                           children: [
-                            Text('Heatmap chart', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Heatmap chart',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             Text(
                               'This chart shows the strength of the sun at every moment throughout '
                               'an entire year.  As you look across the chart from left to right, you '
@@ -178,8 +177,11 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                               'of that max strength, but it\'s true!',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            SizedBox(height: 10),                          
-                            Text('Visible light vs. UV bands', style: Theme.of(context).textTheme.titleMedium),
+                            SizedBox(height: 10),
+                            Text(
+                              'Visible light vs. UV bands',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             Text(
                               'There are three buttons that let you select why kind of sunlight the chart '
                               'is considering.  If you click "Visible light", you are essentially looking '
@@ -199,8 +201,11 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                               'UV-B to see the times you should definitely be the most careful.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            SizedBox(height: 10),                          
-                            Text('Direction of the sun, the bottom chart', style: Theme.of(context).textTheme.titleMedium),
+                            SizedBox(height: 10),
+                            Text(
+                              'Direction of the sun, the bottom chart',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             Text(
                               'The bottom chart primarily shows where the sun will be at any point '
                               'during one specific day.  The circular chart works like a compass, so if '
@@ -226,9 +231,7 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
               ),
             ],
           ),
-          AppBar(
-            title: const Text("Select Your Location")
-          ),
+          const LocationAppBar(),
         ][currentIndexNotifier.value],
         drawer: Drawer(
           child: ListView(
@@ -269,6 +272,31 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
       ),
     );
   }
+}
+
+class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const LocationAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CurrentLocationNotifier>(
+      builder: (context, currentLocationNotifier, child) {
+        return AppBar(
+          title: const Text("Select Your Location"),
+          leading: currentLocationNotifier.value == null
+              ? null
+              : IconButton(
+                  onPressed: () =>
+                      context.read<CurrentIndexNotifier>().value = 0,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+        );
+      },
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
 class YearPickerTile extends StatefulWidget {

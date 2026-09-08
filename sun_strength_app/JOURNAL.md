@@ -2,6 +2,12 @@
 ## 2026-09-05
 Going to check why az chart isn't responding to change in k.
 - Ok.  I see now.  Azimuth chart figures out the color for each pixel differently than the heat map of the scale.  Az chart maps the colorscheme colors to a radial distance from the center to define rings of color.  Then, when the spline points are calculated, their radial distance is equated to a color.  When I do this, however, I AM NOT taking k into account.  This works for visible light, but something about the math is different for uv-a and uv-b.
+- I found a few problems.  I wasn't thinking when I first designed the azimuth chart because I simply defined the color value using a circular definition of relative strength.  That completely ignores AirMass, k value, etc.
+- The biggest headache now is because I defined the color gradient of the ribbon path circularly, I need to define that gradient by tying radial distances from the center point to a color.  That means I need to FIRST (and this is what I wasn't doing) convert the radial distance to a corresponding elevation angle and THEN (also wasn't doing this) use that elevation angle to find the relative solar strength at that angle given h and k.
+- I could FURTH improve the similarity of the two charts by reversing the algebra so that I could instead FIND the radial distance for regular interval in color/relative strength.  That way, since the color scale is the thing you are actually seeing a difference in, I can take more advantage of the 15 item resolution.  Currently, the middle points jump big stretches of color.
+- Done.  It works well.
+
+I also added the back button to the location selection screen ONLY when there is a current location selected, which could just be the default loaded as current.
 
 ## 2026-09-04
 Kept working on the visual list from yesterday
@@ -134,10 +140,6 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 
 ## Add the ability to change the number of vertical lines
 
-## Add some sort of back button on location screen if there already is a saved or current location (whichever one makes sense)
-
 ## Instead of Consumer for the date for the azimuth chart, consider pushing those titles into AzimuthChart widget
 
 ## debugDumpRenderTree()?
-
-## The azimuth chart is not changing strength values based on k!
