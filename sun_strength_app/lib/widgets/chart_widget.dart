@@ -80,7 +80,7 @@ class _ChartWidgetState extends State<ChartWidget> {
   }
 
   void _hideTooltip() {
-    print('running hideTooltip');
+    // print('running hideTooltip');
     if (_tooltipNotifier.value != null) _tooltipNotifier.value = null;
   }
 
@@ -176,9 +176,6 @@ class _ChartWidgetState extends State<ChartWidget> {
           valueListenable: _tooltipNotifier,
           builder: (context, tooltipInfo, child) {
             if (tooltipInfo != null) {
-              print(
-                'running ValueListenableBuilder.build with tooltipInfo != null',
-              );
               return Positioned(
                 // Position it dynamically relative to the cursor position!
                 left: tooltipInfo.hoverBoxPosition.dx,
@@ -210,9 +207,6 @@ class _ChartWidgetState extends State<ChartWidget> {
                 ),
               );
             } else {
-              print(
-                'running ValueListenableBuilder.build with tooltipInfo == null',
-              );
               return Container();
             }
           },

@@ -2,6 +2,7 @@ import 'dart:core';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sun_strength_app/models/current_location_notifier.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 
@@ -10,8 +11,8 @@ class AzimuthWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<OrbitAndSolarValuesListNotifier, DayIndexNotifier>(
-      builder: (context, orbitAndSolarValuesListNotifier, dayIndexNotifier, child) {
+    return Consumer3<OrbitAndSolarValuesListNotifier, DayIndexNotifier, KNotifier>(
+      builder: (context, orbitAndSolarValuesListNotifier, dayIndexNotifier, kNotifier, child) {
         print(
           'Consumer2<OrbitAndSolarValuesListNotifier, DayIndexNotifier> has been triggered insidde azimuth widget',
         );
@@ -24,23 +25,22 @@ class AzimuthWidget extends StatelessWidget {
         return Selector<SavedSettingsNotifier, MyColorScheme?>(
           selector: (_, savedAppSettingsNotifier) =>
               savedAppSettingsNotifier.value?.colorScheme,
-              shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
+          shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
           builder: (context, myColorScheme, child) {
             print(
               'Running Builder under Selector<SavedSettingsNotifier, Colormap?> inside azimuth widget',
             );
             return Padding(
               padding: const EdgeInsets.all(40.0),
-              // child: AzimuthRenderObjectWidget(
-                child: AspectRatio(
-                  aspectRatio: 1.0,
-                  child: BuilderAzimuthChart(
-                    orbitAndSolarValuesListSingleDay:
-                        orbitAndSolarValuesListSingleDay,
-                    colorScheme: myColorScheme,
-                  ),
+              child: AspectRatio(
+                aspectRatio: 1.0,
+                child: BuilderAzimuthChart(
+                  orbitAndSolarValuesListSingleDay:
+                      orbitAndSolarValuesListSingleDay,
+                  colorScheme: myColorScheme,
+                  k: kNotifier.value,
                 ),
-              // ),
+              ),
             );
           },
         );
@@ -53,11 +53,12 @@ class BuilderAzimuthChart extends StatelessWidget {
   const BuilderAzimuthChart({
     super.key,
     required this.orbitAndSolarValuesListSingleDay,
-    this.colorScheme,
+    this.colorScheme, required this.k, 
   });
 
   final List<OrbitAndSolarValues> orbitAndSolarValuesListSingleDay;
   final MyColorScheme? colorScheme;
+  final double k;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +105,8 @@ class BuilderAzimuthChart extends StatelessWidget {
         colorScheme: colorScheme ?? constMyColorScheme,
         positiveStrengths: solarDataStrengths,
         appBackgroundColor: Theme.of(context).colorScheme.surface,
+        k: k,
+        h: context.read<CurrentLocationNotifier>().value?.h ?? 0, // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
       ),
     );
   }

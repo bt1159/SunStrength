@@ -134,6 +134,7 @@ class CurrentChartSettings {
   final Location location;
   final int year;
   final tz.Location timeZone;
+  final double h = 0;
 
   @override
   bool operator ==(Object other) {
@@ -470,6 +471,12 @@ abstract class ColorMapPicker {
       .$2;
 }
 
+double solarStrengthsLocalRelativeToGlobalMax({
+  required double k,
+  required double h,
+  required double theta,
+}) => exp(k * (1 - exp(-h / 8.5)/(cos(pi/2 - theta) + 0.50572 * pow(6.07995 + degrees(theta), -1.6364))));
+
 typedef MyColorScheme = (String name, Colormap colormap);
 typedef MyColorSchemes = List<MyColorScheme>;
 final MyColorSchemes colorSchemes = [
@@ -477,7 +484,9 @@ final MyColorSchemes colorSchemes = [
   ('gist_heat', Colormaps.gist_heat),
   ('hot', Colormaps.hot),
 ];
-final List<(List<double>, List<Color>)> myColorSchemesDiscrete = List.generate(
+List<(List<double>, List<Color>)> myColorSchemesDiscrete({
+  required double k,
+  required double h,}) => List.generate(
   colorSchemes.length,
   (index) {
     final List<double> values = List.generate(
@@ -487,7 +496,7 @@ final List<(List<double>, List<Color>)> myColorSchemesDiscrete = List.generate(
     final List<Vector4> colorVectors = List.generate(
       15,
       (innerIndex) => colorValuesFromMap(
-        sqrt(1 - pow((15 - innerIndex) / 15, 2)),
+        solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: (pi / 2) * (innerIndex / 15)),
         false,
         colorSchemes[index].$2,
       ),
@@ -638,20 +647,19 @@ class CustomPathRibbonPainter extends CustomPainter {
   final MyColorScheme colorScheme;
   final double strokeWidth;
   final Color appBackgroundColor;
+  final double k;
+  final double h;
 
   CustomPathRibbonPainter({
     required this.points,
     required this.colorScheme,
     required this.positiveStrengths,
     required this.appBackgroundColor,
-    this.strokeWidth = 4.0,
+    this.strokeWidth = 4.0, required this.k, required this.h,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    print(
-      'Running paint in CustomPathRibbonPainter, colormap: ${colorScheme.$1}',
-    );
     if (points.length < 2) return;
 
     final double boundingCircleRadius = min(size.width, size.height) / 2;
@@ -843,11 +851,13 @@ class CustomPathRibbonPainter extends CustomPainter {
       (element) => element.$1 == colorScheme.$1,
     );
 
+    final List<(List<double>, List<Color>)> myColorSchemesDiscreteSpecific = myColorSchemesDiscrete(k: k, h: h);
+
     final RadialGradient solarGradient = RadialGradient(
       center: Alignment.center,
       radius: 0.5, // Relative to the Rect provided in createShader
-      colors: myColorSchemesDiscrete[colorSchemeIndex].$2.reversed.toList(),
-      stops: myColorSchemesDiscrete[colorSchemeIndex].$1,
+      colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2.reversed.toList(),
+      stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
     );
 
     // 4. Set up the Paint object
@@ -917,9 +927,13 @@ class CustomPathRibbonPainter extends CustomPainter {
 
 class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
-  OrbitAndSolarValuesListNotifier(super.value, {required this.lastK, required this.lastcurrentChartSettings});
+  OrbitAndSolarValuesListNotifier(
+    super.value, {
+    required this.lastK,
+    required this.lastcurrentChartSettings,
+  });
 
-  int lastK;
+  double lastK;
   CurrentChartSettings? lastcurrentChartSettings;
 }
 

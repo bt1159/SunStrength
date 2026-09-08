@@ -46,6 +46,7 @@ class ChartHomePage extends StatelessWidget {
                       OrbitAndSolarValuesListNotifier
                     >(
                       create: (_) {
+                        print('running create for OrbitAndSolarValuesListNotifier');
                         final List<OrbitAndSolarValues>
                         orbitAndSolarValuesList =
                             calculateOrbitAndSolarValuesIterable(
@@ -56,6 +57,7 @@ class ChartHomePage extends StatelessWidget {
                               timeZone: currentLocationNotifier.value!.timeZone,
                               year: currentLocationNotifier.value!.year,
                             ).toList();
+                            print('running CNP<OrbitAndSolarValuesListNotifier>.create');
                         return OrbitAndSolarValuesListNotifier(
                           orbitAndSolarValuesList,
                           lastK: 2,
@@ -73,6 +75,7 @@ class ChartHomePage extends StatelessWidget {
                             if (orbitAndSolarValuesListNotifier == null) {
                               throw 'null previous in ProxyProvider';
                             }
+                            print('running update for orbitAndSolarValuesListNotifier.  lastK: ${orbitAndSolarValuesListNotifier.lastK}, lastchart: ${orbitAndSolarValuesListNotifier.lastcurrentChartSettings}, this k: ${kNotifier.value}');
                             if (currentLocationNotifier.value ==
                                 orbitAndSolarValuesListNotifier
                                     .lastcurrentChartSettings) {
@@ -89,6 +92,7 @@ class ChartHomePage extends StatelessWidget {
                                           orbitAndSolarValuesListNotifier.value,
                                     ).toList();
                                 return orbitAndSolarValuesListNotifier
+                                  ..lastK = kNotifier.value
                                   ..value = orbitAndSolarValuesList;
                               }
                             } else {
@@ -109,12 +113,11 @@ class ChartHomePage extends StatelessWidget {
                                         currentLocationNotifier.value!.timeZone,
                                     year: currentLocationNotifier.value!.year,
                                   ).toList();
-                              return OrbitAndSolarValuesListNotifier(
-                                orbitAndSolarValuesList,
-                                lastK: 2,
-                                lastcurrentChartSettings:
-                                    currentLocationNotifier.value,
-                              );
+                                  
+                                return orbitAndSolarValuesListNotifier
+                                  ..lastK = kNotifier.value
+                                  ..value = orbitAndSolarValuesList
+                                  ..lastcurrentChartSettings = currentLocationNotifier.value;
                             }
                           },
                     ),
@@ -168,30 +171,50 @@ class ChartHomePage extends StatelessWidget {
                               ),
                               const ColorScaleWidget(),
                               Consumer<KNotifier>(
-                                builder: (context, kNotifer, child) => Row(
-                                  spacing: 20,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ElevatedButton(
-                                      onPressed: kNotifer.value == 0.3
-                                          ? null
-                                          : () => kNotifer.value = 0.3,
-                                      child: Text('Visible light'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: kNotifer.value == 0.64
-                                          ? null
-                                          : () => kNotifer.value = 0.64,
-                                      child: Text('UV-A'),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: kNotifer.value == 2
-                                          ? null
-                                          : () => kNotifer.value = 2,
-                                      child: Text('UV-B'),
-                                    ),
-                                  ],
-                                ),
+                                builder: (context, kNotifer, child) {
+                                  print(
+                                    'Building k button row, k: ${kNotifer.value}',
+                                  );
+                                  return Row(
+                                    spacing: 20,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: kNotifer.value == 0.3
+                                            ? null
+                                            : () {
+                                                print(
+                                                  'current k: ${kNotifer.value}, about to change it to 0.3',
+                                                );
+                                                kNotifer.value = 0.3;
+                                              },
+                                        child: Text('Visible light'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: kNotifer.value == 0.64
+                                            ? null
+                                            : () {
+                                                print(
+                                                  'current k: ${kNotifer.value}, about to change it to 0.64',
+                                                );
+                                                kNotifer.value = 0.64;
+                                              },
+                                        child: Text('UV-A'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: kNotifer.value == 2
+                                            ? null
+                                            : () {
+                                                print(
+                                                  'current k: ${kNotifer.value}, about to change it to 2',
+                                                );
+                                                kNotifer.value = 2;
+                                              },
+                                        child: Text('UV-B'),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                               Row(
                                 spacing: 20,

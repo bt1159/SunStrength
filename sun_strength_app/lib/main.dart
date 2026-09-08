@@ -157,39 +157,61 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Information'),
-                    content: SizedBox(
-                      width: 600,
-                      // height: 300,
-                      child: Column(
-                        children: [
-                          Text('Heatmap chart', style: Theme.of(context).textTheme.headlineMedium),
-                          Text(
-                            'This chart shows the strength of the sun at every moment throughout '
-                            'an entire year.  As you look across the chart from left to right, you '
-                            'go from one day to the next, so the far left is January 1st.  As you go '
-                            'up in the chart, from the bottom to the top, you go from the beginning '
-                            'to the end of a single day.  You can hover your cursor over the chart '
-                            'to see the time and date of any specific point and the strength of the '
-                            'sun at that point.\n\n'
-                            'The "strength" of the sun is always shown as a percentage of the '
-                            'strongest sun strength the Earth ever gets, in other words when the sun '
-                            'is straight up in the sky at the equator.\n\n'
-                            'You may be suprised by how many places on Earth routinely get over 90% '
-                            'of that max strength, but it\'s true!',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          SizedBox(height: 10),                          
-                          Text('Direction of the sun, the bottom chart', style: Theme.of(context).textTheme.headlineMedium),
-                          Text(
-                            'The bottom chart primarily shows where the sun will be at any point '
-                            'during one specific day.  The circular chart works like a compass, so if '
-                            'it shows the sun at the far left edge at a certain time, that means the '
-                            'sun will be due East in the sky when it rises.  As the sun gets higher in '
-                            'the sky, it moves toward the center.  Basically, it\'s a bit like looking '
-                            'down from a bird\'s eye view.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+                    content: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: 600),
+                        child: Column(
+                          children: [
+                            Text('Heatmap chart', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'This chart shows the strength of the sun at every moment throughout '
+                              'an entire year.  As you look across the chart from left to right, you '
+                              'go from one day to the next, so the far left is January 1st.  As you go '
+                              'up in the chart, from the bottom to the top, you go from the beginning '
+                              'to the end of a single day.  You can hover your cursor over the chart '
+                              'to see the time and date of any specific point and the strength of the '
+                              'sun at that point.\n\n'
+                              'The "strength" of the sun is always shown as a percentage of the '
+                              'strongest sun strength the Earth ever gets, in other words when the sun '
+                              'is straight up in the sky at the equator.\n\n'
+                              'You may be suprised by how many places on Earth routinely get over 90% '
+                              'of that max strength, but it\'s true!',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            SizedBox(height: 10),                          
+                            Text('Visible light vs. UV bands', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'There are three buttons that let you select why kind of sunlight the chart '
+                              'is considering.  If you click "Visible light", you are essentially looking '
+                              'at how much visible light your location is reciving. This is pretty much like '
+                              'the calculators only that calculate your solar energy savings.\n\n'
+                              'When you click UV-A or UV-B, you are only considering the sun\'s ultraviolet '
+                              'light.  This is what really matters if you are focusing on skin health and '
+                              'avoiding sunburn.\n\n'
+                              'Within ultraviolet light, UV-B is the portion that is, by far, the most dangerous. '
+                              'You should absolutely avoid a lot of UV-B exposure.  Luckily, most UV-B light gets '
+                              'blocked whever the sun is a decent amount away from straight overhead.\n\n'
+                              'Even though UV-A is not as harmful as UV-B, it is better at getting through the '
+                              'atmosphere.  That means it is still dangerous even when the sun is much lower in '
+                              'the sky.\n\n'
+                              'So, what should you click?  Usually, looking at UV-A is the best bet if you are '
+                              'trying to protect your skin.  That said, it is sometimes helpful to check out '
+                              'UV-B to see the times you should definitely be the most careful.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            SizedBox(height: 10),                          
+                            Text('Direction of the sun, the bottom chart', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'The bottom chart primarily shows where the sun will be at any point '
+                              'during one specific day.  The circular chart works like a compass, so if '
+                              'it shows the sun at the far left edge at a certain time, that means the '
+                              'sun will be due East in the sky when it rises.  As the sun gets higher in '
+                              'the sky, it moves toward the center.  Basically, it\'s a bit like looking '
+                              'down from a bird\'s eye view.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     actions: [

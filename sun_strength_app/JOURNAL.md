@@ -1,10 +1,17 @@
 # Daily log
+## 2026-09-05
+Going to check why az chart isn't responding to change in k.
+- Ok.  I see now.  Azimuth chart figures out the color for each pixel differently than the heat map of the scale.  Az chart maps the colorscheme colors to a radial distance from the center to define rings of color.  Then, when the spline points are calculated, their radial distance is equated to a color.  When I do this, however, I AM NOT taking k into account.  This works for visible light, but something about the math is different for uv-a and uv-b.
+
+## 2026-09-04
+Kept working on the visual list from yesterday
+
 ## 2026-09-03
 I am finally going to address some visual issues.  Ideas:
 X labeling the year
 X a drop down with some explanation of the chart itself
 X change the overall horizontal alignment.  Reference the google or edge start page.  The app bar can be far left with actions far right, but the content should be centered.
-- explanation of the UV bands
+X explanation of the UV bands
 X change the value to percentage and call it strength
 X make the location name label bigger
 X in the map, don't zoom when you click.  Also, check what happens when you type something in and hit enter. It should definitely move there but probably not zoom, or at least not as much.
@@ -132,3 +139,5 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 ## Instead of Consumer for the date for the azimuth chart, consider pushing those titles into AzimuthChart widget
 
 ## debugDumpRenderTree()?
+
+## The azimuth chart is not changing strength values based on k!
