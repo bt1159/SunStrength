@@ -48,6 +48,11 @@ class MyApp extends StatelessWidget {
                 newLocation: savedLocationNotifier.value?.defaultLocation,
                 newYear: savedLocationNotifier.value?.defaultYear,
               );
+            } else if (savedLocationNotifier.value?.defaultYear !=
+                previous.value?.year) {
+              return previous..updateCurrentChartSettings(
+                newYear: savedLocationNotifier.value?.defaultYear,
+              );
             } else {
               return previous;
             }
@@ -233,42 +238,51 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
           ),
           const LocationAppBar(),
         ][currentIndexNotifier.value],
-        drawer: Drawer(
-          child: ListView(
-            children: [
-              ListTile(
-                onTap: () {},
-                title: const Text('Change default time zone'),
-              ),
-              ListTile(
-                onTap: () {},
-                title: const Text('Change default location'),
-              ),
-              ListTile(
-                onTap: () {
-                  final bool currentTwelveHour =
-                      context.read<SavedSettingsNotifier>().value?.twelveHour ??
-                      true;
-                  print('currentTwelveHour: $currentTwelveHour');
-                  context.read<SavedSettingsNotifier>().updateTwelveHour(
-                    !currentTwelveHour,
-                  );
-                  Navigator.of(context).pop();
-                },
-                title: Text('Toggle AM/PM vs. 24 hour display'),
-              ),
-              Selector<SavedSettingsNotifier, int?>(
-                selector: (_, savedSettingsNotifier) =>
-                    savedSettingsNotifier.value?.defaultYear,
-                builder: (_, _, _) => YearPickerTile(),
-              ),
-            ],
-          ),
-        ),
+        drawer: const MainScaffoldDrawer(),
         body: IndexedStack(
           index: currentIndexNotifier.value,
           children: [const ChartHomePage(), const LocationSelectionScreen()],
         ),
+      ),
+    );
+  }
+}
+
+class MainScaffoldDrawer extends StatelessWidget {
+  const MainScaffoldDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
+          ListTile(onTap: () {}, title: const Text('Change default time zone')),
+          ListTile(
+            onTap: () {
+              final bool currentTwelveHour =
+                  context.read<SavedSettingsNotifier>().value?.twelveHour ??
+                  true;
+              print('currentTwelveHour: $currentTwelveHour');
+              context.read<SavedSettingsNotifier>().updateTwelveHour(
+                !currentTwelveHour,
+              );
+              Navigator.of(context).pop();
+            },
+            title: Text('Toggle AM/PM vs. 24 hour display'),
+          ),
+          ListTile(
+            onTap: () async {
+              final bool? yearChanged = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) => YearPickerTile(),
+              );
+              if ((yearChanged ?? false) && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            title: Text('Change Year'),
+          ),
+        ],
       ),
     );
   }
@@ -309,47 +323,6 @@ class YearPickerTile extends StatefulWidget {
 class _YearPickerTileState extends State<YearPickerTile> {
   DateTime currentYear = DateTime.now();
 
-  Future<void> showYearPickerDialog() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Year'),
-          content: SizedBox(
-            width: 300,
-            height: 300,
-            child: YearPicker(
-              firstDate: DateTime(1900),
-              lastDate: DateTime(2100),
-              selectedDate: currentYear,
-              onChanged: (DateTime dateTime) => setState(() {
-                currentYear = dateTime;
-              }),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (currentYear.year !=
-                    context.read<SavedSettingsNotifier>().value?.defaultYear) {
-                  context.read<SavedSettingsNotifier>().updateYear(
-                    currentYear.year,
-                  );
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Ok'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -364,6 +337,38 @@ class _YearPickerTileState extends State<YearPickerTile> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(onTap: showYearPickerDialog, title: Text('Change Year'));
+    return AlertDialog(
+      title: const Text('Select Year'),
+      content: SizedBox(
+        width: 300,
+        height: 300,
+        child: YearPicker(
+          firstDate: DateTime(1900),
+          lastDate: DateTime(2100),
+          selectedDate: currentYear,
+          onChanged: (DateTime dateTime) => setState(() {
+            currentYear = dateTime;
+          }),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            if (currentYear.year !=
+                context.read<SavedSettingsNotifier>().value?.defaultYear) {
+              context.read<SavedSettingsNotifier>().updateYear(
+                currentYear.year,
+              );
+            }
+            Navigator.of(context).pop<bool>(true);
+          },
+          child: const Text('Ok'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop<bool>(false),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }

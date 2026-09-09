@@ -1,4 +1,12 @@
 # Daily log
+## 2026-09-09
+Time to fix some of the settings and default funcitonality.
+
+Two problems with changing default year:
+I click another year, the inkwell fires, but that year doesn't highlight.  Then I click ok, I see in console that the default year has changed, but the current chart settings doesn't change!
+Separately, I need to make sure I understand the difference between clicking the year vs. the OK button.
+- Done.
+
 ## 2026-09-05
 Going to check why az chart isn't responding to change in k.
 - Ok.  I see now.  Azimuth chart figures out the color for each pixel differently than the heat map of the scale.  Az chart maps the colorscheme colors to a radial distance from the center to define rings of color.  Then, when the spline points are calculated, their radial distance is equated to a color.  When I do this, however, I AM NOT taking k into account.  This works for visible light, but something about the math is different for uv-a and uv-b.
@@ -143,3 +151,6 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 ## Instead of Consumer for the date for the azimuth chart, consider pushing those titles into AzimuthChart widget
 
 ## debugDumpRenderTree()?
+
+## In my app, it is a little messy between changing defaults and changing current settings.
+Specifically, some settings like location can be changed for just that setting.  Changing the default is a different thing.  For other settings, though, that is not true.  This is potentially confusing.
