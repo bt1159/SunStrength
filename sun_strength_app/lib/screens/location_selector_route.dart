@@ -33,6 +33,22 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   late Location _currentPosition;
   Marker? _selectedMarker;
 
+  /// [bool] that records if this screen should listen to tap.  This is needed 
+  /// because sometimes the [IndexedStack] works poorly with the [GoogleMap] 
+  /// and results in spurious "ghost clicks" after the screen should be hidden.
+  bool _isClickable = true;
+
+  void syncIsClickable() {
+    if (context.read<CurrentIndexNotifier>().value == 0){
+    setState(() {
+      _isClickable = false;
+    });} else {
+      setState(() {
+        _isClickable = true;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +67,16 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         name: 'Temp',
       );
     }
+
+    context.read<CurrentIndexNotifier>().addListener(syncIsClickable);
+  }
+
+  @override
+  void dispose() {
+    context.read<CurrentIndexNotifier>().removeListener(syncIsClickable);    
+  _searchController.dispose();
+  _mapController?.dispose();
+    super.dispose();
   }
 
   /// updates state variable to new location.  The state variable's value will be sent to notifier if the user clicks button to generate map
@@ -65,7 +91,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // Jumps the map view smoothly to the target coordinate
-  // TODO: Add a check here so that, if the [position] is already in view, don't move
+  
   Future<void> _moveMapTo(LatLng position) async {
     double currentZoomeLevel = await _mapController?.getZoomLevel() ?? 0;
     _mapController?.animateCamera(
@@ -97,7 +123,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         LatLng farRight =
             visibleRegion.northeast; // Top-right or far-right corner
 
-        // TODO: I can get rid of a dependence by just calculating this myself.
+
         double distanceInMeters = Geolocator.distanceBetween(
           farLeft.latitude,
           farLeft.longitude,
@@ -294,6 +320,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
 
           // ACTION: User clicks a spot on the map
           onTap: (LatLng tappedPosition) async {
+            if (!_isClickable) return;
             print('Running GoogleMap.onTap()');
             // Automatically fill the search bar text
             String? address = await _getAddressFromLatLng(tappedPosition);
@@ -314,7 +341,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             print('Finishing GoogleMap.onTap()');
           },
         ),
-
         // THE FLOATING SEARCH BAR
         Positioned(
           top: 20,
@@ -389,7 +415,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             ),
           ),
         ),
-
         // "GO" BUTTON TO NAVIGATE TO HEATMAP
         Positioned(
           bottom: 30,
@@ -400,6 +425,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               padding: const EdgeInsets.symmetric(vertical: 15),
             ),
             onPressed: () {
+                _isClickable = false;
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)

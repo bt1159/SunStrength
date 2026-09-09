@@ -22,7 +22,7 @@ class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
     try {
       output = tz.getLocation(timeZoneName);
       print(
-        'inside CurrentLocationNotifier.getTZFromLocation, trying to see if lat and lon result in valid tz',
+        'inside CurrentLocationNotifier.getTZFromLocation, lat and lon have yielded a valid tz, output.name: ${output.name}',
       );
     } catch (error) {
       print(error);

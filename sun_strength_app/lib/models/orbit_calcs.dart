@@ -163,8 +163,16 @@ Iterable<OrbitAndSolarValues> recalculateOrbitAndSolarValuesIterableNewK({
   required Iterable<OrbitAndSolarValues> oldValues,
 }) {
   final Iterable<OrbitAndSolarValues> newValues = oldValues.map((e) {
-    final double updatedSolarStrengthRelativeToGlobalMax = calculateSolarStrengthRelativeToGlobalMax(k: k, solarElevationAngle: e.solarElevationAngle, h: h);    
-    return e.copyWith(solarStrengthsLocalRelativeToGlobalMax: updatedSolarStrengthRelativeToGlobalMax);
+    final double updatedSolarStrengthRelativeToGlobalMax =
+        calculateSolarStrengthRelativeToGlobalMax(
+          k: k,
+          solarElevationAngle: e.solarElevationAngle,
+          h: h,
+        );
+    return e.copyWith(
+      solarStrengthsLocalRelativeToGlobalMax:
+          updatedSolarStrengthRelativeToGlobalMax,
+    );
   });
   return newValues;
 }

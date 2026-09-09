@@ -6,9 +6,7 @@ import 'package:sun_strength_app/screens/location_selector_route.dart';
 import 'screens/chart_route.dart';
 import 'package:provider/provider.dart';
 
-// TODO: Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key,
-// and restrict it to HTTP Referrers and add your local development URL
-// (http://localhost:*) and your production domain so others cannot steal it.
+
 
 class CurrentIndex {
   const CurrentIndex(this.value);
@@ -84,11 +82,7 @@ class MyApp extends StatelessWidget {
             // If there already is a location selected, presumably because we are well past the initial load OR
             // the default has been loaded and it is NOT null, which means that current location has been
             // updated or is about to be, just go to the chart page.
-            // TODO: Why do I check for non null default location?  If there is one, that means it has been
-            // loaded, and current location notifier should have been called.  The only reason that would be
-            // true but current location notifier value is null would be if the user somehow wiped the current
-            // location (not sure if that is possible) or if the current location notifier just hasn't loaded
-            // yet.  Maybe that is indeed why.  On the other hand, what is the harm?  Just processing time.
+            
 
             if (context.read<CurrentLocationNotifier>().value != null ||
                 savedSettingsNotifier.value?.defaultLocation != null) {

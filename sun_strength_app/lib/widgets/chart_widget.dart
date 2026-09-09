@@ -11,9 +11,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:color_map/color_map.dart';
 
-// TODO: Why is this not rebuilding or responding to multiple CNPs.  Changing the colormap or k does not Force a rebuild or at least a re-paint.
 /// {@template PublicChartRenderObjectWidget}
-/// Public Widget that constains the a [_ChartRenderObjectWidget] and also super imposes the hover tooltip when showing.
+/// Public Widget that constains the a [_ChartRenderObjectWidget] and also super-imposes the hover tooltip when showing.
 /// {@endtemplate}
 class ChartWidget extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
@@ -107,13 +106,13 @@ class _ChartWidgetState extends State<ChartWidget> {
         Selector<SavedSettingsNotifier, bool>(
           selector: (_, savedSettingsNotifier) =>
               savedSettingsNotifier.value?.twelveHour ?? true,
-          builder: (context, twelveHour, selectorSavedSettingsNotifierChild) =>
+          builder: (context, twelveHour, child) =>
               _ChartRenderObjectWidget(
                 nXAxisBuckets: widget.nXAxisBuckets,
                 nYAxisBuckets: widget.nYAxisBuckets,
                 twelveHour: twelveHour,
                 leapYear: widget.leapYear,
-                chartArrayWidget: selectorSavedSettingsNotifierChild!,
+                chartArrayWidget: child!,
               ),
           child: Consumer<OrbitAndSolarValuesListNotifier>(
             builder: (context, orbitAndSolarValuesListNotifier, child) {
@@ -130,9 +129,6 @@ class _ChartWidgetState extends State<ChartWidget> {
                   List<OrbitAndSolarValues> orbitAndSolarValuesList =
                       orbitAndSolarValuesListNotifier.value;
                   Offset localPosition = Offset(0, 0);
-                  // TODO: I could make this a little more efficient by remembering the dayIndex
-                  // from hover.  That way, when I click, I could just pass the day index
-                  // rather than having to calculate it again.
                   return MouseRegion(
                     onHover: (event) {
                       localPosition = event.localPosition;
@@ -467,6 +463,10 @@ class _ChartRenderObject extends RenderBox
     334,
     365,
   ];
+  /// Horizontal gap between y axis labels and chart
+  static const double hLabelGap = 10;
+  /// Vertical gap between x axis labels and chart
+  static const double vLabelGap = 10;
 
   /// A setter function that [_ChartRenderObjectWidget.updateRenderObject] uses when
   /// it needs to change the value for [nXAxisBuckets]
@@ -600,14 +600,14 @@ class _ChartRenderObject extends RenderBox
     final double typicalYAxisLabelHeight =
         _yAxisLabels.first?.getDryLayout(constraints.loosen()).height ?? 0;
     final Size drySize = Size(
-      maxYAxisLabelWidth + chartSize.width,
-      maxXAxisLabelHeight + chartSize.height + typicalYAxisLabelHeight / 2,
+      maxYAxisLabelWidth + chartSize.width + hLabelGap,
+      maxXAxisLabelHeight + chartSize.height + typicalYAxisLabelHeight / 2 + vLabelGap,
     );
     return constraints.constrain(drySize);
   }
 
   @override
-  void performLayout() {
+    void performLayout() {
     double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
@@ -634,7 +634,7 @@ class _ChartRenderObject extends RenderBox
       _chartArray!.layout(
         BoxConstraints.tightFor(
           // width: min(600, constraints.maxWidth - maxYAxisLabelWidth),
-          width: constraints.maxWidth - maxYAxisLabelWidth,
+          width: constraints.maxWidth - maxYAxisLabelWidth - hLabelGap,
           height: heatMapHeight,
         ),
         parentUsesSize: true,
@@ -642,7 +642,7 @@ class _ChartRenderObject extends RenderBox
       final BoxParentData childParentData =
           _chartArray!.parentData as BoxParentData;
       childParentData.offset = Offset(
-        maxYAxisLabelWidth,
+        maxYAxisLabelWidth + hLabelGap,
         typicalYAxisLabelHeight / 2,
       );
     }
@@ -671,14 +671,14 @@ class _ChartRenderObject extends RenderBox
         idealHOffset = heatMapWidth - child.size.width / 2;
       }
       childParentData.offset = Offset(
-        maxYAxisLabelWidth + idealHOffset,
-        heatMapHeight + typicalYAxisLabelHeight / 2,
+        maxYAxisLabelWidth + hLabelGap + idealHOffset,
+        heatMapHeight + typicalYAxisLabelHeight / 2 + vLabelGap,
       );
       maxXAxisLabelHeight = max(maxXAxisLabelHeight, child.size.height);
     });
     size = Size(
-      maxYAxisLabelWidth + heatMapWidth,
-      typicalYAxisLabelHeight / 2 + heatMapHeight + maxXAxisLabelHeight,
+      maxYAxisLabelWidth + heatMapWidth + hLabelGap,
+      typicalYAxisLabelHeight / 2 + heatMapHeight + maxXAxisLabelHeight + vLabelGap,
     );
   }
 

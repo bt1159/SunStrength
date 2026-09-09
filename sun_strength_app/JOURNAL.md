@@ -7,6 +7,10 @@ I click another year, the inkwell fires, but that year doesn't highlight.  Then 
 Separately, I need to make sure I understand the difference between clicking the year vs. the OK button.
 - Done.
 
+Also, removed ability to change timezone by itself.  Instead, timezone will always be automatically loaded from location.  It is too much of a hassle, and I don't understand why anyone would want to do it.
+
+Fixed the bug about places near the equator throwing some sort of range error.  The issue was that the empirical airmass calculation I am using produces a relative solar strength slightly above 1 when elevation angle is above 88 degrees.  When viewing a location near the equator, therefore, the relative solar strength then comes out a little above 100%.  This is not technically correct, but the actual bug comes from the logic that chooses a color.  It is sent a strength value above 1 which forces it to try to pull a color from a point outside its list of colors.   I have since addd a clamp deep inside that function.  That way, any function or widget that converts strength to a number will be protected.  Tecnically, I should also update the orit calcs to change the global max number.
+
 ## 2026-09-05
 Going to check why az chart isn't responding to change in k.
 - Ok.  I see now.  Azimuth chart figures out the color for each pixel differently than the heat map of the scale.  Az chart maps the colorscheme colors to a radial distance from the center to define rings of color.  Then, when the spline points are calculated, their radial distance is equated to a color.  When I do this, however, I AM NOT taking k into account.  This works for visible light, but something about the math is different for uv-a and uv-b.
@@ -127,24 +131,14 @@ You don't mock thing you are trying to test.  You mock things that need to be in
 
 ## Add somewhat of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
 
-## I need to actually build out my buttons for directly updating the default settings.
-
-## Tweak the structure of my custom Render Objects.
-Instead of passing a child to them, which requires using CustomPaint(painter: ImagePainter(image: XXXXX)), instead bury all that inside the RenderObjectWidget so that it builds the child widget itself.  OR, add a container above it that does that logic.  This will simplify the tree.
-
 ## Google Maps API Marker
 There is some API that has been deprecated.   I think it is the thing that actually creates my marker.  It shows up in the console.
 
-## Google Maps JavaScript API error in console
-I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXeMmb5BdYlAWG8_Bs&libraries=places:2457 Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading
-
 ## Some locations seem to think there are only 364 days in the year.  Yellowknife, Canada in 2026 for example.
-
-## Add a note explaining the "relative" value.
 
 ## See if there is a good way to add a "today" indicator.  If so, add a toggle for that.
 
-## Make the pop up look better.  First, reference the above 24 vs. 12 hour display.  Just use local time (without the UTCC offset).  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
+## Make the pop up look better.  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
 
 ## Add the ability to change the number of vertical lines
 
@@ -154,3 +148,24 @@ I am getting a message in the console that says: js?key=AIzaSyA4jGoTQ5Gn_zW5xuXe
 
 ## In my app, it is a little messy between changing defaults and changing current settings.
 Specifically, some settings like location can be changed for just that setting.  Changing the default is a different thing.  For other settings, though, that is not true.  This is potentially confusing.
+
+## Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key,
+and restrict it to HTTP Referrers and add your local development URL
+(http://localhost:*) and your production domain so others cannot steal it.
+
+##  Why do I check for non null default location?
+If there is one, that means it has been
+loaded, and current location notifier should have been called.  The only reason that would be
+true but current location notifier value is null would be if the user somehow wiped the current
+location (not sure if that is possible) or if the current location notifier just hasn't loaded
+yet.  Maybe that is indeed why.  On the other hand, what is the harm?  Just processing time.
+
+## Add a check here so that, if the [position] is already in view, don't move
+LocationSelectorRoute, line 94
+
+## I can get rid of a dependence by just calculating this myself.
+LocationSelectorRoute line 126        double distanceInMeters = Geolocator.distanceBetween(
+
+## I could make this a little more efficient by remembering the dayIndex from hover.
+That way, when I click, I could just pass the day index rather than having to calculate it again.
+ChartWidget line 131.

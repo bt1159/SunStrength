@@ -36,7 +36,7 @@ Vector4 colorValuesFromMap(
 ]) {
   // void colorTest(double strength) {
   final Colormap localColorMap = colormap ?? constMyColorScheme.$2;
-  final Vector4 vector = localColorMap(strength);
+  final Vector4 vector = localColorMap(strength.clamp(0,1));
   final double r = vector.x * 255;
   final double g = vector.y * 255;
   final double b = vector.z * 255;
