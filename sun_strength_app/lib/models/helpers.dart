@@ -7,7 +7,6 @@ import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
@@ -154,7 +153,6 @@ class CurrentChartSettings {
 class SavedAppSettings {
   SavedAppSettings({
     this.defaultLocation,
-    this.defaultTimeZone,
     bool? twelveHour,
     int? defaultYear,
     MyColorScheme? colorScheme,
@@ -162,9 +160,15 @@ class SavedAppSettings {
        twelveHour = twelveHour ?? true,
        colorScheme = colorScheme ?? colorSchemes.first;
 
+       
+  final Location? defaultLocation;
+  final bool twelveHour;
+  final int? defaultYear;
+  final MyColorScheme colorScheme;
+
+
   factory SavedAppSettings.fromSaved(SharedPreferences prefs) {
     Location? newDefaultLocation;
-    tz.Location? newTZoneInput;
     bool twelveHour = true;
     int? newDefaultYear;
     MyColorScheme? newColorScheme;
@@ -177,20 +181,6 @@ class SavedAppSettings {
       final Map<String, dynamic> savedLocJson =
           jsonDecode(savedLocJsonString) as Map<String, dynamic>;
       newDefaultLocation = Location.fromMap(inputMap: savedLocJson);
-    }
-
-    // Parse out time zone
-    final String? savedTZJsonString = prefs.getString('default_solar_timezone');
-    if (savedTZJsonString != null) {
-      tz.initializeTimeZones();
-      final String newTZoneInputString =
-          jsonDecode(savedTZJsonString) as String;
-      try {
-        newTZoneInput = tz.getLocation(newTZoneInputString);
-      } catch (error) {
-        print(error);
-        newTZoneInput = null;
-      }
     }
 
     // Parse out twelveHour
@@ -215,22 +205,15 @@ class SavedAppSettings {
 
     return SavedAppSettings(
       defaultLocation: newDefaultLocation,
-      defaultTimeZone: newTZoneInput,
       twelveHour: twelveHour,
       defaultYear: newDefaultYear,
       colorScheme: newColorScheme,
     );
   }
 
-  final Location? defaultLocation;
-  final tz.Location? defaultTimeZone;
-  final bool twelveHour;
-  final int? defaultYear;
-  final MyColorScheme colorScheme;
-
   @override
   String toString() =>
-      'SavedAppSettings, defaultLocation: $defaultLocation, tZoneInput: $defaultTimeZone, twelveHour: $twelveHour, year: $defaultYear, colorScheme: $colorScheme)';
+      'SavedAppSettings, defaultLocation: $defaultLocation, twelveHour: $twelveHour, year: $defaultYear, colorScheme: $colorScheme)';
 
   @override
   bool operator ==(Object other) {
@@ -241,7 +224,6 @@ class SavedAppSettings {
         other.defaultLocation?.name == defaultLocation?.name &&
         other.defaultLocation?.lat == defaultLocation?.lat &&
         other.defaultLocation?.lon == defaultLocation?.lon &&
-        other.defaultTimeZone == defaultTimeZone &&
         other.twelveHour == twelveHour &&
         other.defaultYear == defaultYear &&
         other.colorScheme == colorScheme;
@@ -250,7 +232,6 @@ class SavedAppSettings {
   @override
   int get hashCode => Object.hash(
     defaultLocation,
-    defaultTimeZone,
     twelveHour,
     defaultYear,
     colorScheme,

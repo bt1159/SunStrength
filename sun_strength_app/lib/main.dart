@@ -256,7 +256,6 @@ class MainScaffoldDrawer extends StatelessWidget {
     return Drawer(
       child: ListView(
         children: [
-          ListTile(onTap: () {}, title: const Text('Change default time zone')),
           ListTile(
             onTap: () {
               final bool currentTwelveHour =

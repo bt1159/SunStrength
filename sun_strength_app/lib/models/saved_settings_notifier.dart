@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:timezone/timezone.dart' as tz;
 
 /// This Notifier is a bit different from typical.  It is NOT ALWAYS intended to trigger rebuilds for all updates.  It depends on multiple 
 /// logic steps.  For instance, [_loadSettingsFromStorage] will always call [notifyListeners].  The [CurrentLocationNotifier], for instance
@@ -47,15 +46,13 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   // CALLS NOTIFYLISTENERS
   Future<void> updateSettings(
     Location? newDefaultLocation,
-    tz.Location? newDefaultTimeZone,
     bool? newTwelveHour,
     int? newDefaultYear,
     MyColorScheme? newColorScheme,
   ) async {
-    if (newDefaultLocation == null && newDefaultTimeZone == null && newTwelveHour == null && newDefaultYear == null && newColorScheme == null) return;
+    if (newDefaultLocation == null && newTwelveHour == null && newDefaultYear == null && newColorScheme == null) return;
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: newDefaultLocation ?? value?.defaultLocation,
-      defaultTimeZone: newDefaultTimeZone ?? value?.defaultTimeZone,
       defaultYear: newDefaultYear ?? value?.defaultYear,
       twelveHour: newTwelveHour ?? value?.twelveHour,
       colorScheme: newColorScheme ?? value?.colorScheme,
@@ -65,9 +62,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (newDefaultLocation != null) {
       await prefs.setString('default_solar_location', newDefaultLocation.toJSONString);
-    }
-    if (newDefaultTimeZone != null) {
-      await prefs.setString('default_solar_timezone', newDefaultTimeZone.name);
     }
     if (newDefaultYear != null) {
       await prefs.setString('default_solar_year', newDefaultYear.toString());
@@ -85,7 +79,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   Future<void> clearSettings() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: null,
-      defaultTimeZone: null,
     );
     value = settings;
     final prefs = await SharedPreferences.getInstance();
@@ -102,7 +95,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     if (value?.defaultLocation == newLocation) return;
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: newLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
       colorScheme: value?.colorScheme,
@@ -116,7 +108,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   Future<void> clearLocation() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: null,
-      defaultTimeZone: value?.defaultTimeZone,
       defaultYear: value?.defaultYear,
       twelveHour: value?.twelveHour,
       colorScheme: value?.colorScheme,
@@ -124,35 +115,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     value = settings;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('default_solar_location');
-  }
-
-  // Update timezone from the selection screen
-  Future<void> updateTZ(tz.Location newTimeZone) async {
-    if (value?.defaultTimeZone == newTimeZone) return;
-    final SavedAppSettings settings = SavedAppSettings(
-      defaultLocation: value?.defaultLocation,
-      defaultTimeZone: newTimeZone,
-      defaultYear: value?.defaultYear,
-      twelveHour: value?.twelveHour,
-      colorScheme: value?.colorScheme,
-    );
-    value = settings;
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('default_solar_timezone', newTimeZone.name);
-  }
-
-  // Clear timezone
-  Future<void> clearTZ() async {
-    final SavedAppSettings settings = SavedAppSettings(
-      defaultLocation: value?.defaultLocation,
-      defaultTimeZone: null,
-      defaultYear: value?.defaultYear,
-      twelveHour: value?.twelveHour,
-      colorScheme: value?.colorScheme,
-    );
-    value = settings;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('default_solar_timezone');
   }
 
   // Update twelveHour from the selection screen
@@ -164,7 +126,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     }
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       twelveHour: twelveHour,
       defaultYear: value?.defaultYear,
       colorScheme: value?.colorScheme,
@@ -179,7 +140,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   Future<void> clearTwelveHour() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       defaultYear: value?.defaultYear,
       colorScheme: value?.colorScheme,
     );
@@ -197,7 +157,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     }
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
       defaultYear: newYear,
       colorScheme: value?.colorScheme,
@@ -212,7 +171,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   Future<void> clearYear() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
       colorScheme: value?.colorScheme,
     );
@@ -229,7 +187,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     }
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
       defaultYear: value?.defaultYear,
       colorScheme: newColorScheme,
@@ -244,7 +201,6 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     Future<void> clearColorScheme() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
-      defaultTimeZone: value?.defaultTimeZone,
       twelveHour: value?.twelveHour,
       defaultYear: value?.defaultYear,
     );
