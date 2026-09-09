@@ -91,7 +91,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   // Jumps the map view smoothly to the target coordinate
-  
   Future<void> _moveMapTo(LatLng position) async {
     double currentZoomeLevel = await _mapController?.getZoomLevel() ?? 0;
     _mapController?.animateCamera(
@@ -397,7 +396,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     print(
                       'In TypeAheadField.onSelected, targetCoordinates received were NOT null',
                     );
-
                     _updateMarker(newLocation);
                     _moveMapTo(
                       targetCoordinates,

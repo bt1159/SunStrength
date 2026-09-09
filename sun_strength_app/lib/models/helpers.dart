@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +22,8 @@ double interpolate(
 ) {
   return (dep1 - dep0) / (ind1 - ind0) * (ind2 - ind0) + dep0;
 }
+
+bool isLeapYear(int y) => (y % 4 == 0) && (y % 100 != 0 || y % 400 == 0);
 
 final MyColorScheme constMyColorScheme = colorSchemes.first;
 // final Colormap constColorMap = Colormaps.magma;
@@ -241,20 +242,20 @@ class SavedAppSettings {
 typedef TimedOrbitData =
     Iterable<({double earthRotationAngle, double trueAnomaly})>;
 
-Iterable<Iterable<double>> createRawMatrixData({
-  required Iterable<double> valueIterable,
-  required int nDays,
-}) {
-  final int nTimes = (valueIterable.length / nDays).toInt();
-  final Iterable<Iterable<double>> output = Iterable.generate(nDays, (
-    dayIndex,
-  ) {
-    final int start = dayIndex * nTimes;
-    final int end = start + nTimes;
-    return valueIterable.toList().sublist(start, end).reversed;
-  });
-  return output;
-}
+// Iterable<Iterable<double>> createRawMatrixData({
+//   required Iterable<double> valueIterable,
+//   required int nDays,
+// }) {
+//   final int nTimes = (valueIterable.length / nDays).toInt();
+//   final Iterable<Iterable<double>> output = Iterable.generate(nDays, (
+//     dayIndex,
+//   ) {
+//     final int start = dayIndex * nTimes;
+//     final int end = start + nTimes;
+//     return valueIterable.toList().sublist(start, end).reversed;
+//   });
+//   return output;
+// }
 
 /// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
 /// inside of an [ChartImageContainer].  This [Future] is called, received, and handled by [HeatMap].
@@ -624,242 +625,6 @@ class ImagePainter extends CustomPainter {
   }
 }
 
-class CustomPathRibbonPainter extends CustomPainter {
-  final List<Offset> points;
-  final List<double> positiveStrengths;
-  final MyColorScheme colorScheme;
-  final double strokeWidth;
-  final Color appBackgroundColor;
-  final double k;
-  final double h;
-
-  CustomPathRibbonPainter({
-    required this.points,
-    required this.colorScheme,
-    required this.positiveStrengths,
-    required this.appBackgroundColor,
-    this.strokeWidth = 4.0, required this.k, required this.h,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
-
-    final double boundingCircleRadius = min(size.width, size.height) / 2;
-    final Offset centerOffset = Offset(size.width / 2, size.height / 2);
-
-    /// Ratio of tip radius for cardinal points to circle
-    final double a1 = 1.1;
-
-    /// Ratio that compares the width of cardinal points (indirectly) to circle
-    final double a2 = 0.25;
-
-    /// Ratio that compares the width of non-cardinal points (indirectly) to circle
-    final double a3 = 0.15;
-
-    /// Scaling ratio to make cardinal points "stroke" background image larger than the facets
-    final double a4 = 1.1;
-
-    /// Scaling ratio to make non-cardinal points "stroke" background image larger than the facets
-    final double a5 = 1.07;
-    final double sqrt2 = sqrt(2);
-
-    final nonCardingalPaint = Paint()
-      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.3)!
-      ..style = PaintingStyle.fill;
-    final cardinalBackPaint = Paint()
-      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.3)!
-      ..style = PaintingStyle.fill;
-    final cardinalForePaint = Paint()
-      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
-      ..style = PaintingStyle.fill;
-
-    final Paint circlePaint = Paint()
-      ..color = Color.lerp(Colors.black, appBackgroundColor, 0.5)!
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawCircle(centerOffset, boundingCircleRadius, circlePaint);
-
-    // Black non-cardinal points
-    final nonCardinalPath = Path()
-      ..moveTo(
-        centerOffset.dx + a5 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a5 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx + a5 * a3 * boundingCircleRadius,
-        centerOffset.dy,
-      )
-      ..lineTo(
-        centerOffset.dx + a5 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a5 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx,
-        centerOffset.dy + a5 * a3 * boundingCircleRadius,
-      )
-      ..lineTo(
-        centerOffset.dx - a5 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a5 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx - a5 * a3 * boundingCircleRadius,
-        centerOffset.dy,
-      )
-      ..lineTo(
-        centerOffset.dx - a5 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a5 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx,
-        centerOffset.dy - a5 * a3 * boundingCircleRadius,
-      )
-      ..close();
-
-    canvas.drawPath(nonCardinalPath, nonCardingalPaint);
-
-    // Black cardinal background
-    final cardinalPath = Path()
-      ..moveTo(
-        centerOffset.dx,
-        centerOffset.dy - a4 * a1 * boundingCircleRadius,
-      )
-      ..lineTo(
-        centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx + a4 * a1 * boundingCircleRadius,
-        centerOffset.dy,
-      )
-      ..lineTo(
-        centerOffset.dx + a4 * a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
-      ..lineTo(
-        centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a4 * a2 * boundingCircleRadius / sqrt2,
-      )
-      ..lineTo(
-        centerOffset.dx - a4 * a1 * boundingCircleRadius,
-        centerOffset.dy,
-      )
-      ..lineTo(
-        centerOffset.dx - a4 * a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a4 * a2 * boundingCircleRadius / sqrt2,
-      )
-      ..close();
-
-    canvas.drawPath(cardinalPath, cardinalBackPaint);
-
-    // White Facets
-
-    final northWhite = Path()
-      ..moveTo(centerOffset.dx, centerOffset.dy)
-      ..lineTo(centerOffset.dx, centerOffset.dy - a1 * boundingCircleRadius)
-      ..lineTo(
-        centerOffset.dx - a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a2 * boundingCircleRadius / sqrt2,
-      )
-      ..close();
-
-    canvas.drawPath(northWhite, cardinalForePaint);
-
-    final eastWhite = Path()
-      ..moveTo(centerOffset.dx, centerOffset.dy)
-      ..lineTo(centerOffset.dx + a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(
-        centerOffset.dx + a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy - a2 * boundingCircleRadius / sqrt2,
-      )
-      ..close();
-
-    canvas.drawPath(eastWhite, cardinalForePaint);
-
-    final southWhite = Path()
-      ..moveTo(centerOffset.dx, centerOffset.dy)
-      ..lineTo(centerOffset.dx, centerOffset.dy + a1 * boundingCircleRadius)
-      ..lineTo(
-        centerOffset.dx + a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a2 * boundingCircleRadius / sqrt2,
-      )
-      ..close();
-
-    canvas.drawPath(southWhite, cardinalForePaint);
-
-    final westWhite = Path()
-      ..moveTo(centerOffset.dx, centerOffset.dy)
-      ..lineTo(centerOffset.dx - a1 * boundingCircleRadius, centerOffset.dy)
-      ..lineTo(
-        centerOffset.dx - a2 * boundingCircleRadius / sqrt2,
-        centerOffset.dy + a2 * boundingCircleRadius / sqrt2,
-      )
-      ..close();
-
-    canvas.drawPath(westWhite, cardinalForePaint);
-
-    final List<Offset> correctedPoints = points
-        .map((e) => (e) * boundingCircleRadius + centerOffset)
-        .toList();
-
-    final Path ribbonPath = Path();
-
-    ribbonPath.moveTo(correctedPoints[0].dx, correctedPoints[0].dy);
-
-    if (correctedPoints.length == 2) {
-      ribbonPath.lineTo(correctedPoints[1].dx, correctedPoints[1].dy);
-    } else {
-      // Tension factor (0.0 = sharp linear, 0.5 = natural Catmull-Rom curve)
-      const double tension = 0.5;
-
-      for (int i = 0; i < correctedPoints.length - 1; i++) {
-        final Offset p0 = i > 0 ? correctedPoints[i - 1] : correctedPoints[i];
-        final Offset p1 = correctedPoints[i];
-        final Offset p2 = correctedPoints[i + 1];
-        final Offset p3 = i < correctedPoints.length - 2
-            ? correctedPoints[i + 2]
-            : p2;
-
-        // Calculate control points based on surrounding vectors
-        final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
-        final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
-
-        ribbonPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
-      }
-    }
-
-    final int colorSchemeIndex = colorSchemes.indexWhere(
-      (element) => element.$1 == colorScheme.$1,
-    );
-
-    final List<(List<double>, List<Color>)> myColorSchemesDiscreteSpecific = myColorSchemesDiscrete(k: k, h: h);
-
-    final RadialGradient solarGradient = RadialGradient(
-      center: Alignment.center,
-      radius: 0.5, // Relative to the Rect provided in createShader
-      colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2,
-      stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
-    );
-
-    // 4. Set up the Paint object
-    final Paint ribbonPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..shader = solarGradient.createShader(
-        Rect.fromCircle(center: centerOffset, radius: boundingCircleRadius),
-      );
-
-    // 5. Draw it
-    canvas.drawPath(ribbonPath, ribbonPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPathRibbonPainter oldDelegate) => true;
-}
 
 class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
@@ -873,91 +638,89 @@ class OrbitAndSolarValuesListNotifier
   CurrentChartSettings? lastcurrentChartSettings;
 }
 
-const List<int> leapYears = [1996, 2004, 2008, 2012, 2016, 2020, 2024, 2028];
+// /// {@template PathMetricsGradientPainter}
+// /// CustomPainter that paints the multi-colored line for solar azimuth and strength.
+// ///
+// /// Note: make sure to filter the path and strengths so that only positive strengths
+// /// and their associated paths are sent.  Otherwise, no error will occur, but it will
+// /// be inefficient.
+// ///
+// /// {@endtemplate}
+// class PathMetricsGradientPainter extends CustomPainter {
+//   final Path path;
+//   final List<double> positiveStrengths;
+//   final Colormap colormap;
 
-/// {@template PathMetricsGradientPainter}
-/// CustomPainter that paints the multi-colored line for solar azimuth and strength.
-///
-/// Note: make sure to filter the path and strengths so that only positive strengths
-/// and their associated paths are sent.  Otherwise, no error will occur, but it will
-/// be inefficient.
-///
-/// {@endtemplate}
-class PathMetricsGradientPainter extends CustomPainter {
-  final Path path;
-  final List<double> positiveStrengths;
-  final Colormap colormap;
+//   PathMetricsGradientPainter({
+//     required this.path,
+//     required this.colormap,
+//     required this.positiveStrengths,
+//   });
 
-  PathMetricsGradientPainter({
-    required this.path,
-    required this.colormap,
-    required this.positiveStrengths,
-  });
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final PathMetrics metrics = path.computeMetrics();
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final PathMetrics metrics = path.computeMetrics();
+//     // Loop though each contour where a contour goes from one time data point to the next
+//     for (final PathMetric metric in metrics) {
+//       final double startingStrength = positiveStrengths[metric.contourIndex];
+//       final double endingStrength = positiveStrengths[metric.contourIndex + 1];
 
-    // Loop though each contour where a contour goes from one time data point to the next
-    for (final PathMetric metric in metrics) {
-      final double startingStrength = positiveStrengths[metric.contourIndex];
-      final double endingStrength = positiveStrengths[metric.contourIndex + 1];
+//       if (startingStrength < 0 && endingStrength < 0) continue;
 
-      if (startingStrength < 0 && endingStrength < 0) continue;
+//       final double totalLength = metric.length;
+//       final double step = 2.0; // Resolution: 2px per step
 
-      final double totalLength = metric.length;
-      final double step = 2.0; // Resolution: 2px per step
+//       final Paint paint = Paint()
+//         ..style = PaintingStyle.stroke
+//         ..strokeWidth = 20.0
+//         ..strokeCap = StrokeCap.round;
 
-      final Paint paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 20.0
-        ..strokeCap = StrokeCap.round;
+//       // Loop through however many steps make up a single countour.  Each step will have a
+//       // constant color based on the fraction of the length of this contour of the start
+//       // of this step.
+//       for (double d = 0; d < totalLength; d += step) {
+//         final double nextD = (d + step).clamp(0.0, totalLength);
 
-      // Loop through however many steps make up a single countour.  Each step will have a
-      // constant color based on the fraction of the length of this contour of the start
-      // of this step.
-      for (double d = 0; d < totalLength; d += step) {
-        final double nextD = (d + step).clamp(0.0, totalLength);
+//         // Calculate normalized fraction [0.0 to 1.0] along the curve length
+//         final double fraction = d / totalLength;
+//         final double strengthAtStep =
+//             lerpDouble(startingStrength, endingStrength, fraction) ??
+//             startingStrength;
 
-        // Calculate normalized fraction [0.0 to 1.0] along the curve length
-        final double fraction = d / totalLength;
-        final double strengthAtStep =
-            lerpDouble(startingStrength, endingStrength, fraction) ??
-            startingStrength;
+//         if (strengthAtStep < 0) continue;
 
-        if (strengthAtStep < 0) continue;
+//         final Vector4 colorVector = colorValuesFromMap(
+//           strengthAtStep,
+//           false,
+//           colormap,
+//         );
+//         final Color color = Color.fromARGB(
+//           colorVector.w.toInt(),
+//           colorVector.x.toInt(),
+//           colorVector.y.toInt(),
+//           colorVector.z.toInt(),
+//         );
 
-        final Vector4 colorVector = colorValuesFromMap(
-          strengthAtStep,
-          false,
-          colormap,
-        );
-        final Color color = Color.fromARGB(
-          colorVector.w.toInt(),
-          colorVector.x.toInt(),
-          colorVector.y.toInt(),
-          colorVector.z.toInt(),
-        );
+//         paint.color = color;
 
-        paint.color = color;
+//         // Extract segment geometry
+//         final Path segmentPath = metric.extractPath(d, nextD);
+//         canvas.drawPath(segmentPath, paint);
+//       }
+//     }
+//   }
 
-        // Extract segment geometry
-        final Path segmentPath = metric.extractPath(d, nextD);
-        canvas.drawPath(segmentPath, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant PathMetricsGradientPainter oldDelegate) {
-    // Optimization: Only repaint if the image object has actually changed
-    final bool hasAnythingChanged =
-        path != oldDelegate.path ||
-        positiveStrengths != oldDelegate.positiveStrengths ||
-        colormap != oldDelegate.colormap;
-    return hasAnythingChanged;
-  }
-}
+//   @override
+//   bool shouldRepaint(covariant PathMetricsGradientPainter oldDelegate) {
+//     // Optimization: Only repaint if the image object has actually changed
+//     final bool hasAnythingChanged =
+//         path != oldDelegate.path ||
+//         positiveStrengths != oldDelegate.positiveStrengths ||
+//         colormap != oldDelegate.colormap;
+//     return hasAnythingChanged;
+//   }
+// }
 
 typedef TooltipInfo = ({
   Offset hoverBoxPosition,
@@ -968,3 +731,5 @@ typedef TooltipInfo = ({
 class KNotifier extends ValueNotifier<double> {
   KNotifier([super.value = 2]);
 }
+
+typedef AzimuthChartData = ({Iterable<Offset> solarDataOffsets, Iterable<double> solarDataStrengths, Iterable<double> elapsedHours});

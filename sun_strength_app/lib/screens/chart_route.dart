@@ -46,7 +46,9 @@ class ChartHomePage extends StatelessWidget {
                       OrbitAndSolarValuesListNotifier
                     >(
                       create: (_) {
-                        print('running create for OrbitAndSolarValuesListNotifier');
+                        print(
+                          'running create for OrbitAndSolarValuesListNotifier',
+                        );
                         final List<OrbitAndSolarValues>
                         orbitAndSolarValuesList =
                             calculateOrbitAndSolarValuesIterable(
@@ -57,7 +59,9 @@ class ChartHomePage extends StatelessWidget {
                               timeZone: currentLocationNotifier.value!.timeZone,
                               year: currentLocationNotifier.value!.year,
                             ).toList();
-                            print('running CNP<OrbitAndSolarValuesListNotifier>.create');
+                        print(
+                          'running CNP<OrbitAndSolarValuesListNotifier>.create',
+                        );
                         return OrbitAndSolarValuesListNotifier(
                           orbitAndSolarValuesList,
                           lastK: 2,
@@ -75,7 +79,9 @@ class ChartHomePage extends StatelessWidget {
                             if (orbitAndSolarValuesListNotifier == null) {
                               throw 'null previous in ProxyProvider';
                             }
-                            print('running update for orbitAndSolarValuesListNotifier.  lastK: ${orbitAndSolarValuesListNotifier.lastK}, lastchart: ${orbitAndSolarValuesListNotifier.lastcurrentChartSettings}, this k: ${kNotifier.value}');
+                            print(
+                              'running update for orbitAndSolarValuesListNotifier.  lastK: ${orbitAndSolarValuesListNotifier.lastK}, lastchart: ${orbitAndSolarValuesListNotifier.lastcurrentChartSettings}, this k: ${kNotifier.value}',
+                            );
                             if (currentLocationNotifier.value ==
                                 orbitAndSolarValuesListNotifier
                                     .lastcurrentChartSettings) {
@@ -113,11 +119,12 @@ class ChartHomePage extends StatelessWidget {
                                         currentLocationNotifier.value!.timeZone,
                                     year: currentLocationNotifier.value!.year,
                                   ).toList();
-                                  
-                                return orbitAndSolarValuesListNotifier
-                                  ..lastK = kNotifier.value
-                                  ..value = orbitAndSolarValuesList
-                                  ..lastcurrentChartSettings = currentLocationNotifier.value;
+
+                              return orbitAndSolarValuesListNotifier
+                                ..lastK = kNotifier.value
+                                ..value = orbitAndSolarValuesList
+                                ..lastcurrentChartSettings =
+                                    currentLocationNotifier.value;
                             }
                           },
                     ),
@@ -321,53 +328,7 @@ class ChartHomePage extends StatelessWidget {
                                     );
                                     return valueNotNull ? child! : Container();
                                   },
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Sun strength and location on a single day',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                      Consumer<DayIndexNotifier>(
-                                        builder:
-                                            (context, dayIndexNotifier, child) {
-                                              final int dayIndex =
-                                                  (dayIndexNotifier.value ?? 0);
-                                              final int datetimeDelta =
-                                                  (((dayIndex * 24 * 60)) *
-                                                  60 *
-                                                  1000);
-                                              final tz.TZDateTime
-                                              hoverDateTimeRaw =
-                                                  tz.TZDateTime(
-                                                    currentLocationNotifier
-                                                        .value!
-                                                        .timeZone,
-                                                    currentLocationNotifier
-                                                        .value!
-                                                        .year,
-                                                  ).add(
-                                                    Duration(
-                                                      milliseconds:
-                                                          datetimeDelta,
-                                                    ),
-                                                  );
-                                              return Text(
-                                                DateFormat(
-                                                  'd MMM yyyy',
-                                                ).format(hoverDateTimeRaw),
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.titleSmall,
-                                              );
-                                            },
-                                      ),
-                                      const AzimuthWidget(),
-                                    ],
-                                  ),
+                                  child: const AzimuthChartWithLabels(),
                                 ),
                               ),
                             ],
@@ -379,6 +340,39 @@ class ChartHomePage extends StatelessWidget {
                 ),
               );
       },
+    );
+  }
+}
+
+class AzimuthChartWithLabels extends StatelessWidget {
+  const AzimuthChartWithLabels({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<DayIndexNotifier, CurrentLocationNotifier>(
+      builder: (context, dayIndexNotifier, currentLocationNotifier, child) {
+        final int dayIndex = (dayIndexNotifier.value ?? 0);
+        final int datetimeDelta = (((dayIndex * 24 * 60)) * 60 * 1000);
+        final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
+          currentLocationNotifier.value!.timeZone,
+          currentLocationNotifier.value!.year,
+        ).add(Duration(milliseconds: datetimeDelta));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            child!,
+            Text(
+              DateFormat('d MMM yyyy').format(hoverDateTimeRaw),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            AzimuthWidget(dayIndex: dayIndexNotifier.value ?? 0),
+          ],
+        );
+      },
+      child: Text(
+        'Sun strength and location on a single day',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
     );
   }
 }

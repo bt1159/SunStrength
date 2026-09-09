@@ -28,7 +28,7 @@ class ChartWidget extends StatefulWidget {
   final int nYAxisBuckets;
   final int year;
   final tz.Location timeZone;
-  bool get leapYear => leapYears.contains(year);
+  bool get leapYear => isLeapYear(year);
   int get nDays => leapYear ? 366 : 365;
 
   @override
@@ -443,11 +443,13 @@ class _ChartRenderObject extends RenderBox
     required bool leapYear,
   }) : _nXAxisBuckets = nXAxisBuckets,
        _nYAxisBuckets = nYAxisBuckets,
-       _leapYear = leapYear;
+       _leapYear = leapYear,
+       _nDays = leapYear ? 366 : 365;
 
   int _nXAxisBuckets;
   int _nYAxisBuckets;
   bool _leapYear;
+  int _nDays;
   List<int> _bomIndices = [
     0,
     31,
@@ -490,6 +492,7 @@ class _ChartRenderObject extends RenderBox
     if (_leapYear == value) return;
     _leapYear = value;
     if (_leapYear) {
+      _nDays = 366;
       _bomIndices = [
         0,
         31,
@@ -506,6 +509,7 @@ class _ChartRenderObject extends RenderBox
         366,
       ];
     } else {
+      _nDays = 365;
       _bomIndices = [
         0,
         31,
@@ -656,8 +660,7 @@ class _ChartRenderObject extends RenderBox
       final BoxParentData childParentData = child.parentData as BoxParentData;
 
       int monthsPerLabel = (12 / _nXAxisBuckets).toInt();
-      final int nDays = _leapYear ? 366 : 365;
-      final double xPerDay = heatMapWidth / nDays;
+      final double xPerDay = heatMapWidth / _nDays;
       final double x0 = (_bomIndices[index * monthsPerLabel] * xPerDay);
       final double x1 = (_bomIndices[(index * monthsPerLabel) + 1] * xPerDay);
 
@@ -707,8 +710,7 @@ class _ChartRenderObject extends RenderBox
         ..style = PaintingStyle.stroke;
 
       // 5. Draw Vertical Grid Lines (X-Axis Dividers)
-      final int nDays = _leapYear ? 366 : 365;
-      final double xPerDay = chartSize.width / nDays;
+      final double xPerDay = chartSize.width / _nDays;
       for (int i = 1; i < 12; i++) {
         final double x = canvasOrigin.dx + (_bomIndices[i] * xPerDay);
         context.canvas.drawLine(

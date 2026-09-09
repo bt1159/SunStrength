@@ -11,6 +11,12 @@ Also, removed ability to change timezone by itself.  Instead, timezone will alwa
 
 Fixed the bug about places near the equator throwing some sort of range error.  The issue was that the empirical airmass calculation I am using produces a relative solar strength slightly above 1 when elevation angle is above 88 degrees.  When viewing a location near the equator, therefore, the relative solar strength then comes out a little above 100%.  This is not technically correct, but the actual bug comes from the logic that chooses a color.  It is sent a strength value above 1 which forces it to try to pull a color from a point outside its list of colors.   I have since addd a clamp deep inside that function.  That way, any function or widget that converts strength to a number will be protected.  Tecnically, I should also update the orit calcs to change the global max number.
 
+Fixed spacing on chart with labels
+
+Fixed the bug where some times I only showed 364 days per year.  The issue was the way I calculated the number of years.  I started with dateTime0, which was tz aware.  Then I added a year using DateTime.add which was NOT tz aware.  When I used .difference which is timezone aware, it assumed the second datetime was UTC.  When I then rounded the different to number of days, I got 364 instead of 365.
+
+I just started looking at the time graduated lines for the azimuth chart.  One issue is that I was extracting only the data points with a visible sun, which makes sense, but then I did not actually know the time of day for each point.  I have now adjusted the process to first marry the data with "elapsedHours" with is just index / 4 such that it is a double that represents hours in a 24 hour day.  Then, I extracted visible only points again, but now each data point is aligned with a time.  I will later be able to use that to construct the graduated time lines.
+
 ## 2026-09-05
 Going to check why az chart isn't responding to change in k.
 - Ok.  I see now.  Azimuth chart figures out the color for each pixel differently than the heat map of the scale.  Az chart maps the colorscheme colors to a radial distance from the center to define rings of color.  Then, when the spline points are calculated, their radial distance is equated to a color.  When I do this, however, I AM NOT taking k into account.  This works for visible light, but something about the math is different for uv-a and uv-b.
@@ -134,20 +140,13 @@ You don't mock thing you are trying to test.  You mock things that need to be in
 ## Google Maps API Marker
 There is some API that has been deprecated.   I think it is the thing that actually creates my marker.  It shows up in the console.
 
-## Some locations seem to think there are only 364 days in the year.  Yellowknife, Canada in 2026 for example.
-
 ## See if there is a good way to add a "today" indicator.  If so, add a toggle for that.
 
 ## Make the pop up look better.  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
 
 ## Add the ability to change the number of vertical lines
 
-## Instead of Consumer for the date for the azimuth chart, consider pushing those titles into AzimuthChart widget
-
 ## debugDumpRenderTree()?
-
-## In my app, it is a little messy between changing defaults and changing current settings.
-Specifically, some settings like location can be changed for just that setting.  Changing the default is a different thing.  For other settings, though, that is not true.  This is potentially confusing.
 
 ## Make sure, at some point, to go to Google Cloud Console, go to my Google Maps API key,
 and restrict it to HTTP Referrers and add your local development URL
@@ -160,12 +159,25 @@ true but current location notifier value is null would be if the user somehow wi
 location (not sure if that is possible) or if the current location notifier just hasn't loaded
 yet.  Maybe that is indeed why.  On the other hand, what is the harm?  Just processing time.
 
-## Add a check here so that, if the [position] is already in view, don't move
-LocationSelectorRoute, line 94
-
 ## I can get rid of a dependence by just calculating this myself.
 LocationSelectorRoute line 126        double distanceInMeters = Geolocator.distanceBetween(
 
 ## I could make this a little more efficient by remembering the dayIndex from hover.
 That way, when I click, I could just pass the day index rather than having to calculate it again.
 ChartWidget line 131.
+
+## Get rid of that dumb google location code.  For clicks, just show the town and maybe some note about a speicific point.
+Or consider forcing an address like Google Maps does for directions.
+
+## I should check through my 1D vs. 2D conversions to improve indexing & width/height logic
+Sometimes I pass nDays so that the giant 1D list can be chunked.  Other times, I hard code 96 and the other direction.  I should make all that soft coded and pass vertical length or something.
+
+## IMPORTANT: add a note about direction of the surface.
+In other words, the app calculates the strength of the sun on a surface perpindicular to the sunlight.  That is different from solar calculators, for instance, which usually either assume a fixed angle that you enter or assume parallel to the ground, roof, etc.  It also explains why many of the sun strengths will seem higher than people expect, especially in winter.  In the winter, it gets colder in temperate places because the sun's light falls on the ground at a steep angle and is therefore spread out of a larger area.  A spherical surface like your head, however, will not be impacted by this AT ALL!  The only reason the sun is less strong on your head in the winter is because it is traveling through more atmosphere...almost.  One other thing, although a much smaller point.  Imagine you were in London in winter time and stood still all day facing South.  While it is true that the strength of the sun at any moment would NOT be reduced because of the winter-time-spreading-out effect, it is also true that the sun would be moving accross your face over the day (from left ear to nose to right ear).  That means that any particular bit of your skin would get less total sunlight over the day.  Compare that to do exactly the same thing in summer.  Because the sun is higher, it is more hitting the top of your head, which means that as it arcs through the sky through the day, the same bits of your scalp are getting the sun light, leading to more total sunlight throughout the day.
+
+That last point seems as first way too subtle, abstract, or inconsequential to worry about, and that is true for our silly example of standing still all day.  It is true, however, that as humans go about a day outside, they are very likely to move their face in many different directions but remain standing and looking horizontally almost all the time.  This does indeed mean that surfaces that are perpindicular to winter-time sun are more likely to receive less sunlight throughout a winter day compared to surface perpindicular to summer-time sun throughout a summer day, but NOT because of the "spreading out" effect that makes is colder in winter.
+
+## Accuracy check
+Yellowknife, Canada.  June 30th.  Gets up to around 90%.  That is feasible, but seems high.  Also, then, the azimuth chart seems really low.  How can it be as high as 90% while still appearing to be less than 45degrees in the sky.
+
+## Should I bring in the 3D stuff I did in that other app and make the azimuth chart essentially a 3D rotatable snow globe?
