@@ -56,7 +56,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     // 1. Initialize the standard Autocomplete service
     service = gmaps_places.AutocompleteService();
     final Location? currentAppLocation = context
-        .read<CurrentLocationNotifier>()
+        .read<CurrentChartSettingsNotifier>()
         .value
         ?.location;
     if (currentAppLocation != null) {
@@ -428,7 +428,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               print("Proceeding with coordinates: $_currentPosition");
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
               context
-                  .read<CurrentLocationNotifier>()
+                  .read<CurrentChartSettingsNotifier>()
                   .updateCurrentChartSettings(newLocation: _currentPosition);
               print(
                 "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",

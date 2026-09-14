@@ -32,9 +32,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProxyProvider<
           SavedSettingsNotifier,
-          CurrentLocationNotifier
+          CurrentChartSettingsNotifier
         >(
-          create: (_) => CurrentLocationNotifier(),
+          create: (_) => CurrentChartSettingsNotifier(),
           update: (_, savedLocationNotifier, previous) {
             if (previous == null) {
               throw 'previous CurrentLocationNotifier is null';
@@ -84,7 +84,7 @@ class MyApp extends StatelessWidget {
             // updated or is about to be, just go to the chart page.
             
 
-            if (context.read<CurrentLocationNotifier>().value != null ||
+            if (context.read<CurrentChartSettingsNotifier>().value != null ||
                 savedSettingsNotifier.value?.defaultLocation != null) {
               previous.value = 0;
             } else {
@@ -286,7 +286,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CurrentLocationNotifier>(
+    return Consumer<CurrentChartSettingsNotifier>(
       builder: (context, currentLocationNotifier, child) {
         return AppBar(
           title: const Text("Select Your Location"),

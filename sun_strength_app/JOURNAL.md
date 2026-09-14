@@ -1,4 +1,34 @@
 # Daily log
+##2026-09-14
+I started by cleaning up azimuth_widget a bit.  Particularly the paint() method.  I pulled out the paintint logic for each major pieces to make the code more readable.  Then, I have attempted to add logic that skips any labels that would overlap a preexisting label.
+
+One problem is that the location calculated is given to the top right corner.  I need to address this somehow because it needs to depend on the angle of the break.
+
+OOOOO, new problem.  I was looking at data somwhere in Canada and had an azimuth chart drawn.  I then switched location.  The heat map was redrawn, BUT the azimuth chart remained for Canada until I click a new day (or at least until I clicked the 2D heat map somewhere).
+
+Ok, fixed the issue just above (blanking the azimuth chart as soon as the data above changes).  I still need to tweak the "location" of the labels.
+
+Ok, labels work pretty well.  I accomplished what I was trying to do.  There are some improvements I could make, but these work.
+
+I also added a button to reset chart back to default location.
+
+I also fixed pinning the location at the top, BUT I NEED TO FIX SPACING NOW.
+
+## 2026-09-11
+Putting in place the idea I had at PT: change DayIndexNotifier to a time-zone aware datetime of the time at solar noon.  That way, everywhere will already have access to the date, without converting day index to date, and azimuth chart will have access to the timezone in order to know how to label the times.  To be clear, when I say the time at solar noon, I mean the time at index 12 * (the number of data points per hour).  Currently, that would be 48.
+
+New plan.  I just changed DayIndexNotifier to contain the List<OrbitAndSolarData> for a single day.  Also, I adjust OrbitAndSolarData to have a property called tzDateTime that is the exact timezone-aware datetime for that data point.
+
+Quick note: For Azimuth Chart, move selector that checks if a day is selected inside the chart widget itself.  Since the chart widget already has a consumer on DayIndexNotifier
+
+Ok.  It looks a lot better, and the logic is much cleaner.  I really like that I just keep the TZDateTime tied to each data point, and pass the entire OrbitAndSolarData for the day to the Azimuth chart.  I do need to tweak one thing, ideally, to make the hour labels not overlap.  I will have to think creatively.  Maybe, as it iterates through each one, if its size/box overlaps a previously-made one, it just skips it.
+
+# 2026-09-10
+Starting with the hourly markers in the azimuth ribbon.
+
+I now have the hourly dots.  Next will be labels.
+Also, make the ribbon width somehow dynamic to overall image size.
+
 ## 2026-09-09
 Time to fix some of the settings and default funcitonality.
 
@@ -181,3 +211,17 @@ That last point seems as first way too subtle, abstract, or inconsequential to w
 Yellowknife, Canada.  June 30th.  Gets up to around 90%.  That is feasible, but seems high.  Also, then, the azimuth chart seems really low.  How can it be as high as 90% while still appearing to be less than 45degrees in the sky.
 
 ## Should I bring in the 3D stuff I did in that other app and make the azimuth chart essentially a 3D rotatable snow globe?
+
+## Consider whether changing the location should nullify the day selected (i.e., blank out the azimuth chart)
+Actually, I decided.  I should only blank out the azimuth chart (when it was previously present) if the date has changed.  What I mean is the year and the day index, essentially.  OR, the time zone-independent date of the first day.  If that stays the same but the location changes, don't null it out.  BUT, I will have to overwrite the one-day list of values with a new list of values.
+
+Also, changing k should indeed update the data but NOT blank it out.
+
+## Don't scroll location
+
+## Add a button to go back to default location
+
+## Something weird is happening with the RadialGradient in the azimuth chart.   Check Phoenixville, visible light, around Winter Soltice.  The path seems to jump directly from purple to orange.  Actually, even around summer soltice
+
+## Improve hover location
+There are probably a lot of improvements that could be made.  For now, though, at least make it jump up above pointer if it gets to the bottom (so it doesn't get cut off).

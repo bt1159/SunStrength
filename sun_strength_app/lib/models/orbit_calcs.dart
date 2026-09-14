@@ -53,8 +53,8 @@ const double yearLength = 365.242190402;
 const double h1 = 0;
 final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 
-/// J2000
-final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
+// /// J2000
+// final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
 
 /// Vector from center of the Earth to the North Pole.  Used to calculate solar azimuth angle.
 final Vector3 reNorthPole = Vector3(rEarth * sin(tilt), 0, rEarth * cos(tilt));
@@ -87,7 +87,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
   );
 
   /// Number of hours between J2000 and dateTIme0
-  final initialHOffsetFromJ2000 = dateTime0.difference(date0J2000).inHours;
+  final int initialHOffsetFromJ2000 = dateTime0.difference(date0J2000).inHours;
 
   /// List of offsets in hours from J2000 for each 15-minute interval of the year provided
   final Iterable<double> hOffsetsFromJ2000 = Iterable.generate(
@@ -104,6 +104,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
   final Iterable<OrbitAndSolarValues> output = hOffsetsFromJ2000.map((
     hOffsetFromJ2000,
   ) {
+    final tz.TZDateTime tzDateTime = calculateTZDateTime(dateTime0, initialHOffsetFromJ2000, hOffsetFromJ2000);
     final double earthRotationAngle = calculateERA(hOffsetFromJ2000);
     final double meanAnomaly = calculateMeanAnomaly(hOffsetFromJ2000);
     final double eccentricAnomaly = calculateEccentricAnomaly(meanAnomaly);
@@ -141,6 +142,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
         );
 
     final OrbitAndSolarValues output = OrbitAndSolarValues(
+      tzDateTime: tzDateTime,
       hOffsetFromJ2000: hOffsetFromJ2000,
       earthRotationAngle: earthRotationAngle,
       meanAnomaly: meanAnomaly,
@@ -183,6 +185,15 @@ Iterable<OrbitAndSolarValues> recalculateOrbitAndSolarValuesIterableNewK({
   });
   return newValues;
 }
+
+tz.TZDateTime calculateTZDateTime(tz.TZDateTime dateTime0, int initialHOffsetFromJ2000, double hOffsetFromJ2000, ) {
+  final double thisHOffset = hOffsetFromJ2000 - initialHOffsetFromJ2000;
+  final int thisHOffsetHours = thisHOffset.toInt();
+  final int thisHOffsetMinutes = ((thisHOffset - thisHOffsetHours) * 60).toInt();
+  final int thisHOffsetSeconds = ((thisHOffset - thisHOffsetHours - (thisHOffsetMinutes / 60)) * 3600).toInt();
+  return dateTime0.add(Duration(hours: thisHOffsetHours, minutes: thisHOffsetMinutes, seconds: thisHOffsetSeconds));
+}
+
 
 double calculateERA(double hOffsetFromJ2000) =>
     (2 * pi * (yearLength + 1) / yearLength * (hOffsetFromJ2000 / 24) +

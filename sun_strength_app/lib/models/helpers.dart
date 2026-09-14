@@ -142,11 +142,12 @@ class CurrentChartSettings {
     return other is CurrentChartSettings &&
         other.location == location &&
         other.year == year &&
-        other.timeZone == timeZone;
+        other.timeZone == timeZone &&
+        other.h == h;
   }
 
   @override
-  int get hashCode => Object.hash(location, year, timeZone);
+  int get hashCode => Object.hash(location, year, timeZone, h);
 }
 
 /// This class is a container for all the settings that a user will store between app sessions.  Keep in mind
@@ -508,8 +509,12 @@ class CurrentIndexNotifier extends ValueNotifier<int> {
   set value(int newValue) => super.value = newValue.clamp(0, 1);
 }
 
+/// J2000
+final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
+
 class OrbitAndSolarValues {
   const OrbitAndSolarValues({
+    required this.tzDateTime,
     required this.hOffsetFromJ2000,
     required this.earthRotationAngle,
     required this.meanAnomaly,
@@ -524,6 +529,7 @@ class OrbitAndSolarValues {
   });
 
   OrbitAndSolarValues copyWith({
+    tz.TZDateTime? tzDateTime,
     double? hOffsetFromJ2000,
     double? earthRotationAngle,
     double? meanAnomaly,
@@ -536,6 +542,7 @@ class OrbitAndSolarValues {
     double? solarAzimuthAngle,
     double? solarStrengthsLocalRelativeToGlobalMax,
   }) => OrbitAndSolarValues(
+    tzDateTime: tzDateTime ?? this.tzDateTime,
     hOffsetFromJ2000: hOffsetFromJ2000 ?? this.hOffsetFromJ2000,
     earthRotationAngle: earthRotationAngle ?? this.earthRotationAngle,
     meanAnomaly: meanAnomaly ?? this.meanAnomaly,
@@ -553,7 +560,8 @@ class OrbitAndSolarValues {
 
   OrbitAndSolarValues.strengthOnly({
     required this.solarStrengthsLocalRelativeToGlobalMax,
-  }) : hOffsetFromJ2000 = 0,
+  }) : tzDateTime = date0J2000,
+  hOffsetFromJ2000 = 0,
        earthRotationAngle = 0,
        meanAnomaly = 0,
        eccentricAnomaly = 0,
@@ -564,6 +572,7 @@ class OrbitAndSolarValues {
        solarElevationAngle = 0,
        solarAzimuthAngle = 0;
 
+  final tz.TZDateTime tzDateTime;
   final double hOffsetFromJ2000;
   final double earthRotationAngle;
   final double meanAnomaly;
@@ -577,8 +586,8 @@ class OrbitAndSolarValues {
   final double solarStrengthsLocalRelativeToGlobalMax;
 }
 
-class DayIndexNotifier extends ValueNotifier<int?> {
-  DayIndexNotifier(super.value);
+class DayDataNotifier extends ValueNotifier<List<OrbitAndSolarValues>?> {
+  DayDataNotifier(super.value);
 }
 
 /// {@template ImagePainter}
@@ -732,4 +741,89 @@ class KNotifier extends ValueNotifier<double> {
   KNotifier([super.value = 2]);
 }
 
-typedef AzimuthChartData = ({Iterable<Offset> solarDataOffsets, Iterable<double> solarDataStrengths, Iterable<double> elapsedHours});
+typedef AzimuthChartData = ({Iterable<Offset> solarDataOffsets, Iterable<double> solarDataStrengths, Iterable<tz.TZDateTime> tzDateTime});
+
+extension TZDateTimeOnHour on tz.TZDateTime {
+  bool get isOnTheHour {
+    return this == tz.TZDateTime(location, year, month, day, hour);
+  }
+}
+
+/// Calculates two points (p1, p2) centered on [centerPoint], 
+/// aligned with [circleCenter], with a total length of [strokeWidth].
+({Offset p1, Offset p2}) calculateSegment({
+  required Offset centerPoint,
+  required Offset circleCenter,
+  required double strokeWidth,
+}) {
+  // 1. Get the direction vector from circleCenter to centerPoint
+  Offset direction = centerPoint - circleCenter;
+  double distance = direction.distance;
+
+  // Handle edge case where both centers are at the exact same coordinates
+  if (distance == 0) {
+    return (
+      p1: centerPoint - Offset(strokeWidth / 2, 0),
+      p2: centerPoint + Offset(strokeWidth / 2, 0),
+    );
+  }
+
+  // 2. Normalize the vector to get a unit direction vector
+  Offset unitDirection = direction / distance;
+
+  // 3. Find half the length to offset from the centerPoint
+  double halfLength = strokeWidth / 2.0;
+
+  // 4. Calculate p1 and p2 symmetrically around centerPoint
+  Offset p1 = centerPoint - (unitDirection * halfLength);
+  Offset p2 = centerPoint + (unitDirection * halfLength);
+
+  return (p1: p1, p2: p2);
+}
+
+
+// Offset calculateLabelPoint({
+//   required Offset hourMarkerPoint,
+//   required Offset circleCenter,
+//   required double spacing,
+//   required bool labelAbove,
+// }) {
+//   spacing = labelAbove ? -spacing : spacing;
+
+//   // 1. Get the direction vector from circleCenter to centerPoint
+//   Offset direction = hourMarkerPoint - circleCenter;
+//   double distance = direction.distance;
+
+//   // Handle edge case where both centers are at the exact same coordinates
+//   if (distance == 0) {
+//     return hourMarkerPoint + Offset(0, spacing);
+//   }
+
+//   // 2. Normalize the vector to get a unit direction vector
+//   Offset unitDirection = direction / distance;
+
+//   // 3. Find half the length to offset from the centerPoint
+//   double halfLength = strokeWidth / 2.0;
+
+//   // 4. Calculate p1 and p2 symmetrically around centerPoint
+//   Offset p1 = centerPoint - (unitDirection * halfLength);
+//   Offset p2 = centerPoint + (unitDirection * halfLength);
+
+//   return (p1: p1, p2: p2);
+// }
+
+
+Offset getPerpendicularUnitVector(Offset p1, Offset p2) {
+  final double dx = p2.dx - p1.dx;
+  final double dy = p2.dy - p1.dy;
+
+  final double distance = sqrt(dx * dx + dy * dy);
+
+  // Prevent division by zero if the points are identical
+  if (distance == 0.0) {
+    return Offset.zero; 
+  }
+
+  // Swap components, negate one, and divide by the distance
+  return Offset(-dy / distance, dx / distance);
+}

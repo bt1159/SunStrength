@@ -136,8 +136,8 @@ void main() {
   group('CurrentLocationNotifier test group', () {
     test('Initial setup', () async {
       // Test that the CurrentLocationNotifier is instantiated but does not have any location yet from the SavedLocationNotifier
-      final CurrentLocationNotifier currentLocationNotifier =
-          CurrentLocationNotifier();
+      final CurrentChartSettingsNotifier currentLocationNotifier =
+          CurrentChartSettingsNotifier();
       bool listenerCalled = false;
       currentLocationNotifier.addListener(() {
         listenerCalled = true;
@@ -148,8 +148,8 @@ void main() {
     });
     test('Getting SavedLocation', () async {
       // Test that the CurrentLocationNotifier correctly gets initialk SavedLocation
-      final CurrentLocationNotifier currentLocationNotifier =
-          CurrentLocationNotifier();
+      final CurrentChartSettingsNotifier currentLocationNotifier =
+          CurrentChartSettingsNotifier();
       bool listenerCalled = false;
       currentLocationNotifier.addListener(() {
         listenerCalled = true;
@@ -175,8 +175,8 @@ void main() {
     });
     test('Loading saved and updating to something else', () async {
       // Test that CurrentLocationNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentLocationNotifier currentLocationNotifier =
-          CurrentLocationNotifier();
+      final CurrentChartSettingsNotifier currentLocationNotifier =
+          CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
       currentLocationNotifier.addListener(() {
         listenerCalledCounter++;
@@ -194,8 +194,8 @@ void main() {
     });
     test('Changing location to null after a non-null', () async {
       // Test that CurrentLocationNotifier correctly updates to null after having a real location
-      final CurrentLocationNotifier currentLocationNotifier =
-          CurrentLocationNotifier();
+      final CurrentChartSettingsNotifier currentLocationNotifier =
+          CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
       currentLocationNotifier.addListener(() {
         listenerCalledCounter++;
@@ -222,8 +222,8 @@ void main() {
     test('Testing that running update with the same location does NOT call listeners', () async { 
 
       // Test that CurrentLocationNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentLocationNotifier currentLocationNotifier =
-          CurrentLocationNotifier();
+      final CurrentChartSettingsNotifier currentLocationNotifier =
+          CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
       currentLocationNotifier.addListener(() {
         listenerCalledCounter++;

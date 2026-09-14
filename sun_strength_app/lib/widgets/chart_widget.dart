@@ -41,10 +41,9 @@ class _ChartWidgetState extends State<ChartWidget> {
   static const Offset toolTipFormattingOffset = Offset(0, 40);
   // static const Offset toolTipFormattingOffset = Offset(20, 20);
 
-  void _handleChartHover(
+  List<OrbitAndSolarValues> _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
-    // Offset chartWidgetOffsetToParent,
     List<OrbitAndSolarValues> orbitAndSolarValuesList,
   ) {
     final double x = chartTextLocalPosition.dx;
@@ -58,8 +57,10 @@ class _ChartWidgetState extends State<ChartWidget> {
     final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
     final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
     // Look up data parameters safely.  First index is day, then time
-    final double value = orbitAndSolarValuesList[dayIndex * 96 + timeIndex]
-        .solarStrengthsLocalRelativeToGlobalMax;
+    final List<OrbitAndSolarValues> osSingleDay = orbitAndSolarValuesList
+        .sublist(dayIndex * 96, (dayIndex + 1) * 96);
+    final double value =
+        osSingleDay[timeIndex].solarStrengthsLocalRelativeToGlobalMax;
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
     final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
@@ -67,15 +68,13 @@ class _ChartWidgetState extends State<ChartWidget> {
       widget.year,
     ).add(Duration(milliseconds: datetimeDelta));
     _tooltipNotifier.value = (
-      hoverBoxPosition:
-          chartTextLocalPosition +
-          // chartWidgetOffsetToParent +
-          toolTipFormattingOffset,
+      hoverBoxPosition: chartTextLocalPosition + toolTipFormattingOffset,
       tooltipText12:
           '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
       tooltipText24:
           '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
     );
+    return osSingleDay;
   }
 
   void _hideTooltip() {
@@ -106,14 +105,13 @@ class _ChartWidgetState extends State<ChartWidget> {
         Selector<SavedSettingsNotifier, bool>(
           selector: (_, savedSettingsNotifier) =>
               savedSettingsNotifier.value?.twelveHour ?? true,
-          builder: (context, twelveHour, child) =>
-              _ChartRenderObjectWidget(
-                nXAxisBuckets: widget.nXAxisBuckets,
-                nYAxisBuckets: widget.nYAxisBuckets,
-                twelveHour: twelveHour,
-                leapYear: widget.leapYear,
-                chartArrayWidget: child!,
-              ),
+          builder: (context, twelveHour, child) => _ChartRenderObjectWidget(
+            nXAxisBuckets: widget.nXAxisBuckets,
+            nYAxisBuckets: widget.nYAxisBuckets,
+            twelveHour: twelveHour,
+            leapYear: widget.leapYear,
+            chartArrayWidget: child!,
+          ),
           child: Consumer<OrbitAndSolarValuesListNotifier>(
             builder: (context, orbitAndSolarValuesListNotifier, child) {
               return Selector<SavedSettingsNotifier, MyColorScheme?>(
@@ -128,13 +126,14 @@ class _ChartWidgetState extends State<ChartWidget> {
                   );
                   List<OrbitAndSolarValues> orbitAndSolarValuesList =
                       orbitAndSolarValuesListNotifier.value;
-                  Offset localPosition = Offset(0, 0);
+                  // Offset localPosition = Offset(0, 0);
+                  List<OrbitAndSolarValues> osSingleDay =
+                      <OrbitAndSolarValues>[];
                   return MouseRegion(
                     onHover: (event) {
-                      localPosition = event.localPosition;
                       final RenderBox box =
                           context.findRenderObject() as RenderBox;
-                      _handleChartHover(
+                      osSingleDay = _handleChartHover(
                         event.localPosition,
                         box.size,
                         orbitAndSolarValuesList,
@@ -144,16 +143,10 @@ class _ChartWidgetState extends State<ChartWidget> {
                     child: GestureDetector(
                       onTap: () {
                         print('running GestureDetector.onTapUp');
-                        final RenderBox box =
-                            context.findRenderObject() as RenderBox;
-                        final double pxWidth = box.size.width / widget.nDays;
-                        final int dayIndex = (localPosition.dx / pxWidth)
-                            .floor()
-                            .clamp(0, widget.nDays - 1);
                         print(
-                          'about to update DayIndexNotifier value: $dayIndex',
+                          'about to update DayDataNotifier, first datetime: ${osSingleDay.first.tzDateTime}',
                         );
-                        context.read<DayIndexNotifier>().value = dayIndex;
+                        context.read<DayDataNotifier>().value = osSingleDay;
                       },
                       child: FutureBuilderChartImage(
                         orbitAndSolarValuesIterable:
@@ -203,7 +196,7 @@ class _ChartWidgetState extends State<ChartWidget> {
                 ),
               );
             } else {
-              return Container();
+              return const SizedBox.shrink();
             }
           },
         ),
@@ -264,10 +257,10 @@ class _FutureBuilderChartImageState extends State<FutureBuilderChartImage> {
     futureChartImage = createChartImage();
   }
 
-  /// This override is required because the only place where 
-  /// [widget.orbitAndSolarValuesIterable] and [widget.colormap] are 
-  /// referenced are in [createChartImage].  Since they are not referenced 
-  /// in the build method, changing those values (i.e., changing the 
+  /// This override is required because the only place where
+  /// [widget.orbitAndSolarValuesIterable] and [widget.colormap] are
+  /// referenced are in [createChartImage].  Since they are not referenced
+  /// in the build method, changing those values (i.e., changing the
   /// configuration widget) will not run the build() method.
   @override
   void didUpdateWidget(covariant FutureBuilderChartImage oldWidget) {
@@ -465,8 +458,10 @@ class _ChartRenderObject extends RenderBox
     334,
     365,
   ];
+
   /// Horizontal gap between y axis labels and chart
   static const double hLabelGap = 10;
+
   /// Vertical gap between x axis labels and chart
   static const double vLabelGap = 10;
 
@@ -605,13 +600,16 @@ class _ChartRenderObject extends RenderBox
         _yAxisLabels.first?.getDryLayout(constraints.loosen()).height ?? 0;
     final Size drySize = Size(
       maxYAxisLabelWidth + chartSize.width + hLabelGap,
-      maxXAxisLabelHeight + chartSize.height + typicalYAxisLabelHeight / 2 + vLabelGap,
+      maxXAxisLabelHeight +
+          chartSize.height +
+          typicalYAxisLabelHeight / 2 +
+          vLabelGap,
     );
     return constraints.constrain(drySize);
   }
 
   @override
-    void performLayout() {
+  void performLayout() {
     double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
@@ -681,7 +679,10 @@ class _ChartRenderObject extends RenderBox
     });
     size = Size(
       maxYAxisLabelWidth + heatMapWidth + hLabelGap,
-      typicalYAxisLabelHeight / 2 + heatMapHeight + maxXAxisLabelHeight + vLabelGap,
+      typicalYAxisLabelHeight / 2 +
+          heatMapHeight +
+          maxXAxisLabelHeight +
+          vLabelGap,
     );
   }
 

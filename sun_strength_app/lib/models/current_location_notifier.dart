@@ -4,8 +4,8 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:lat_lng_to_timezone/lat_lng_to_timezone.dart' as tzmap;
 
-class CurrentLocationNotifier extends ValueNotifier<CurrentChartSettings?> {
-  CurrentLocationNotifier() : super(null) {
+class CurrentChartSettingsNotifier extends ValueNotifier<CurrentChartSettings?> {
+  CurrentChartSettingsNotifier() : super(null) {
     print(
       'running CurrentLocationNotifier constructor, with value?.location.name: ${value?.location.name}, value?.year: ${value?.year}, value?.timeZone.name: ${value?.timeZone.name}',
     );
