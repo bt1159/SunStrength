@@ -37,7 +37,7 @@ Vector4 colorValuesFromMap(
 ]) {
   // void colorTest(double strength) {
   final Colormap localColorMap = colormap ?? constMyColorScheme.$2;
-  final Vector4 vector = localColorMap(strength.clamp(0,1));
+  final Vector4 vector = localColorMap(strength.clamp(0, 1));
   final double r = vector.x * 255;
   final double g = vector.y * 255;
   final double b = vector.z * 255;
@@ -162,12 +162,10 @@ class SavedAppSettings {
        twelveHour = twelveHour ?? true,
        colorScheme = colorScheme ?? colorSchemes.first;
 
-       
   final Location? defaultLocation;
   final bool twelveHour;
   final int? defaultYear;
   final MyColorScheme colorScheme;
-
 
   factory SavedAppSettings.fromSaved(SharedPreferences prefs) {
     Location? newDefaultLocation;
@@ -232,12 +230,8 @@ class SavedAppSettings {
   }
 
   @override
-  int get hashCode => Object.hash(
-    defaultLocation,
-    twelveHour,
-    defaultYear,
-    colorScheme,
-  );
+  int get hashCode =>
+      Object.hash(defaultLocation, twelveHour, defaultYear, colorScheme);
 }
 
 typedef TimedOrbitData =
@@ -458,7 +452,13 @@ double solarStrengthsLocalRelativeToGlobalMax({
   required double k,
   required double h,
   required double theta,
-}) => exp(k * (1 - exp(-h / 8.5)/(cos(pi/2 - theta) + 0.50572 * pow(6.07995 + degrees(theta), -1.6364)))).clamp(0.0, 1.0);
+}) => exp(
+  k *
+      (1 -
+          exp(-h / 8.5) /
+              (cos(pi / 2 - theta) +
+                  0.50572 * pow(6.07995 + degrees(theta), -1.6364))),
+).clamp(0.0, 1.0);
 
 typedef MyColorScheme = (String name, Colormap colormap);
 typedef MyColorSchemes = List<MyColorScheme>;
@@ -469,45 +469,31 @@ final MyColorSchemes colorSchemes = [
 ];
 List<(List<double>, List<Color>)> myColorSchemesDiscrete({
   required double k,
-  required double h,}) => List.generate(
-  colorSchemes.length,
-  (index) {
-    final List<double> values = List.generate(
-      15,
-      (innerIndex) => innerIndex / 14,
+  required double h,
+}) => List.generate(colorSchemes.length, (index) {
+  final List<double> values = List.generate(
+    15,
+    (innerIndex) => innerIndex / 14,
+  );
+  final List<Vector4> colorVectors = List.generate(15, (innerIndex) {
+    return colorValuesFromMap(
+      solarStrengthsLocalRelativeToGlobalMax(
+        k: k,
+        h: h,
+        theta: acos(innerIndex / 14),
+      ),
+      false,
+      colorSchemes[index].$2,
     );
-    final List<Vector4> colorVectors = List.generate(
-      15,
-      (innerIndex) {        
-        return colorValuesFromMap(
-        solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: acos(innerIndex / 14)),
-        false,
-        colorSchemes[index].$2,
-      );
-      },
-    );
-    final List<Color> colors = colorVectors
-        .map(
-          (e) => Color.fromARGB(
-            e.w.toInt(),
-            e.x.toInt(),
-            e.y.toInt(),
-            e.z.toInt(),
-          ),
-        )
-        .toList();
-    return (values, colors);
-  },
-);
-
-class CurrentIndexNotifier extends ValueNotifier<int> {
-  CurrentIndexNotifier() : super(0);
-
-  bool savedSettingsIsInitialized = false;
-
-  @override
-  set value(int newValue) => super.value = newValue.clamp(0, 1);
-}
+  });
+  final List<Color> colors = colorVectors
+      .map(
+        (e) =>
+            Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt()),
+      )
+      .toList();
+  return (values, colors);
+});
 
 /// J2000
 final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
@@ -561,7 +547,7 @@ class OrbitAndSolarValues {
   OrbitAndSolarValues.strengthOnly({
     required this.solarStrengthsLocalRelativeToGlobalMax,
   }) : tzDateTime = date0J2000,
-  hOffsetFromJ2000 = 0,
+       hOffsetFromJ2000 = 0,
        earthRotationAngle = 0,
        meanAnomaly = 0,
        eccentricAnomaly = 0,
@@ -584,10 +570,6 @@ class OrbitAndSolarValues {
   final double solarElevationAngle;
   final double solarAzimuthAngle;
   final double solarStrengthsLocalRelativeToGlobalMax;
-}
-
-class DayDataNotifier extends ValueNotifier<List<OrbitAndSolarValues>?> {
-  DayDataNotifier(super.value);
 }
 
 /// {@template ImagePainter}
@@ -633,7 +615,6 @@ class ImagePainter extends CustomPainter {
     return oldDelegate.image != image;
   }
 }
-
 
 class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
@@ -737,11 +718,11 @@ typedef TooltipInfo = ({
   String tooltipText24,
 });
 
-class KNotifier extends ValueNotifier<double> {
-  KNotifier([super.value = 2]);
-}
-
-typedef AzimuthChartData = ({Iterable<Offset> solarDataOffsets, Iterable<double> solarDataStrengths, Iterable<tz.TZDateTime> tzDateTime});
+typedef AzimuthChartData = ({
+  Iterable<Offset> solarDataOffsets,
+  Iterable<double> solarDataStrengths,
+  Iterable<tz.TZDateTime> tzDateTime,
+});
 
 extension TZDateTimeOnHour on tz.TZDateTime {
   bool get isOnTheHour {
@@ -749,7 +730,7 @@ extension TZDateTimeOnHour on tz.TZDateTime {
   }
 }
 
-/// Calculates two points (p1, p2) centered on [centerPoint], 
+/// Calculates two points (p1, p2) centered on [centerPoint],
 /// aligned with [circleCenter], with a total length of [strokeWidth].
 ({Offset p1, Offset p2}) calculateSegment({
   required Offset centerPoint,
@@ -781,7 +762,6 @@ extension TZDateTimeOnHour on tz.TZDateTime {
   return (p1: p1, p2: p2);
 }
 
-
 // Offset calculateLabelPoint({
 //   required Offset hourMarkerPoint,
 //   required Offset circleCenter,
@@ -812,7 +792,6 @@ extension TZDateTimeOnHour on tz.TZDateTime {
 //   return (p1: p1, p2: p2);
 // }
 
-
 Offset getPerpendicularUnitVector(Offset p1, Offset p2) {
   final double dx = p2.dx - p1.dx;
   final double dy = p2.dy - p1.dy;
@@ -821,9 +800,11 @@ Offset getPerpendicularUnitVector(Offset p1, Offset p2) {
 
   // Prevent division by zero if the points are identical
   if (distance == 0.0) {
-    return Offset.zero; 
+    return Offset.zero;
   }
 
   // Swap components, negate one, and divide by the distance
   return Offset(-dy / distance, dx / distance);
 }
+
+const double kButtonTapTargetPadding = 4.0;

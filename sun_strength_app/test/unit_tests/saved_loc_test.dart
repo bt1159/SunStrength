@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:flutter_test/flutter_test.dart';
 // import 'package:mocktail/mocktail.dart';
 

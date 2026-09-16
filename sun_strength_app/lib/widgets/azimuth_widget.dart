@@ -4,9 +4,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:provider/provider.dart';
-import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_settings_notifier.dart';
+import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 typedef SolarPathHourlyData = ({

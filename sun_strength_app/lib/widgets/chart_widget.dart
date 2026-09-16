@@ -3,9 +3,10 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/errors.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_settings_notifier.dart';
+import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -20,16 +21,10 @@ class ChartWidget extends StatefulWidget {
     super.key,
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
-    required this.year,
-    required this.timeZone,
   });
 
   final int nXAxisBuckets;
   final int nYAxisBuckets;
-  final int year;
-  final tz.Location timeZone;
-  bool get leapYear => isLeapYear(year);
-  int get nDays => leapYear ? 366 : 365;
 
   @override
   State<ChartWidget> createState() => _ChartWidgetState();
@@ -39,22 +34,24 @@ class _ChartWidgetState extends State<ChartWidget> {
   int ticks = DateTime.now().millisecondsSinceEpoch;
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
   static const Offset toolTipFormattingOffset = Offset(0, 40);
-  // static const Offset toolTipFormattingOffset = Offset(20, 20);
 
   List<OrbitAndSolarValues> _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
     List<OrbitAndSolarValues> orbitAndSolarValuesList,
+    tz.Location timeZone,
+    int year,
   ) {
     final double x = chartTextLocalPosition.dx;
     final double y = chartTextLocalPosition.dy;
+    final int nDays = isLeapYear(year) ? 366 : 365;
 
     // Calculate grid cell dimensions dynamically based on current layout size
-    final double pxWidth = chartSize.width / widget.nDays;
+    final double pxWidth = chartSize.width / nDays;
     final double pxHeight = chartSize.height / 96;
 
     // Determine the exact row and column indices
-    final int dayIndex = (x / pxWidth).floor().clamp(0, widget.nDays - 1);
+    final int dayIndex = (x / pxWidth).floor().clamp(0, nDays - 1);
     final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
     // Look up data parameters safely.  First index is day, then time
     final List<OrbitAndSolarValues> osSingleDay = orbitAndSolarValuesList
@@ -64,8 +61,8 @@ class _ChartWidgetState extends State<ChartWidget> {
     final int datetimeDelta =
         (((dayIndex * 24 * 60) + 15 * timeIndex) * 60 * 1000);
     final tz.TZDateTime hoverDateTimeRaw = tz.TZDateTime(
-      widget.timeZone,
-      widget.year,
+      timeZone,
+      year,
     ).add(Duration(milliseconds: datetimeDelta));
     _tooltipNotifier.value = (
       hoverBoxPosition: chartTextLocalPosition + toolTipFormattingOffset,
@@ -78,7 +75,6 @@ class _ChartWidgetState extends State<ChartWidget> {
   }
 
   void _hideTooltip() {
-    // print('running hideTooltip');
     if (_tooltipNotifier.value != null) _tooltipNotifier.value = null;
   }
 
@@ -99,106 +95,125 @@ class _ChartWidgetState extends State<ChartWidget> {
     print(
       'running _PublicChartRenderObjectWidgetState.build, ${_tooltipNotifier.value == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}',
     );
-    return Stack(
-      clipBehavior: Clip.hardEdge,
+    return Column(
       children: [
-        Selector<SavedSettingsNotifier, bool>(
-          selector: (_, savedSettingsNotifier) =>
-              savedSettingsNotifier.value?.twelveHour ?? true,
-          builder: (context, twelveHour, child) => _ChartRenderObjectWidget(
-            nXAxisBuckets: widget.nXAxisBuckets,
-            nYAxisBuckets: widget.nYAxisBuckets,
-            twelveHour: twelveHour,
-            leapYear: widget.leapYear,
-            chartArrayWidget: child!,
-          ),
-          child: Consumer<OrbitAndSolarValuesListNotifier>(
-            builder: (context, orbitAndSolarValuesListNotifier, child) {
-              return Selector<SavedSettingsNotifier, MyColorScheme?>(
-                selector: (_, savedAppSettingsNotifier) =>
-                    savedAppSettingsNotifier.value?.colorScheme,
-                shouldRebuild: (previous, next) {
-                  return previous?.$1 != next?.$1;
-                },
-                builder: (context, colorScheme, child) {
-                  print(
-                    'Running builder just under color map selector in chart, colorScheme: ${colorScheme == null ? 'null' : ColorMapPicker.getName(colorScheme.$2)}}',
-                  );
-                  List<OrbitAndSolarValues> orbitAndSolarValuesList =
-                      orbitAndSolarValuesListNotifier.value;
-                  // Offset localPosition = Offset(0, 0);
-                  List<OrbitAndSolarValues> osSingleDay =
-                      <OrbitAndSolarValues>[];
-                  return MouseRegion(
-                    onHover: (event) {
-                      final RenderBox box =
-                          context.findRenderObject() as RenderBox;
-                      osSingleDay = _handleChartHover(
-                        event.localPosition,
-                        box.size,
-                        orbitAndSolarValuesList,
-                      );
-                    },
-                    onExit: (_) => _hideTooltip(),
-                    child: GestureDetector(
-                      onTap: () {
-                        print('running GestureDetector.onTapUp');
-                        print(
-                          'about to update DayDataNotifier, first datetime: ${osSingleDay.first.tzDateTime}',
-                        );
-                        context.read<DayDataNotifier>().value = osSingleDay;
-                      },
-                      child: FutureBuilderChartImage(
-                        orbitAndSolarValuesIterable:
-                            orbitAndSolarValuesListNotifier.value,
-                        colormap: colorScheme?.$2,
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+        Align(
+          alignment: AlignmentGeometry.centerLeft,
+          child: Text(
+            'Sun strength throughout the year',
+            style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
-        // 2. The Floating Tooltip Popup Layer
-        ValueListenableBuilder<TooltipInfo?>(
-          valueListenable: _tooltipNotifier,
-          builder: (context, tooltipInfo, child) {
-            if (tooltipInfo != null) {
-              return Positioned(
-                // Position it dynamically relative to the cursor position!
-                left: tooltipInfo.hoverBoxPosition.dx,
-                // Offset slightly to clear the cursor graphic
-                top: tooltipInfo.hoverBoxPosition.dy,
-                child: IgnorePointer(
-                  // Prevents the tooltip box from stealing mouse focus
-                  child: Container(
-                    // padding: const EdgeInsets.all(8),
-                    padding: const EdgeInsets.all(0),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(4),
+        const SizedBox(height: 5),
+        Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Selector<CurrentChartSettingsNotifier, (int, tz.Location)?>(
+              selector: (_, currentChartSettingsNotifier) =>
+                  currentChartSettingsNotifier.value == null
+                  ? null
+                  : (
+                      currentChartSettingsNotifier.value!.year,
+                      currentChartSettingsNotifier.value!.timeZone,
                     ),
-                    child: Selector<SavedSettingsNotifier, bool>(
-                      selector: (_, savedSettingsNotifier) =>
-                          savedSettingsNotifier.value?.twelveHour ?? true,
-                      builder: (_, twelveHour, _) => Text(
-                        twelveHour
-                            ? tooltipInfo.tooltipText12
-                            : tooltipInfo.tooltipText24,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
+              builder: (_, currentSettings, _) {
+                if (currentSettings == null) return SizedBox.shrink();
+                final (year, timeZone) = currentSettings;
+                return Selector<SavedSettingsNotifier, bool>(
+                  selector: (_, savedSettingsNotifier) =>
+                      savedSettingsNotifier.value?.twelveHour ?? true,
+                  builder: (context, twelveHour, child) =>
+                      _ChartRenderObjectWidget(
+                        nXAxisBuckets: widget.nXAxisBuckets,
+                        nYAxisBuckets: widget.nYAxisBuckets,
+                        twelveHour: twelveHour,
+                        leapYear: isLeapYear(year),
+                        chartArrayWidget: child!,
+                      ),
+                  child: Consumer<OrbitAndSolarValuesListNotifier>(
+                    builder: (context, orbitAndSolarValuesListNotifier, _) {
+                      List<OrbitAndSolarValues> orbitAndSolarValuesList =
+                          orbitAndSolarValuesListNotifier.value;
+                      List<OrbitAndSolarValues> osSingleDay =
+                          <OrbitAndSolarValues>[];
+                      return MouseRegion(
+                        onHover: (event) {
+                          final RenderBox box =
+                              context.findRenderObject() as RenderBox;
+                          osSingleDay = _handleChartHover(
+                            event.localPosition,
+                            box.size,
+                            orbitAndSolarValuesList,
+                            timeZone,
+                            year,
+                          );
+                        },
+                        onExit: (_) => _hideTooltip(),
+                        child: GestureDetector(
+                          onTap: () => context.read<DayDataNotifier>().value =
+                              osSingleDay,
+                          child:
+                              Selector<SavedSettingsNotifier, MyColorScheme?>(
+                                selector: (_, savedAppSettingsNotifier) =>
+                                    savedAppSettingsNotifier.value?.colorScheme,
+                                shouldRebuild: (previous, next) =>
+                                    previous?.$1 != next?.$1,
+                                builder: (context, colorScheme, child) {
+                                  return FutureBuilderChartImage(
+                                    orbitAndSolarValuesIterable:
+                                        orbitAndSolarValuesListNotifier.value,
+                                    colormap: colorScheme?.$2,
+                                  );
+                                },
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            // 2. The Floating Tooltip Popup Layer
+            ValueListenableBuilder<TooltipInfo?>(
+              valueListenable: _tooltipNotifier,
+              builder: (context, tooltipInfo, child) {
+                if (tooltipInfo != null) {
+                  return Positioned(
+                    // Position it dynamically relative to the cursor position!
+                    left: tooltipInfo.hoverBoxPosition.dx,
+                    // Offset slightly to clear the cursor graphic
+                    top: tooltipInfo.hoverBoxPosition.dy,
+                    child: IgnorePointer(
+                      // Prevents the tooltip box from stealing mouse focus
+                      child: Container(
+                        // padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(0),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Selector<SavedSettingsNotifier, bool>(
+                          selector: (_, savedSettingsNotifier) =>
+                              savedSettingsNotifier.value?.twelveHour ?? true,
+                          builder: (_, twelveHour, _) => Text(
+                            twelveHour
+                                ? tooltipInfo.tooltipText12
+                                : tooltipInfo.tooltipText24,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            } else {
-              return const SizedBox.shrink();
-            }
-          },
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
+              },
+            ),
+          ],
         ),
       ],
     );

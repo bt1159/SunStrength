@@ -5,7 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sun_strength_app/models/current_location_notifier.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'dart:async';
 import 'package:google_maps/google_maps_places.dart' as gmaps_places;
@@ -39,7 +39,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   bool _isClickable = true;
 
   void syncIsClickable() {
-    if (context.read<CurrentIndexNotifier>().value == 0){
+    if (context.read<PageIndexNotifier>().value == 0){
     setState(() {
       _isClickable = false;
     });} else {
@@ -68,12 +68,12 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       );
     }
 
-    context.read<CurrentIndexNotifier>().addListener(syncIsClickable);
+    context.read<PageIndexNotifier>().addListener(syncIsClickable);
   }
 
   @override
   void dispose() {
-    context.read<CurrentIndexNotifier>().removeListener(syncIsClickable);    
+    context.read<PageIndexNotifier>().removeListener(syncIsClickable);    
   _searchController.dispose();
   _mapController?.dispose();
     super.dispose();
@@ -433,7 +433,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               print(
                 "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",
               );
-              context.read<CurrentIndexNotifier>().value = 0;
+              context.read<PageIndexNotifier>().value = 0;
               print("Just triggerred an index switch");
             },
             child: const Text(

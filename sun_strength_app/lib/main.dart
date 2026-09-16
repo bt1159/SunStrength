@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:sun_strength_app/models/current_location_notifier.dart';
-import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_settings_notifier.dart';
 import 'package:sun_strength_app/screens/location_selector_route.dart';
 import 'screens/chart_route.dart';
 import 'package:provider/provider.dart';
-
-
+import 'package:sun_strength_app/models/main_notifiers.dart';
 
 class CurrentIndex {
   const CurrentIndex(this.value);
   final int value;
 }
 
+late final SavedSettingsNotifier savedSettings;
+
 void main() {
   print('running main()');
+  WidgetsFlutterBinding.ensureInitialized();
+  savedSettings = SavedSettingsNotifier();
   runApp(const MyApp());
 }
 
@@ -25,75 +25,77 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('Started build method for MyApp');
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<SavedSettingsNotifier>(
-          create: (_) => SavedSettingsNotifier(),
+    return MaterialApp(
+      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark, // <-- This does the heavy lifting
         ),
-        ChangeNotifierProxyProvider<
-          SavedSettingsNotifier,
-          CurrentChartSettingsNotifier
-        >(
-          create: (_) => CurrentChartSettingsNotifier(),
-          update: (_, savedLocationNotifier, previous) {
-            if (previous == null) {
-              throw 'previous CurrentLocationNotifier is null';
-            }
-            if (!previous.savedChartSettingsLoaded &&
-                savedLocationNotifier.isInitialized &&
-                savedLocationNotifier.value != null) {
-              return previous..updateWithInitialSaved(
-                newLocation: savedLocationNotifier.value?.defaultLocation,
-                newYear: savedLocationNotifier.value?.defaultYear,
-              );
-            } else if (savedLocationNotifier.value?.defaultYear !=
-                previous.value?.year) {
-              return previous..updateCurrentChartSettings(
-                newYear: savedLocationNotifier.value?.defaultYear,
-              );
-            } else {
-              return previous;
-            }
-          },
-        ),
-      ],
-      child: MaterialApp(
-        title: 'Flutter Demo',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark, // <-- This does the heavy lifting
+      ),
+      themeMode: ThemeMode.dark,
+      home: MultiProvider(
+        providers: [          
+          ChangeNotifierProvider<SavedSettingsNotifier>.value(
+            value: savedSettings,
           ),
-        ),
-        themeMode: ThemeMode.dark,
-        home: ChangeNotifierProxyProvider<SavedSettingsNotifier, CurrentIndexNotifier>(
-          create: (context) => CurrentIndexNotifier(),
-          update: (context, savedSettingsNotifier, previous) {
-            if (previous == null) throw 'previous is null';
-            // If SavedSettingsNotifier still is not initialized, don't do anything
-            if (!savedSettingsNotifier.isInitialized) return previous;
-            // If SavedSettingsNotifier was already initialized the last time this update ran, don't do anything
-            if (previous.savedSettingsIsInitialized) return previous;
-            // This is the first update from SavedSettingsNotifier, start by recording initializtion
-            previous.savedSettingsIsInitialized = true;
+          ChangeNotifierProxyProvider<
+            SavedSettingsNotifier,
+            CurrentChartSettingsNotifier
+          >(
+            create: (_) => CurrentChartSettingsNotifier(),
+            update: (_, savedLocationNotifier, previous) {
+              if (previous == null) {
+                throw 'previous CurrentLocationNotifier is null';
+              }
+              if (!previous.savedChartSettingsLoaded &&
+                  savedLocationNotifier.isInitialized &&
+                  savedLocationNotifier.value != null) {
+                return previous..updateWithInitialSaved(
+                  newLocation: savedLocationNotifier.value?.defaultLocation,
+                  newYear: savedLocationNotifier.value?.defaultYear,
+                );
+              } else if (savedLocationNotifier.value?.defaultYear !=
+                  previous.value?.year) {
+                return previous..updateCurrentChartSettings(
+                  newYear: savedLocationNotifier.value?.defaultYear,
+                );
+              } else {
+                return previous;
+              }
+            },
+          ),
+          ChangeNotifierProxyProvider<
+            SavedSettingsNotifier,
+            PageIndexNotifier
+          >(
+            create: (context) => PageIndexNotifier(),
+            update: (context, savedSettingsNotifier, previous) {
+              if (previous == null) throw 'previous is null';
+              // If SavedSettingsNotifier still is not initialized, don't do anything
+              if (!savedSettingsNotifier.isInitialized) return previous;
+              // If SavedSettingsNotifier was already initialized the last time this update ran, don't do anything
+              if (previous.savedSettingsIsInitialized) return previous;
+              // This is the first update from SavedSettingsNotifier, start by recording initializtion
+              previous.savedSettingsIsInitialized = true;
 
-            // If there already is a location selected, presumably because we are well past the initial load OR
-            // the default has been loaded and it is NOT null, which means that current location has been
-            // updated or is about to be, just go to the chart page.
-            
+              // If there already is a location selected, presumably because we are well past the initial load OR
+              // the default has been loaded and it is NOT null, which means that current location has been
+              // updated or is about to be, just go to the chart page.
 
-            if (context.read<CurrentChartSettingsNotifier>().value != null ||
-                savedSettingsNotifier.value?.defaultLocation != null) {
-              previous.value = 0;
-            } else {
-              previous.value = 1;
-            }
-            return previous;
-          },
-          child: const SettingsLoadingHandler(),
-        ),
+              if (context.read<CurrentChartSettingsNotifier>().value != null ||
+                  savedSettingsNotifier.value?.defaultLocation != null) {
+                previous.value = 0;
+              } else {
+                previous.value = 1;
+              }
+              return previous;
+            },
+          ),
+        ],
+        child: const SettingsLoadingHandler(),
       ),
     );
   }
@@ -140,7 +142,7 @@ class MainScaffoldAndIndexedStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CurrentIndexNotifier>(
+    return Consumer<PageIndexNotifier>(
       builder: (context, currentIndexNotifier, child) => Scaffold(
         appBar: [
           AppBar(
@@ -294,7 +296,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
               ? null
               : IconButton(
                   onPressed: () =>
-                      context.read<CurrentIndexNotifier>().value = 0,
+                      context.read<PageIndexNotifier>().value = 0,
                   icon: const Icon(Icons.arrow_back),
                 ),
         );

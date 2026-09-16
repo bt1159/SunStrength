@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/saved_settings_notifier.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
 
 class ColorScaleWidget extends StatelessWidget {
   const ColorScaleWidget({super.key});
@@ -212,37 +212,6 @@ class ColorScaleRenderObject extends RenderBox
     if (child != null) {
       final BoxParentData childParentData = child!.parentData as BoxParentData;
       context.paintChild(child!, offset + childParentData.offset);
-
-      // // Layout the two extremem labels so that I can use half of the widths to get the color bar's width
-      // final farLeftTextPainter = labelTextPainter(0)..layout();
-      // final farRightTextPainter = labelTextPainter(_labelValues.length - 1)
-      //   ..layout();
-
-      // // Define size of colored bar
-      // final Size rectSize = Size(
-      //   size.width -
-      //       (farLeftTextPainter.width / 2 + farRightTextPainter.width / 2),
-      //   _barHeight,
-      // );
-      // final Offset rectOffset = offset + Offset(farLeftTextPainter.width / 2, 0);
-      // final Rect rect = rectOffset & rectSize;
-
-      // // Define painting (i.e, gradient) for colored bar
-      // final Paint gradientPainter = Paint()
-      //   ..shader = const LinearGradient(
-      //     begin: Alignment.centerLeft,
-      //     end: Alignment.centerRight,
-      //     colors: <Color>[
-      //       Color(0xFF000000),
-      //       Color(0xFFFF0000),
-      //       Color(0xFFFFFF00),
-      //       Color(0xFFFFFFFF),
-      //     ],
-      //     stops: <double>[0.0, 1 / 3, 2 / 3, 1.0],
-      //   ).createShader(rect);
-
-      // // Draw the rectangle onto the canvas
-      // canvas.drawRect(rect, gradientPainter);
 
       // Define style for vertical lines in bar
       final Paint gridPaint = Paint()

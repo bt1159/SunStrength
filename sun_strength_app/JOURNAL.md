@@ -1,4 +1,24 @@
 # Daily log
+## 2026-09-16
+I will focus now on tailoring what makes the azimuth chart disappear vs. what makes it update.  I actually can't think of anything that should make it disappear.  Perhaps I should add a button to hide it, since that always bugs me.  Like when a car stereo has a pause button but no power button.
+
+Dependencies in Azimuth widget
+Consumer<DayDataNotifier>: null = blank, not-null = use in regular widget
+Selector<SavedSettingsNotifier, MyColorScheme?>: use in regular widget
+Selector<SavedSettingsNotifier, bool>twelveHour: use in regular widget
+Selector<CurrentChartSettingsNotifier, double>latitude: use in regular widget
+Consumer<KNotifier>: use in regular widget
+
+The only thing currently that blanks this out is if datDataNotifier is blanked.  So, I now have to go see what blanks that out and change that.
+Ok.  I have now fixed the blanking out.  Changing location no longer blanks it out.
+
+I did a bunch of refactoring to put notifiers into two files (main level and then chart level).
+
+## 2026-09-15
+Did some refactoring in chart route to make the tree easier to navigate.  It might improve performance slightly, but that was not the main purpose.  It will also make it easier to tweak the layout of the chart route page, especially spacing in the column.
+
+Ok, the spacing looks pretty good, now.  I will move on.
+
 ##2026-09-14
 I started by cleaning up azimuth_widget a bit.  Particularly the paint() method.  I pulled out the paintint logic for each major pieces to make the code more readable.  Then, I have attempted to add logic that skips any labels that would overlap a preexisting label.
 
@@ -217,11 +237,9 @@ Actually, I decided.  I should only blank out the azimuth chart (when it was pre
 
 Also, changing k should indeed update the data but NOT blank it out.
 
-## Don't scroll location
-
-## Add a button to go back to default location
-
 ## Something weird is happening with the RadialGradient in the azimuth chart.   Check Phoenixville, visible light, around Winter Soltice.  The path seems to jump directly from purple to orange.  Actually, even around summer soltice
 
 ## Improve hover location
 There are probably a lot of improvements that could be made.  For now, though, at least make it jump up above pointer if it gets to the bottom (so it doesn't get cut off).
+
+## Move CNP for saved settings lower with some sort of trigger early on to pre-build it in the background.  Also, move CNP for current chart settings lower.  They don't need to be much lower, but I might as well group them with the others just below them.
