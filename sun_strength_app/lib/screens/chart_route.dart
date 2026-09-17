@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/screens/location_selector_route.dart';
+import 'package:sun_strength_app/screens/location_selection_route.dart';
 import 'package:sun_strength_app/widgets/azimuth_widget.dart';
 import 'package:sun_strength_app/widgets/color_scale_widget.dart';
 // import 'package:timezone/timezone.dart' as tz;
@@ -17,9 +17,9 @@ import 'package:sun_strength_app/models/main_notifiers.dart';
 /// Its only actual function is to expose the [Consumer] of the [CurrentChartSettingsNotifier] to widgets below.
 ///
 /// {@endtemplate}
-class ChartHomePage extends StatelessWidget {
+class ChartRoute extends StatelessWidget {
   /// {@macro ChartHomePage}
-  const ChartHomePage({super.key});
+  const ChartRoute({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +202,7 @@ class ScrollableChartPageWidget extends StatelessWidget {
                 const KButtonRow(),
                 const LocationButtonRow(),
                 const DropdownColorschemeButton(),
-                const AzimuthWidget(),
+                const AzimuthChart(),
               ],
             ),
           ),
@@ -343,7 +343,7 @@ class LocationButtonRow extends StatelessWidget {
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const LocationSelectionScreen(),
+                  builder: (_) => const LocationSelectionRoute(),
                 ),
               ),
               child: Text('Change location'),

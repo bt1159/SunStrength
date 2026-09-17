@@ -844,6 +844,7 @@ class MainScaffoldDrawer extends StatelessWidget {
             },
             title: Text('Change Year'),
           ),
+        ListTile(onTap: () => context.read<SavedSettingsNotifier>().clearSettings(),title: Text('DEV ONLY: Wipe defaults')),
         ],
       ),
     );

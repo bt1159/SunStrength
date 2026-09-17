@@ -1,6 +1,5 @@
-import 'package:sun_strength_app/models/helpers.dart';
 import 'package:flutter/material.dart';
-import 'package:sun_strength_app/screens/location_selector_route.dart';
+import 'package:sun_strength_app/screens/location_selection_route.dart';
 import 'screens/chart_route.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
@@ -150,13 +149,13 @@ class _InitScreenState extends State<InitScreen> {
       if (currentSettingsNotNull) {
         // Replaces InitScreen with ChooseXyzScreen as the base route
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ChartHomePage()),
+          MaterialPageRoute(builder: (_) => const ChartRoute()),
         );
       } else {
         // Replaces InitScreen with ChartScreen as the base route
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => const LocationSelectionScreen(isInitialLoad: true),
+            builder: (_) => const LocationSelectionRoute(isInitialLoad: true),
           ),
         );
       }

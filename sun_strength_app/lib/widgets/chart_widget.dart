@@ -473,7 +473,7 @@ class _ChartRenderObject extends RenderBox
     334,
     365,
   ];
-
+  
   /// Horizontal gap between y axis labels and chart
   static const double hLabelGap = 10;
 
@@ -625,6 +625,7 @@ class _ChartRenderObject extends RenderBox
 
   @override
   void performLayout() {
+    constraints;
     double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()

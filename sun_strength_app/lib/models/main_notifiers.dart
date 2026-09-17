@@ -115,7 +115,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  // Load from localStorage on boot
+  /// Load from localStorage on boot
   // CALLS NOTIFYLISTENERS
   Future<void> _loadSettingsFromStorage() async {
     print('Starting SavedSettingsNotifier._loadSettingsFromStorage');
@@ -134,7 +134,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     print('Finished SavedSettingsNotifier._loadSettingsFromStorage');
   }
 
-  // Update location and/or timezone from the selection screen.  NOTE: a null passed for either input will NOT setting the setting to null.
+  /// Update location and/or timezone from the selection screen.  NOTE: a null passed for either input will NOT setting the setting to null.
   // Instead, it will skip that setting.
   // CALLS NOTIFYLISTENERS
   Future<void> updateSettings(
@@ -176,7 +176,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     print('just finished saving new settings: value: $value');
   }
 
-  // Clear location and timezone
+  /// Clear all settings from memory
   Future<void> clearSettings() async {
     final SavedAppSettings settings = SavedAppSettings(defaultLocation: null);
     value = settings;
@@ -189,7 +189,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     print('just finished clearing saved settings, value: $value');
   }
 
-  // Update location from the selection screen
+  /// Update location from the selection screen
   Future<void> updateLocation(Location newLocation) async {
     if (value?.defaultLocation == newLocation) return;
     final SavedAppSettings settings = SavedAppSettings(
@@ -203,7 +203,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.setString('default_solar_location', newLocation.toJSONString);
   }
 
-  // Clear location
+  /// Clear location
   Future<void> clearLocation() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: null,
@@ -216,7 +216,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.remove('default_solar_location');
   }
 
-  // Update twelveHour from the selection screen
+  /// Update twelveHour from the selection screen
   Future<void> updateTwelveHour(bool twelveHour) async {
     print('running updateTwelveHour with twelveHour: $twelveHour');
     if (value?.twelveHour == twelveHour) {
@@ -239,7 +239,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.setString('twelveHour', twelveHour.toString());
   }
 
-  // Clear twelveHour
+  /// Clear twelveHour
   Future<void> clearTwelveHour() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,
@@ -251,7 +251,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.remove('twelveHour');
   }
 
-  // Update year from the selection screen
+  /// Update year from the selection screen
   Future<void> updateYear(int newYear) async {
     print('running updateYear with newYear: $newYear');
     if (value?.defaultYear == newYear) {
@@ -274,7 +274,7 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
     await prefs.setString('default_solar_year', newYear.toString());
   }
 
-  // Clear year
+  /// Clear year
   Future<void> clearYear() async {
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: value?.defaultLocation,

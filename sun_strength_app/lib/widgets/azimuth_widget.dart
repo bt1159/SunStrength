@@ -9,14 +9,8 @@ import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-typedef SolarPathHourlyData = ({
-  tz.TZDateTime tzDateTime,
-  Offset centerPoint,
-  Offset normalVHat,
-});
-
-class AzimuthWidget extends StatelessWidget {
-  const AzimuthWidget({super.key});
+class AzimuthChart extends StatelessWidget {
+  const AzimuthChart({super.key});
 
   AzimuthChartData generateLists({
     required List<OrbitAndSolarValues> osSingleDay,
@@ -55,69 +49,180 @@ class AzimuthWidget extends StatelessWidget {
         );
         final tz.TZDateTime hoverDateTimeRaw =
             dayDataNotifier.value[12 * 4].tzDateTime;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            child!,
-            Text(
-              intl.DateFormat('d MMM yyyy').format(hoverDateTimeRaw),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            Selector<SavedSettingsNotifier, MyColorScheme?>(
-              selector: (_, savedAppSettingsNotifier) =>
-                  savedAppSettingsNotifier.value?.colorScheme,
-              shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
-              builder: (context, myColorScheme, child) =>
-                  Selector<SavedSettingsNotifier, bool>(
-                    selector: (_, savedAppSettingsNotifier) =>
-                        savedAppSettingsNotifier.value?.twelveHour ?? true,
-                    builder: (context, twelveHour, child) =>
-                        Selector<CurrentChartSettingsNotifier, double>(
-                          selector: (_, currentChartSettingsNotifier) =>
-                              currentChartSettingsNotifier
-                                  .value
-                                  ?.location
-                                  .latLng
-                                  .latitude ??
-                              0,
-                          builder: (context, latitude, child) {
-                            return Consumer<KNotifier>(
-                              builder: (context, kNotifier, child) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(40.0),
-                                  child: AspectRatio(
-                                    aspectRatio: 1.0,
-                                    child: CustomPaint(
-                                      painter: CustomPathRibbonPainter(
-                                        twelveHour: twelveHour,
-                                        lat: latitude,
-                                        azimuthChartData: azimuthChartData,
-                                        colorScheme:
-                                            myColorScheme ?? constMyColorScheme,
-                                        appBackgroundColor: Theme.of(
-                                          context,
-                                        ).colorScheme.surface,
-                                        k: kNotifier.value,
-                                        h:
-                                            context
-                                                .read<
-                                                  CurrentChartSettingsNotifier
-                                                >()
-                                                .value
-                                                ?.h ??
-                                            0,
-                                        // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
+        return ChangeNotifierProvider<AzChartSizeNotifier>(
+          create: (context) => AzChartSizeNotifier(AzChartSize.large),
+          builder: (context, _) {
+            return Consumer<AzChartSizeNotifier>(
+              builder: (context, azChartSizeNotifier, _) {
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    double maxWidth = constraints.maxWidth;
+                    final AzChartSizeComplete large = (
+                      width: maxWidth,
+                      azChartSize: AzChartSize.large,
+                    );
+                    final AzChartSizeComplete small = (
+                      width: (maxWidth / 4).clamp(200, maxWidth),
+                      azChartSize: AzChartSize.small,
+                    );
+                    final AzChartSizeComplete medium = (
+                      width: (small.width + large.width) / 2,
+                      azChartSize: AzChartSize.medium,
+                    );
+                    void onPressedSmall() =>
+                        azChartSizeNotifier.value == small.azChartSize ||
+                            small.width == large.width
+                        ? null
+                        : azChartSizeNotifier.value = small.azChartSize;
+                    void onPressedMedium() =>
+                        azChartSizeNotifier.value == medium.azChartSize ||
+                            medium.width == large.width
+                        ? null
+                        : azChartSizeNotifier.value = medium.azChartSize;
+                    void onPressedLarge() =>
+                        azChartSizeNotifier.value == large.azChartSize
+                        ? null
+                        : azChartSizeNotifier.value = large.azChartSize;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            child!,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 4,
+                              children: [
+                                ElevatedButton(
+                                  onPressed:
+                                      azChartSizeNotifier.value ==
+                                              small.azChartSize ||
+                                          small.width == large.width
+                                      ? null
+                                      : onPressedSmall,
+                                  child: Text('S'),
+                                ),
+                                ElevatedButton(
+                                  onPressed:
+                                      azChartSizeNotifier.value ==
+                                              medium.azChartSize ||
+                                          medium.width == large.width
+                                      ? null
+                                      : onPressedMedium,
+                                  child: Text('M'),
+                                ),
+                                ElevatedButton(
+                                  onPressed:
+                                      azChartSizeNotifier.value ==
+                                          large.azChartSize
+                                      ? null
+                                      : onPressedLarge,
+                                  child: Text('L'),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                  ),
-            ),
-          ],
+                        Text(
+                          intl.DateFormat(
+                            'd MMM yyyy',
+                          ).format(hoverDateTimeRaw),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        Container(
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          child: Selector<SavedSettingsNotifier, MyColorScheme?>(
+                            selector: (_, savedAppSettingsNotifier) =>
+                                savedAppSettingsNotifier.value?.colorScheme,
+                            shouldRebuild: (previous, next) =>
+                                previous?.$1 != next?.$1,
+                            builder: (context, myColorScheme, _) =>
+                                Selector<SavedSettingsNotifier, bool>(
+                                  selector: (_, savedAppSettingsNotifier) =>
+                                      savedAppSettingsNotifier
+                                          .value
+                                          ?.twelveHour ??
+                                      true,
+                                  builder: (context, twelveHour, _) =>
+                                      Selector<
+                                        CurrentChartSettingsNotifier,
+                                        double
+                                      >(
+                                        selector:
+                                            (_, currentChartSettingsNotifier) =>
+                                                currentChartSettingsNotifier
+                                                    .value
+                                                    ?.location
+                                                    .latLng
+                                                    .latitude ??
+                                                0,
+                                        builder: (context, latitude, _) {
+                                          return Consumer<KNotifier>(
+                                            builder: (context, kNotifier, _) {
+                                              return Padding(
+                                                padding: const EdgeInsets.all(
+                                                  40.0,
+                                                ),
+                                                child: ConstrainedBox(
+                                                  constraints: BoxConstraints(
+                                                    maxWidth:
+                                                        switch (azChartSizeNotifier
+                                                            .value) {
+                                                          AzChartSize.large =>
+                                                            large.width,
+                                                          AzChartSize.medium =>
+                                                            medium.width,
+                                                          AzChartSize.small =>
+                                                            small.width,
+                                                        },
+                                                  ),
+                                                  child: AspectRatio(
+                                                    aspectRatio: 1.0,
+                                                    child: CustomPaint(
+                                                      painter: CustomPathRibbonPainter(
+                                                        twelveHour: twelveHour,
+                                                        lat: latitude,
+                                                        azimuthChartData:
+                                                            azimuthChartData,
+                                                        colorScheme:
+                                                            myColorScheme ??
+                                                            constMyColorScheme,
+                                                        appBackgroundColor:
+                                                            Theme.of(
+                                                              context,
+                                                            ).colorScheme.surface,
+                                                        k: kNotifier.value,
+                                                        h:
+                                                            context
+                                                                .read<
+                                                                  CurrentChartSettingsNotifier
+                                                                >()
+                                                                .value
+                                                                ?.h ??
+                                                            0,
+                                                        // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
+          },
         );
       },
       child: Text(
@@ -504,7 +609,7 @@ class CustomPathRibbonPainter extends CustomPainter {
 
       final TextSpan textSpan = TextSpan(
         text: hourText,
-        style: TextStyle(color: Colors.white, fontSize: strokeWidth),
+        style: TextStyle(color: Colors.white, fontSize: max(strokeWidth, 12)),
       );
 
       final TextPainter textPainter = TextPainter(
@@ -690,3 +795,17 @@ class CustomPathRibbonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPathRibbonPainter oldDelegate) => true;
 }
+
+typedef SolarPathHourlyData = ({
+  tz.TZDateTime tzDateTime,
+  Offset centerPoint,
+  Offset normalVHat,
+});
+
+enum AzChartSize { small, medium, large }
+
+class AzChartSizeNotifier extends ValueNotifier<AzChartSize> {
+  AzChartSizeNotifier(super.value);
+}
+
+typedef AzChartSizeComplete = ({double width, AzChartSize azChartSize});

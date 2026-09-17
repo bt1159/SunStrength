@@ -7,6 +7,10 @@ Oops.  The CNP for saved settings is apparently now too low for the sidebar to r
 
 I have now changed the app structure so that chart screen and location screen are proper Navigator Routes rather than an IndexedStack.  I had to add some extra logic handling the case when the location screen is loaded first because there is no saved setting.
 
+Added a button to change the size of the azimuth chart with some options.
+
+I think I also added a button for dev only to wipe saved settings. (but see problems at the bottom.  I screwed something up.)
+
 ## 2026-09-16
 I will focus now on tailoring what makes the azimuth chart disappear vs. what makes it update.  I actually can't think of anything that should make it disappear.  Perhaps I should add a button to hide it, since that always bugs me.  Like when a car stereo has a pause button but no power button.
 
@@ -251,6 +255,4 @@ There are probably a lot of improvements that could be made.  For now, though, a
 ## I could probably make some of my ChangeNotifier's that are currently nullable classes to non-nullable.  Especially if they are exposed via a ChangeNotifierProxyProvider.
 I just learned that, not only does the update function "right" after the create fuction, literally nothing is built in between.  That means, it is completely safe to create the Notifier with some dummy/blank (but not null) value that will get immediately replaced by a real value.
 
-## Add some kind of button or drop down or something to select the size of the azimuth chart.
-
-## Add button for testing that blanks out all saved settings.
+## OOPS: MAJOR there is now a bug when I wipe saved settings and then restart, it correctly loaded to the maps page, but then when I clicked a location, I went white and I got an error in the console.  Sometrhing about Google Maps could not build before calling buildView

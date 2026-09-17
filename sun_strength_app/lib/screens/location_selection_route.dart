@@ -15,8 +15,8 @@ import 'package:google_maps/google_maps_core.dart' as gmaps;
 import 'package:google_maps/google_maps_geocoding.dart' as gmaps_geo;
 import 'package:sun_strength_app/screens/chart_route.dart';
 
-class LocationSelectionScreen extends StatelessWidget {
-  const LocationSelectionScreen({super.key, this.isInitialLoad = false});
+class LocationSelectionRoute extends StatelessWidget {
+  const LocationSelectionRoute({super.key, this.isInitialLoad = false});
   final bool isInitialLoad;
 
   @override
@@ -451,7 +451,7 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               // context.read<PageIndexNotifier>().value = 0;
               if (widget.isInitialLoad) {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ChartHomePage()),
+                  MaterialPageRoute(builder: (_) => const ChartRoute()),
                 );
               } else {
                 Navigator.of(context).pop();
@@ -510,7 +510,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
                     } else {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (_) => const ChartHomePage(),
+                          builder: (_) => const ChartRoute(),
                         ),
                       );
                     }
