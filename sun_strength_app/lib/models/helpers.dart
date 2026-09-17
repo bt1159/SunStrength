@@ -10,6 +10,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:sun_strength_app/models/errors.dart';
+import 'package:sun_strength_app/models/main_notifiers.dart';
+import 'package:provider/provider.dart';
 
 const kDebugMode = true;
 
@@ -471,28 +473,28 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
   required double k,
   required double h,
 }) => List.generate(colorSchemes.length, (index) {
-  final List<double> values = List.generate(
+  final List<double> thetas = List.generate(
     15,
-    (innerIndex) => innerIndex / 14,
+    (innerIndex) => (1 - innerIndex / 14) * (pi / 2),
   );
-  final List<Vector4> colorVectors = List.generate(15, (innerIndex) {
-    return colorValuesFromMap(
-      solarStrengthsLocalRelativeToGlobalMax(
-        k: k,
-        h: h,
-        theta: acos(innerIndex / 14),
-      ),
-      false,
-      colorSchemes[index].$2,
-    );
-  });
+  final List<double> radii = thetas.map((theta) =>cos(theta)).toList();
+  final List<Vector4> colorVectors = thetas
+      .map(
+        (theta) => colorValuesFromMap(
+          solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: theta),
+          false,
+          colorSchemes[index].$2,
+        ),
+      )
+      .toList();
   final List<Color> colors = colorVectors
       .map(
         (e) =>
             Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt()),
       )
       .toList();
-  return (values, colors);
+      print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
+  return (radii, colors);
 });
 
 /// J2000
@@ -620,11 +622,11 @@ class OrbitAndSolarValuesListNotifier
     extends ValueNotifier<List<OrbitAndSolarValues>> {
   OrbitAndSolarValuesListNotifier(
     super.value, {
-    required this.lastK,
-    required this.lastcurrentChartSettings,
+    this.lastK,
+    this.lastcurrentChartSettings,
   });
 
-  double lastK;
+  double? lastK;
   CurrentChartSettings? lastcurrentChartSettings;
 }
 
@@ -808,3 +810,102 @@ Offset getPerpendicularUnitVector(Offset p1, Offset p2) {
 }
 
 const double kButtonTapTargetPadding = 4.0;
+
+class MainScaffoldDrawer extends StatelessWidget {
+  const MainScaffoldDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
+          ListTile(
+            onTap: () {
+              final bool currentTwelveHour =
+                  context.read<SavedSettingsNotifier>().value?.twelveHour ??
+                  true;
+              print('currentTwelveHour: $currentTwelveHour');
+              context.read<SavedSettingsNotifier>().updateTwelveHour(
+                !currentTwelveHour,
+              );
+              Navigator.of(context).pop();
+            },
+            title: Text('Toggle AM/PM vs. 24 hour display'),
+          ),
+          ListTile(
+            onTap: () async {
+              final bool? yearChanged = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) => YearPickerTile(),
+              );
+              if ((yearChanged ?? false) && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            title: Text('Change Year'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class YearPickerTile extends StatefulWidget {
+  const YearPickerTile({super.key});
+
+  @override
+  State<YearPickerTile> createState() => _YearPickerTileState();
+}
+
+class _YearPickerTileState extends State<YearPickerTile> {
+  DateTime currentYear = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    int? potentialSavedYear = context
+        .read<SavedSettingsNotifier>()
+        .value
+        ?.defaultYear;
+    if (potentialSavedYear != null) {
+      currentYear = DateTime(potentialSavedYear);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Year'),
+      content: SizedBox(
+        width: 300,
+        height: 300,
+        child: YearPicker(
+          firstDate: DateTime(1900),
+          lastDate: DateTime(2100),
+          selectedDate: currentYear,
+          onChanged: (DateTime dateTime) => setState(() {
+            currentYear = dateTime;
+          }),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            if (currentYear.year !=
+                context.read<SavedSettingsNotifier>().value?.defaultYear) {
+              context.read<SavedSettingsNotifier>().updateYear(
+                currentYear.year,
+              );
+            }
+            Navigator.of(context).pop<bool>(true);
+          },
+          child: const Text('Ok'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop<bool>(false),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}

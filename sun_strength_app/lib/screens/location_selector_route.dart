@@ -13,16 +13,31 @@ import 'package:google_maps/google_maps_places.dart' as gmaps_places;
 import 'package:google_maps/google_maps_core.dart' as gmaps;
 // import 'package:google_maps/google_maps.dart';
 import 'package:google_maps/google_maps_geocoding.dart' as gmaps_geo;
+import 'package:sun_strength_app/screens/chart_route.dart';
 
-class LocationSelectionScreen extends StatefulWidget {
-  const LocationSelectionScreen({super.key});
+class LocationSelectionScreen extends StatelessWidget {
+  const LocationSelectionScreen({super.key, this.isInitialLoad = false});
+  final bool isInitialLoad;
 
   @override
-  State<LocationSelectionScreen> createState() =>
-      _LocationSelectionScreenState();
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      appBar: LocationAppBar(),
+      drawer: MainScaffoldDrawer(),
+      body: LocationSelectionBody(),
+    );
+  }
 }
 
-class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
+class LocationSelectionBody extends StatefulWidget {
+  const LocationSelectionBody({super.key, this.isInitialLoad = false});
+  final bool isInitialLoad;
+
+  @override
+  State<LocationSelectionBody> createState() => _LocationSelectionBodyState();
+}
+
+class _LocationSelectionBodyState extends State<LocationSelectionBody> {
   final String apiKey =
       "AIzaSyA4jGoTQ5Gn_zW5xuXeMmb5BdYlAWG8_Bs"; // Use same key as index.html
   late final gmaps_places.AutocompleteService service;
@@ -33,18 +48,19 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   late Location _currentPosition;
   Marker? _selectedMarker;
 
-  /// [bool] that records if this screen should listen to tap.  This is needed 
-  /// because sometimes the [IndexedStack] works poorly with the [GoogleMap] 
+  /// [bool] that records if this screen should listen to tap.  This is needed
+  /// because sometimes the [IndexedStack] works poorly with the [GoogleMap]
   /// and results in spurious "ghost clicks" after the screen should be hidden.
   bool _isClickable = true;
 
   void syncIsClickable() {
-    if (context.read<PageIndexNotifier>().value == 0){
-    setState(() {
-      _isClickable = false;
-    });} else {
+    if (context.mounted) {
       setState(() {
         _isClickable = true;
+      });
+    } else {
+      setState(() {
+        _isClickable = false;
       });
     }
   }
@@ -68,14 +84,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       );
     }
 
-    context.read<PageIndexNotifier>().addListener(syncIsClickable);
+    // context.read<PageIndexNotifier>().addListener(syncIsClickable);
   }
 
   @override
   void dispose() {
-    context.read<PageIndexNotifier>().removeListener(syncIsClickable);    
-  _searchController.dispose();
-  _mapController?.dispose();
+    // context.read<PageIndexNotifier>().removeListener(syncIsClickable);
+    _searchController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -121,7 +137,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             visibleRegion.southwest; // Bottom-left or far-left corner
         LatLng farRight =
             visibleRegion.northeast; // Top-right or far-right corner
-
 
         double distanceInMeters = Geolocator.distanceBetween(
           farLeft.latitude,
@@ -423,7 +438,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               padding: const EdgeInsets.symmetric(vertical: 15),
             ),
             onPressed: () {
-                _isClickable = false;
+              _isClickable = false;
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
@@ -433,7 +448,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               print(
                 "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",
               );
-              context.read<PageIndexNotifier>().value = 0;
+              // context.read<PageIndexNotifier>().value = 0;
+              if (widget.isInitialLoad) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const ChartHomePage()),
+                );
+              } else {
+                Navigator.of(context).pop();
+              }
               print("Just triggerred an index switch");
             },
             child: const Text(
@@ -468,4 +490,38 @@ List<String> inspectObject(JSObject someJsObject) {
   // print("Available keys: $dartKeys"); // e.g. ['location', 'displayName']
 
   return dartKeys;
+}
+
+class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const LocationAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CurrentChartSettingsNotifier>(
+      builder: (context, currentLocationNotifier, child) {
+        return AppBar(
+          title: const Text("Select Your Location"),
+          leading: currentLocationNotifier.value == null
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const ChartHomePage(),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                ),
+        );
+      },
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

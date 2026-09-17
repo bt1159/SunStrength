@@ -50,80 +50,75 @@ class AzimuthWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DayDataNotifier>(
       builder: (context, dayDataNotifier, child) {
-        if (dayDataNotifier.value == null) {
-          return const SizedBox.shrink();
-        } else {
-          final AzimuthChartData azimuthChartData = generateLists(
-            osSingleDay: dayDataNotifier.value!,
-          );
-          final tz.TZDateTime hoverDateTimeRaw =
-              dayDataNotifier.value![12 * 4].tzDateTime;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              child!,
-              Text(
-                intl.DateFormat('d MMM yyyy').format(hoverDateTimeRaw),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              Selector<SavedSettingsNotifier, MyColorScheme?>(
-                selector: (_, savedAppSettingsNotifier) =>
-                    savedAppSettingsNotifier.value?.colorScheme,
-                shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
-                builder: (context, myColorScheme, child) =>
-                    Selector<SavedSettingsNotifier, bool>(
-                      selector: (_, savedAppSettingsNotifier) =>
-                          savedAppSettingsNotifier.value?.twelveHour ?? true,
-                      builder: (context, twelveHour, child) =>
-                          Selector<CurrentChartSettingsNotifier, double>(
-                            selector: (_, currentChartSettingsNotifier) =>
-                                currentChartSettingsNotifier
-                                    .value
-                                    ?.location
-                                    .latLng
-                                    .latitude ??
-                                0,
-                            builder: (context, latitude, child) {
-                              return Consumer<KNotifier>(
-                                builder: (context, kNotifier, child) {
-                                  return Padding(
-                                    padding: const EdgeInsets.all(40.0),
-                                    child: AspectRatio(
-                                      aspectRatio: 1.0,
-                                      child: CustomPaint(
-                                        painter: CustomPathRibbonPainter(
-                                          twelveHour: twelveHour,
-                                          lat: latitude,
-                                          azimuthChartData: azimuthChartData,
-                                          colorScheme:
-                                              myColorScheme ??
-                                              constMyColorScheme,
-                                          appBackgroundColor: Theme.of(
-                                            context,
-                                          ).colorScheme.surface,
-                                          k: kNotifier.value,
-                                          h:
-                                              context
-                                                  .read<
-                                                    CurrentChartSettingsNotifier
-                                                  >()
-                                                  .value
-                                                  ?.h ??
-                                              0,
-                                          // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
-                                        ),
+        final AzimuthChartData azimuthChartData = generateLists(
+          osSingleDay: dayDataNotifier.value,
+        );
+        final tz.TZDateTime hoverDateTimeRaw =
+            dayDataNotifier.value[12 * 4].tzDateTime;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            child!,
+            Text(
+              intl.DateFormat('d MMM yyyy').format(hoverDateTimeRaw),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            Selector<SavedSettingsNotifier, MyColorScheme?>(
+              selector: (_, savedAppSettingsNotifier) =>
+                  savedAppSettingsNotifier.value?.colorScheme,
+              shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
+              builder: (context, myColorScheme, child) =>
+                  Selector<SavedSettingsNotifier, bool>(
+                    selector: (_, savedAppSettingsNotifier) =>
+                        savedAppSettingsNotifier.value?.twelveHour ?? true,
+                    builder: (context, twelveHour, child) =>
+                        Selector<CurrentChartSettingsNotifier, double>(
+                          selector: (_, currentChartSettingsNotifier) =>
+                              currentChartSettingsNotifier
+                                  .value
+                                  ?.location
+                                  .latLng
+                                  .latitude ??
+                              0,
+                          builder: (context, latitude, child) {
+                            return Consumer<KNotifier>(
+                              builder: (context, kNotifier, child) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(40.0),
+                                  child: AspectRatio(
+                                    aspectRatio: 1.0,
+                                    child: CustomPaint(
+                                      painter: CustomPathRibbonPainter(
+                                        twelveHour: twelveHour,
+                                        lat: latitude,
+                                        azimuthChartData: azimuthChartData,
+                                        colorScheme:
+                                            myColorScheme ?? constMyColorScheme,
+                                        appBackgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.surface,
+                                        k: kNotifier.value,
+                                        h:
+                                            context
+                                                .read<
+                                                  CurrentChartSettingsNotifier
+                                                >()
+                                                .value
+                                                ?.h ??
+                                            0,
+                                        // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
                                       ),
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                    ),
-              ),
-            ],
-          );
-        }
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                  ),
+            ),
+          ],
+        );
       },
       child: Text(
         'Sun strength and location on a single day',
@@ -598,6 +593,13 @@ class CustomPathRibbonPainter extends CustomPainter {
       radius: 0.5, // Relative to the Rect provided in createShader
       colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2,
       stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
+    );
+
+    print(
+      'calculating solarGradient, colors: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$2}',
+    );
+    print(
+      'calculating solarGradient, stops: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$1}',
     );
 
     final List<Offset> correctedPoints = points

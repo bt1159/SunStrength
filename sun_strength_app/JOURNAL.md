@@ -1,4 +1,12 @@
 # Daily log
+## 2026-09-17
+Currently working on the update I made where DayDataNotifier can never be null.  Instead, it starts with a blank list.  Then, when it gets data, it overwrites that blank list.  But, if it gets new data and already had data, it gets the date of the day and month it previously had but in the current year and pulls that date's data from the new list.
+
+Oops.  The CNP for saved settings is apparently now too low for the sidebar to reference it.
+- Fixed
+
+I have now changed the app structure so that chart screen and location screen are proper Navigator Routes rather than an IndexedStack.  I had to add some extra logic handling the case when the location screen is loaded first because there is no saved setting.
+
 ## 2026-09-16
 I will focus now on tailoring what makes the azimuth chart disappear vs. what makes it update.  I actually can't think of anything that should make it disappear.  Perhaps I should add a button to hide it, since that always bugs me.  Like when a car stereo has a pause button but no power button.
 
@@ -13,6 +21,12 @@ The only thing currently that blanks this out is if datDataNotifier is blanked. 
 Ok.  I have now fixed the blanking out.  Changing location no longer blanks it out.
 
 I did a bunch of refactoring to put notifiers into two files (main level and then chart level).
+
+I fixed the problem where the gradient color in the azimuth chart didn't have good color resolution in the cool areas.
+
+Also, I checked accuracy.  I had seen that Yellowknife, Canada (up north) said 92% for summer soltice noon, visible light, but the azimuth chart showed that it looked really low.  I checked some things, and this is correct.  The sun is about 51deg up in the sky, so just above halfway, angle-wise.  In the azimuth chart, this puts it about 2/3 of the radius away from the center.  Also, since visible light is not as impacted by airmass, even being so low, it is still 92% of solar strength.  As a note, however, the UVB in the same scenario is 55%.  That "feels" more right.
+
+Added close button to azimuth chart.
 
 ## 2026-09-15
 Did some refactoring in chart route to make the tree easier to navigate.  It might improve performance slightly, but that was not the main purpose.  It will also make it easier to tweak the layout of the chart route page, especially spacing in the column.
@@ -185,7 +199,7 @@ You don't mock thing you are trying to test.  You mock things that need to be in
 # Future work
 ## Add a note about DST (pop up changes to always be correct local time, but y axis is solar time).
 
-## Add somewhat of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
+## Add some way of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
 
 ## Google Maps API Marker
 There is some API that has been deprecated.   I think it is the thing that actually creates my marker.  It shows up in the console.
@@ -225,21 +239,18 @@ Sometimes I pass nDays so that the giant 1D list can be chunked.  Other times, I
 ## IMPORTANT: add a note about direction of the surface.
 In other words, the app calculates the strength of the sun on a surface perpindicular to the sunlight.  That is different from solar calculators, for instance, which usually either assume a fixed angle that you enter or assume parallel to the ground, roof, etc.  It also explains why many of the sun strengths will seem higher than people expect, especially in winter.  In the winter, it gets colder in temperate places because the sun's light falls on the ground at a steep angle and is therefore spread out of a larger area.  A spherical surface like your head, however, will not be impacted by this AT ALL!  The only reason the sun is less strong on your head in the winter is because it is traveling through more atmosphere...almost.  One other thing, although a much smaller point.  Imagine you were in London in winter time and stood still all day facing South.  While it is true that the strength of the sun at any moment would NOT be reduced because of the winter-time-spreading-out effect, it is also true that the sun would be moving accross your face over the day (from left ear to nose to right ear).  That means that any particular bit of your skin would get less total sunlight over the day.  Compare that to do exactly the same thing in summer.  Because the sun is higher, it is more hitting the top of your head, which means that as it arcs through the sky through the day, the same bits of your scalp are getting the sun light, leading to more total sunlight throughout the day.
 
-That last point seems as first way too subtle, abstract, or inconsequential to worry about, and that is true for our silly example of standing still all day.  It is true, however, that as humans go about a day outside, they are very likely to move their face in many different directions but remain standing and looking horizontally almost all the time.  This does indeed mean that surfaces that are perpindicular to winter-time sun are more likely to receive less sunlight throughout a winter day compared to surface perpindicular to summer-time sun throughout a summer day, but NOT because of the "spreading out" effect that makes is colder in winter.
-
-## Accuracy check
-Yellowknife, Canada.  June 30th.  Gets up to around 90%.  That is feasible, but seems high.  Also, then, the azimuth chart seems really low.  How can it be as high as 90% while still appearing to be less than 45degrees in the sky.
+That last point seems as first way too subtle, abstract, or inconsequential to worry about, and that is true for our silly example of standing still all day.  It is true, however, that as humans go about a day outside, they are very likely to move their face in many different directions but remain standing and looking horizontally almost all the time.  This does indeed mean that surfaces that are perpindicular to winter-time sun are more likely to receive less sunlight throughout a winter day compared to surface perpindicular to summer-time sun throughout a summer day, but NOT because of the "spreading out" effect that makes is colder in winter.less than 45degrees in the sky.
 
 ## Should I bring in the 3D stuff I did in that other app and make the azimuth chart essentially a 3D rotatable snow globe?
-
-## Consider whether changing the location should nullify the day selected (i.e., blank out the azimuth chart)
-Actually, I decided.  I should only blank out the azimuth chart (when it was previously present) if the date has changed.  What I mean is the year and the day index, essentially.  OR, the time zone-independent date of the first day.  If that stays the same but the location changes, don't null it out.  BUT, I will have to overwrite the one-day list of values with a new list of values.
-
-Also, changing k should indeed update the data but NOT blank it out.
-
-## Something weird is happening with the RadialGradient in the azimuth chart.   Check Phoenixville, visible light, around Winter Soltice.  The path seems to jump directly from purple to orange.  Actually, even around summer soltice
 
 ## Improve hover location
 There are probably a lot of improvements that could be made.  For now, though, at least make it jump up above pointer if it gets to the bottom (so it doesn't get cut off).
 
-## Move CNP for saved settings lower with some sort of trigger early on to pre-build it in the background.  Also, move CNP for current chart settings lower.  They don't need to be much lower, but I might as well group them with the others just below them.
+## Major: responsive design
+
+## I could probably make some of my ChangeNotifier's that are currently nullable classes to non-nullable.  Especially if they are exposed via a ChangeNotifierProxyProvider.
+I just learned that, not only does the update function "right" after the create fuction, literally nothing is built in between.  That means, it is completely safe to create the Notifier with some dummy/blank (but not null) value that will get immediately replaced by a real value.
+
+## Add some kind of button or drop down or something to select the size of the azimuth chart.
+
+## Add button for testing that blanks out all saved settings.

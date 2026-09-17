@@ -326,11 +326,11 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
   }
 }
 
-class PageIndexNotifier extends ValueNotifier<int> {
-  PageIndexNotifier() : super(0);
+// class PageIndexNotifier extends ValueNotifier<int> {
+//   PageIndexNotifier() : super(0);
 
-  bool savedSettingsIsInitialized = false;
+//   bool savedSettingsIsInitialized = false;
 
-  @override
-  set value(int newValue) => super.value = newValue.clamp(0, 1);
-}
+//   @override
+//   set value(int newValue) => super.value = newValue.clamp(0, 1);
+// }
