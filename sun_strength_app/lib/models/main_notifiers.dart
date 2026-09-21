@@ -9,7 +9,7 @@ class CurrentChartSettingsNotifier
     extends ValueNotifier<CurrentChartSettings?> {
   CurrentChartSettingsNotifier() : super(null) {
     print(
-      'running CurrentLocationNotifier constructor, with value?.location.name: ${value?.location.name}, value?.year: ${value?.year}, value?.timeZone.name: ${value?.timeZone.name}',
+      'running CurrentChartSettingsNotifier constructor, with value?.location.name: ${value?.location.name}, value?.year: ${value?.year}, value?.timeZone.name: ${value?.timeZone.name}',
     );
   }
 
@@ -24,7 +24,7 @@ class CurrentChartSettingsNotifier
     try {
       output = tz.getLocation(timeZoneName);
       print(
-        'inside CurrentLocationNotifier.getTZFromLocation, lat and lon have yielded a valid tz, output.name: ${output.name}',
+        'inside CurrentChartSettingsNotifier.getTZFromLocation, lat and lon have yielded a valid tz, output.name: ${output.name}',
       );
     } catch (error) {
       print(error);
@@ -55,7 +55,7 @@ class CurrentChartSettingsNotifier
       value = newValue;
     }
     savedChartSettingsLoaded = true;
-    print('CurrentLocationNotifier just updated from savedChartSettings');
+    print('CurrentChartSettingsNotifier just updated from savedChartSettings');
   }
 
   void updateCurrentChartSettings({
@@ -89,18 +89,18 @@ class CurrentChartSettingsNotifier
       value = newSettings;
 
       print(
-        'CurrentLocationNotifier just updated via updateCurrentChartSettings',
+        'CurrentChartSettingsNotifier just updated via updateCurrentChartSettings',
       );
     }
   }
 }
 
 /// This Notifier is a bit different from typical.  It is NOT ALWAYS intended to trigger rebuilds for all updates.  It depends on multiple
-/// logic steps.  For instance, [_loadSettingsFromStorage] will always call [notifyListeners].  The [CurrentLocationNotifier], for instance
+/// logic steps.  For instance, [_loadSettingsFromStorage] will always call [notifyListeners].  The [CurrentChartSettingsNotifier], for instance
 /// needs to reuild when the default settings are initially loaded.  Even after that, when the twelveHour setting is updated, this notifier
 /// is where the current AND the default setting is saved.  So, any widgets that display time should update when the twelveHour bool is
 /// changed.  The default location, however, should NOT trigger rebuilds when it is changed by itself.  In other words, when it is updated
-/// as part of the initial load, then yes it should trigger CurrentLocationNotifier to update. After that, however, when the user selects a
+/// as part of the initial load, then yes it should trigger CurrentChartSettingsNotifier to update. After that, however, when the user selects a
 /// new default location, I don't want anything to update.  Rather than being handled here in the update functions, all updates call
 /// [notifyListeners].  Instead, the widget tree itself should use context.read, Selector, or other methods to control exactly when its
 /// rebuild is triggered by this notifier.
@@ -191,7 +191,12 @@ class SavedSettingsNotifier extends ValueNotifier<SavedAppSettings?> {
 
   /// Update location from the selection screen
   Future<void> updateLocation(Location newLocation) async {
-    if (value?.defaultLocation == newLocation) return;
+    print('triggered updateLocation, newLocation: $newLocation, value?.defaultLocation: ${value?.defaultLocation}');
+    if (value?.defaultLocation == newLocation) {
+      print('decided newLocation matches old location');
+      return;
+    }
+    print('decided newLocation does not match old location');
     final SavedAppSettings settings = SavedAppSettings(
       defaultLocation: newLocation,
       defaultYear: value?.defaultYear,

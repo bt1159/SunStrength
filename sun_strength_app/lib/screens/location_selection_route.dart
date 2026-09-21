@@ -9,9 +9,7 @@ import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'dart:async';
 import 'package:google_maps/google_maps_places.dart' as gmaps_places;
-// import 'package:google_maps/google_maps_places.dart';
 import 'package:google_maps/google_maps_core.dart' as gmaps;
-// import 'package:google_maps/google_maps.dart';
 import 'package:google_maps/google_maps_geocoding.dart' as gmaps_geo;
 import 'package:sun_strength_app/screens/chart_route.dart';
 
@@ -21,11 +19,19 @@ class LocationSelectionRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: LocationAppBar(),
-      drawer: MainScaffoldDrawer(),
-      body: LocationSelectionBody(),
-    );
+    if (isInitialLoad) {
+      return Scaffold(
+        appBar: const LocationAppBar(),
+        drawer: const MainScaffoldDrawer(),
+        body: LocationSelectionBody(isInitialLoad: true),
+      );
+    } else {
+      return const Scaffold(
+        appBar: LocationAppBar(),
+        drawer: MainScaffoldDrawer(),
+        body: LocationSelectionBody(),
+      );
+    }
   }
 }
 
@@ -441,14 +447,13 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               _isClickable = false;
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
-              // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
               context
                   .read<CurrentChartSettingsNotifier>()
                   .updateCurrentChartSettings(newLocation: _currentPosition);
               print(
-                "Just finished updating current location CurrentLocationNotifier.  About to trigger an index switch",
+                "Just finished updating current location CurrentChartSettingsNotifier.  About to pop or push",
               );
-              // context.read<PageIndexNotifier>().value = 0;
+              // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
               if (widget.isInitialLoad) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const ChartRoute()),
@@ -456,7 +461,16 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               } else {
                 Navigator.of(context).pop();
               }
-              print("Just triggerred an index switch");
+              print("Just triggerred an navigator route change");
+              if (context
+                      .read<SavedSettingsNotifier>()
+                      .value
+                      ?.defaultLocation ==
+                  null) {
+                context.read<SavedSettingsNotifier>().updateLocation(
+                  _currentPosition,
+                );
+              }
             },
             child: const Text(
               "Generate Sun Strength Heatmap",
@@ -469,39 +483,16 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
   }
 }
 
-// 1. Declare the global JS Object class wrapper
-@JS('Object')
-extension type JSObjectClass._(JSObject _) implements JSObject {
-  // 2. Bind directly to JavaScript's native Object.keys() method
-  external static JSArray<JSString> keys(JSObject object);
-}
-
-// --- Usage inside your function ---
-List<String> inspectObject(JSObject someJsObject) {
-  // Get the keys as a JavaScript Array of JS Strings
-  final JSArray<JSString> jsKeys = JSObjectClass.keys(someJsObject);
-
-  // Convert it cleanly to a standard Dart List<String> to view or loop over
-  final List<String> dartKeys = jsKeys.toDart
-      .map((jsStr) => jsStr.toDart)
-      .toList();
-
-  // Now you can safely use it like a regular list:
-  // print("Available keys: $dartKeys"); // e.g. ['location', 'displayName']
-
-  return dartKeys;
-}
-
 class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
   const LocationAppBar({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<CurrentChartSettingsNotifier>(
-      builder: (context, currentLocationNotifier, child) {
+      builder: (context, currentChartSettingsNotifier, child) {
         return AppBar(
           title: const Text("Select Your Location"),
-          leading: currentLocationNotifier.value == null
+          leading: currentChartSettingsNotifier.value == null
               ? null
               : IconButton(
                   onPressed: () {
@@ -509,9 +500,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Navigator.of(context).pop();
                     } else {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const ChartRoute(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const ChartRoute()),
                       );
                     }
                   },

@@ -35,6 +35,7 @@ class _ChartWidgetState extends State<ChartWidget> {
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
   static const Offset toolTipFormattingOffset = Offset(0, 40);
 
+  /// This method's purpose is two-fold: 1) update the value of [_tooltipNotifier] and return the single day's [OrbitAndSolarValues], which is then sent to azimuth chart if this chart is clicked.
   List<OrbitAndSolarValues> _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
@@ -64,12 +65,16 @@ class _ChartWidgetState extends State<ChartWidget> {
       timeZone,
       year,
     ).add(Duration(milliseconds: datetimeDelta));
+    String timeZoneName = hoverDateTimeRaw.timeZoneName;
+    if (timeZoneName.length > 3) {
+      timeZoneName = '';
+    }
     _tooltipNotifier.value = (
       hoverBoxPosition: chartTextLocalPosition + toolTipFormattingOffset,
       tooltipText12:
-          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
+          '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)} $timeZoneName\nStrength: ${(value * 100).toStringAsFixed(0)}%',
       tooltipText24:
-          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)}\nStrength: ${(value * 100).toStringAsFixed(0)}%',
+          '${DateFormat('d MMM yyyy HH:mm').format(hoverDateTimeRaw)} $timeZoneName\nStrength: ${(value * 100).toStringAsFixed(0)}%',
     );
     return osSingleDay;
   }
@@ -178,30 +183,48 @@ class _ChartWidgetState extends State<ChartWidget> {
               valueListenable: _tooltipNotifier,
               builder: (context, tooltipInfo, child) {
                 if (tooltipInfo != null) {
-                  return Positioned(
-                    // Position it dynamically relative to the cursor position!
-                    left: tooltipInfo.hoverBoxPosition.dx,
-                    // Offset slightly to clear the cursor graphic
-                    top: tooltipInfo.hoverBoxPosition.dy,
-                    child: IgnorePointer(
-                      // Prevents the tooltip box from stealing mouse focus
-                      child: Container(
-                        // padding: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.all(0),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Selector<SavedSettingsNotifier, bool>(
-                          selector: (_, savedSettingsNotifier) =>
-                              savedSettingsNotifier.value?.twelveHour ?? true,
-                          builder: (_, twelveHour, _) => Text(
-                            twelveHour
-                                ? tooltipInfo.tooltipText12
-                                : tooltipInfo.tooltipText24,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                  return Positioned.fill(
+                    child: CustomSingleChildLayout(
+                      delegate: MouseFollowingTooltipDelegate(
+                        hoverBoxPosition: tooltipInfo.hoverBoxPosition,
+                      ),
+                      child: IgnorePointer(
+                        // Prevents the tooltip box from stealing mouse focus
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          // padding: const EdgeInsets.all(0),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Selector<SavedSettingsNotifier, bool>(
+                            selector: (_, savedSettingsNotifier) =>
+                                savedSettingsNotifier.value?.twelveHour ?? true,
+                            builder: (_, twelveHour, _) => Stack(
+                              alignment: Alignment.topRight,
+                              children: [
+                                Opacity(
+                                  opacity: 0,
+                                  child: Text(
+                                    twelveHour
+                                        ? '88 888 8888 88:88 88 XXX\nStrength: 100%'
+                                        : '88 888 8888 88:88 XXX\nStrength: 100%',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  twelveHour
+                                      ? tooltipInfo.tooltipText12
+                                      : tooltipInfo.tooltipText24,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -217,6 +240,60 @@ class _ChartWidgetState extends State<ChartWidget> {
         ),
       ],
     );
+  }
+}
+
+class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
+  final Offset hoverBoxPosition;
+
+  MouseFollowingTooltipDelegate({required this.hoverBoxPosition});
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    // Converts tight constraints (forced size) into loose constraints (0 to max size),
+    // allowing the tooltip Container to shrink to exactly the size of its text.
+    return constraints.loosen();
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    // Start with the ideal position next to the cursor
+    double x = hoverBoxPosition.dx;
+    double y = hoverBoxPosition.dy;
+    print('inside getPositionForChild, x: $x, y: $y');
+
+    // Clamp to the right edge (prevent overflowing the screen)
+    // If the tooltip's right edge goes past the screen width, lock it to the max allowed X.
+    if (x + childSize.width > size.width) {
+      x = size.width - childSize.width;
+    }
+
+    // Clamp to the left edge (just in case)
+    if (x < 0) {
+      x = 0;
+    }
+
+    _ChartWidgetState.toolTipFormattingOffset.dy;
+    // Clamp to the bottom edge
+    if (y + childSize.height > size.height) {
+      y =
+          hoverBoxPosition.dy -
+          _ChartWidgetState.toolTipFormattingOffset.dy -
+          childSize.height;
+    }
+
+    print('inside getPositionForChild, x: $x, y: $y');
+
+    print(
+      'inside getPositionForChild, size.width: ${size.width}, size.height: ${size.height}',
+    );
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(MouseFollowingTooltipDelegate oldDelegate) {
+    // Only recalculate layout if the mouse has actually moved
+    return oldDelegate.hoverBoxPosition != hoverBoxPosition;
   }
 }
 
@@ -473,7 +550,7 @@ class _ChartRenderObject extends RenderBox
     334,
     365,
   ];
-  
+
   /// Horizontal gap between y axis labels and chart
   static const double hLabelGap = 10;
 

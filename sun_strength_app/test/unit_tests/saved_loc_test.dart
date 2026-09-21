@@ -132,25 +132,25 @@ void main() {
       // verifyNoMoreInteractions(mockSavedLocationNotifier);
     });
   });
-  group('CurrentLocationNotifier test group', () {
+  group('CurrentChartSettingsNotifier test group', () {
     test('Initial setup', () async {
-      // Test that the CurrentLocationNotifier is instantiated but does not have any location yet from the SavedLocationNotifier
-      final CurrentChartSettingsNotifier currentLocationNotifier =
+      // Test that the CurrentChartSettingsNotifier is instantiated but does not have any location yet from the SavedLocationNotifier
+      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
           CurrentChartSettingsNotifier();
       bool listenerCalled = false;
-      currentLocationNotifier.addListener(() {
+      currentChartSettingsNotifier.addListener(() {
         listenerCalled = true;
       });
       await pumpEventQueue();
-      expect(currentLocationNotifier.value, null);
+      expect(currentChartSettingsNotifier.value, null);
       expect(listenerCalled, false);
     });
     test('Getting SavedLocation', () async {
-      // Test that the CurrentLocationNotifier correctly gets initialk SavedLocation
-      final CurrentChartSettingsNotifier currentLocationNotifier =
+      // Test that the CurrentChartSettingsNotifier correctly gets initialk SavedLocation
+      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
           CurrentChartSettingsNotifier();
       bool listenerCalled = false;
-      currentLocationNotifier.addListener(() {
+      currentChartSettingsNotifier.addListener(() {
         listenerCalled = true;
       });
 
@@ -166,39 +166,39 @@ void main() {
       await pumpEventQueue();
       expect(savedLocationNotifier.value?.defaultLocation != null, true);
       expect(listenerCalled, false);
-      expect(currentLocationNotifier.savedChartSettingsLoaded, false);
-      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      expect(currentChartSettingsNotifier.savedChartSettingsLoaded, false);
+      // currentChartSettingsNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      expect(currentLocationNotifier.value?.location.name, locationPxv.name);
+      expect(currentChartSettingsNotifier.value?.location.name, locationPxv.name);
       expect(listenerCalled, true);
     });
     test('Loading saved and updating to something else', () async {
-      // Test that CurrentLocationNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentChartSettingsNotifier currentLocationNotifier =
+      // Test that CurrentChartSettingsNotifier correctly updates its location manually after it has already loaded the savedLocation.
+      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
           CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
-      currentLocationNotifier.addListener(() {
+      currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
       });
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
       await pumpEventQueue();
-      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      // currentChartSettingsNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateCurrentChartSettings(newLocation: locationTest);
+      currentChartSettingsNotifier.updateCurrentChartSettings(newLocation: locationTest);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 2);
-      expect(currentLocationNotifier.value?.location.name, locationTest.name);
+      expect(currentChartSettingsNotifier.value?.location.name, locationTest.name);
     });
     test('Changing location to null after a non-null', () async {
-      // Test that CurrentLocationNotifier correctly updates to null after having a real location
-      final CurrentChartSettingsNotifier currentLocationNotifier =
+      // Test that CurrentChartSettingsNotifier correctly updates to null after having a real location
+      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
           CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
-      currentLocationNotifier.addListener(() {
+      currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
-        print('inside currentLocationNotifier, this should be running immediately after notifyListeners.  new value?.name: ${currentLocationNotifier.value?.location.name}');
+        print('inside currentChartSettingsNotifier, this should be running immediately after notifyListeners.  new value?.name: ${currentChartSettingsNotifier.value?.location.name}');
       });
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
@@ -207,24 +207,24 @@ void main() {
           SavedSettingsNotifier();
 
       await pumpEventQueue();
-      currentLocationNotifier.updateWithInitialSaved(newLocation: savedLocationNotifier.value?.defaultLocation);
+      currentChartSettingsNotifier.updateWithInitialSaved(newLocation: savedLocationNotifier.value?.defaultLocation);
 
-      currentLocationNotifier.updateCurrentChartSettings(newLocation: locationTest);
+      currentChartSettingsNotifier.updateCurrentChartSettings(newLocation: locationTest);
 
-      // currentLocationNotifier.updateWithNewLocationLocalTZ(null);
+      // currentChartSettingsNotifier.updateWithNewLocationLocalTZ(null);
 
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, 3);
 
-      expect(currentLocationNotifier.value, null);
+      expect(currentChartSettingsNotifier.value, null);
     });
     test('Testing that running update with the same location does NOT call listeners', () async { 
 
-      // Test that CurrentLocationNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentChartSettingsNotifier currentLocationNotifier =
+      // Test that CurrentChartSettingsNotifier correctly updates its location manually after it has already loaded the savedLocation.
+      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
           CurrentChartSettingsNotifier();
       int listenerCalledCounter = 0;
-      currentLocationNotifier.addListener(() {
+      currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
       });
 
@@ -234,13 +234,13 @@ void main() {
           SavedSettingsNotifier();
 
       await pumpEventQueue();
-      // currentLocationNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
+      // currentChartSettingsNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       final int lockedCounter = listenerCalledCounter;
-      currentLocationNotifier.updateCurrentChartSettings(newLocation: savedLocationNotifier.value?.defaultLocation);
+      currentChartSettingsNotifier.updateCurrentChartSettings(newLocation: savedLocationNotifier.value?.defaultLocation);
       print('listenerCalledCounter: $listenerCalledCounter');
       expect(listenerCalledCounter, lockedCounter);
-      expect(currentLocationNotifier.value?.location.name, savedLocationNotifier.value?.defaultLocation?.name);
+      expect(currentChartSettingsNotifier.value?.location.name, savedLocationNotifier.value?.defaultLocation?.name);
     });
   });
 }

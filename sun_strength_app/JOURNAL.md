@@ -1,4 +1,25 @@
 # Daily log
+## 2026-09-21
+I was trying to make a custom widget the essentially wraps an ElevatedButton and makes the greying out cleaner, but it's not worth it.
+Changes to make to pop-up:
+- Add small padding
+- When can't fit left to right, stop panning.  In other words, when cursos is just inside of right border, pop up should be aligned on far right side.
+- When can't fit below cursor, move above cursor (with the same offset, I think).
+- Add TZ code.
+
+Position looks good enough, left to right and height.  The vertical jump is weird, but I don't know what to do better.  Also, I need a better solution long term for time zone.  This works for now.
+
+The next two tasks to tackle are to start on responsive design and also the carets for selected date.
+
+## 2026-09-18
+I fixed the bug that would happen after the location screen opens first (due to no saved settings) and then, when trying to load to next screen.
+
+I will now add a manual button to restart app (for dev only).   Done.
+
+Also added logic so that, when no default location exists, the first time you generate a chart, that location is saved as your default.
+
+Also, when the current location matches default, "save as default location" is greyed out.
+
 ## 2026-09-17
 Currently working on the update I made where DayDataNotifier can never be null.  Instead, it starts with a blank list.  Then, when it gets data, it overwrites that blank list.  But, if it gets new data and already had data, it gets the date of the day and month it previously had but in the current year and pulls that date's data from the new list.
 
@@ -210,8 +231,6 @@ There is some API that has been deprecated.   I think it is the thing that actua
 
 ## See if there is a good way to add a "today" indicator.  If so, add a toggle for that.
 
-## Make the pop up look better.  Move it away from the cursor a little, maybe.  Add a shadow or something.  Make it dark grey instead of black.  Or maybe make it a bit translucent.  Something to look less ugly.
-
 ## Add the ability to change the number of vertical lines
 
 ## debugDumpRenderTree()?
@@ -255,4 +274,10 @@ There are probably a lot of improvements that could be made.  For now, though, a
 ## I could probably make some of my ChangeNotifier's that are currently nullable classes to non-nullable.  Especially if they are exposed via a ChangeNotifierProxyProvider.
 I just learned that, not only does the update function "right" after the create fuction, literally nothing is built in between.  That means, it is completely safe to create the Notifier with some dummy/blank (but not null) value that will get immediately replaced by a real value.
 
-## OOPS: MAJOR there is now a bug when I wipe saved settings and then restart, it correctly loaded to the maps page, but then when I clicked a location, I went white and I got an error in the console.  Sometrhing about Google Maps could not build before calling buildView
+## I just read about extension types.  They seem very handy for times when, for instance, an index has to be positive, but the type is simply int.  I could use an index extension type so that it costs nothing but makes it totally safe.
+I could do this with an assert in the default constructor's initialization list or used a factory constructor that first checks the value and throws if there is a problem.
+
+## I should just make the tooltip a custom render object
+I am running into issues like making the layout of the text look good and not jittery.  I realize now that the time and date should each stay in the same relative location regrdless of how many digits they are.
+
+## Come up with a more robust solution for timezone abbreviation.  Currently, if the system supplies something longer than 3 characters, it just gets omitted.

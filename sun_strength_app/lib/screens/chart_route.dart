@@ -162,16 +162,16 @@ class PinnedChartPageWidget extends StatelessWidget {
         child: SizedBox(
           width: double.infinity,
           child: Consumer<CurrentChartSettingsNotifier>(
-            builder: (context, currentLocationNotifier, child) {
+            builder: (context, currentChartSettingsNotifier, child) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    currentLocationNotifier.value!.location.name,
+                    currentChartSettingsNotifier.value!.location.name,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Text(
-                    currentLocationNotifier.value!.year.toString(),
+                    currentChartSettingsNotifier.value!.year.toString(),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ],

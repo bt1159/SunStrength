@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:convert';
@@ -12,6 +13,7 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:sun_strength_app/models/errors.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:provider/provider.dart';
+import 'package:sun_strength_app/main.dart';
 
 const kDebugMode = true;
 
@@ -116,7 +118,7 @@ class Location {
 
     // 2. Check type, runtimeType, and property values
     return other is Location &&
-        other.runtimeType == runtimeType &&
+        // other.runtimeType == runtimeType &&
         other.name == name &&
         other.lat == lat &&
         other.lon == lon;
@@ -477,7 +479,7 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
     15,
     (innerIndex) => (1 - innerIndex / 14) * (pi / 2),
   );
-  final List<double> radii = thetas.map((theta) =>cos(theta)).toList();
+  final List<double> radii = thetas.map((theta) => cos(theta)).toList();
   final List<Vector4> colorVectors = thetas
       .map(
         (theta) => colorValuesFromMap(
@@ -493,7 +495,7 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
             Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt()),
       )
       .toList();
-      print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
+  print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
   return (radii, colors);
 });
 
@@ -844,7 +846,24 @@ class MainScaffoldDrawer extends StatelessWidget {
             },
             title: Text('Change Year'),
           ),
-        ListTile(onTap: () => context.read<SavedSettingsNotifier>().clearSettings(),title: Text('DEV ONLY: Wipe defaults')),
+          ExpansionTile(
+            title: Text('Dev only'),
+            children: [
+              ListTile(
+                onTap: () =>
+                    context.read<SavedSettingsNotifier>().clearSettings(),
+                title: Text('Wipe defaults'),
+              ),
+              ListTile(
+                onTap: () {
+                  WidgetsFlutterBinding.ensureInitialized();
+                  // savedSettings = SavedSettingsNotifier();
+                  runApp(MyApp(key: UniqueKey()));
+                },
+                title: Text('Restart app'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -910,3 +929,27 @@ class _YearPickerTileState extends State<YearPickerTile> {
     );
   }
 }
+
+// 1. Declare the global JS Object class wrapper
+@JS('Object')
+extension type JSObjectClass._(JSObject _) implements JSObject {
+  // 2. Bind directly to JavaScript's native Object.keys() method
+  external static JSArray<JSString> keys(JSObject object);
+}
+
+// --- Usage inside your function ---
+List<String> inspectObject(JSObject someJsObject) {
+  // Get the keys as a JavaScript Array of JS Strings
+  final JSArray<JSString> jsKeys = JSObjectClass.keys(someJsObject);
+
+  // Convert it cleanly to a standard Dart List<String> to view or loop over
+  final List<String> dartKeys = jsKeys.toDart
+      .map((jsStr) => jsStr.toDart)
+      .toList();
+
+  // Now you can safely use it like a regular list:
+  // print("Available keys: $dartKeys"); // e.g. ['location', 'displayName']
+
+  return dartKeys;
+}
+
