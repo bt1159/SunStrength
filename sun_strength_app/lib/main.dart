@@ -10,12 +10,12 @@ class CurrentIndex {
   final int value;
 }
 
-late final SavedSettingsNotifier savedSettings;
+late final SavedSettingsNot savedSettings;
 
 void main() {
   print('running main()');
   WidgetsFlutterBinding.ensureInitialized();
-  savedSettings = SavedSettingsNotifier();
+  savedSettings = SavedSettingsNot();
   runApp(const MyApp());
 }
 
@@ -28,14 +28,14 @@ class MyApp extends StatelessWidget {
     print('Started build method for MyApp');
     return MultiProvider(
       providers: [
-        CNP<SavedSettingsNotifier>.value(
+        CNP<SavedSettingsNot>.value(
           value: savedSettings,
         ),
-        ChangeNotifierProxyProvider<
-          SavedSettingsNotifier,
-          CurrentChartSettingsNotifier
+        CNPP<
+          SavedSettingsNot,
+          ChartSettingsNot
         >(
-          create: (_) => CurrentChartSettingsNotifier(),
+          create: (_) => ChartSettingsNot(),
           update: (_, savedLocationNotifier, previous) {
             if (previous == null) {
               throw 'previous CurrentChartSettingsNotifier is null';
@@ -62,7 +62,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ],
-      child: Selector<SavedSettingsNotifier, bool>(
+      child: Selector<SavedSettingsNot, bool>(
         selector: (_, savedSettingsNotifier) =>
             savedSettingsNotifier.isInitialized,
         shouldRebuild: (previousIsInitialized, nextIsInitialized) =>
@@ -126,7 +126,7 @@ class _InitScreenState extends State<InitScreen> {
     // Wait for the first frame to finish before navigating
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentSettingsNotNull =
-          context.read<CurrentChartSettingsNotifier>().value != null;
+          context.read<ChartSettingsNot>().value != null;
 
       if (currentSettingsNotNull) {
         // Replaces InitScreen with ChooseXyzScreen as the base route

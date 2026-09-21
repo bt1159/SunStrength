@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-class DayDataNotifier extends ValueNotifier<List<OrbitAndSolarValues>> {
-  DayDataNotifier(super.value);
+class DayDataNot extends ValueNotifier<List<OrbSolValues>> {
+  DayDataNot(super.value);
 
   /// This function will get added to a
-  /// [ChangeNotifierProxyProvider<OrbitAndSolarValuesListNotifier,DayDataNotifier>]
+  /// [CNPP<OrbitAndSolarValuesListNotifier,DayDataNotifier>]
   /// as its update method.  That means that the purpose of this function is to update
-  /// the [DayDataNotifier] specifically when the [OrbitAndSolarValuesListNotifier] value
+  /// the [DayDataNot] specifically when the [OrbSolValuesListNot] value
   /// is updated.  This method will therefore NOT be used when just the date is updated.
-  static DayDataNotifier changeNotifierProxyProviderUpdateFunction(
+  static DayDataNot cNPPUpdateFunction(
     BuildContext context,
-    OrbitAndSolarValuesListNotifier orbitAndSolarValuesListNotifier,
-    DayDataNotifier? oldDayDataNotifier,
+    OrbSolValuesListNot orbitAndSolarValuesListNotifier,
+    DayDataNot? oldDayDataNotifier,
   ) {
     if (oldDayDataNotifier == null) {
       // Throw error if previous the previous notifier itself is null (i.e, not the value but the notifier itself)
@@ -61,6 +61,6 @@ class DayDataNotifier extends ValueNotifier<List<OrbitAndSolarValues>> {
   }
 }
 
-class KNotifier extends ValueNotifier<double> {
-  KNotifier([super.value = 2]);
+class KNot extends ValueNotifier<double> {
+  KNot([super.value = 2]);
 }

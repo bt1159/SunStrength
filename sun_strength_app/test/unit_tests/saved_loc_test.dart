@@ -53,8 +53,8 @@ void main() {
       bool listenerCalled = false;
       SharedPreferences.setMockInitialValues({});
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
+      final SavedSettingsNot savedLocationNotifier =
+          SavedSettingsNot();
       savedLocationNotifier.addListener(() {
         listenerCalled = true;
       });
@@ -98,8 +98,8 @@ void main() {
       final String? savedJson = prefs.getString('default_solar_location');
       print('savedJson: $savedJson');
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
+      final SavedSettingsNot savedLocationNotifier =
+          SavedSettingsNot();
       bool listenerCalled = false;
       savedLocationNotifier.addListener(() {
         listenerCalled = true;
@@ -135,8 +135,8 @@ void main() {
   group('CurrentChartSettingsNotifier test group', () {
     test('Initial setup', () async {
       // Test that the CurrentChartSettingsNotifier is instantiated but does not have any location yet from the SavedLocationNotifier
-      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
-          CurrentChartSettingsNotifier();
+      final ChartSettingsNot currentChartSettingsNotifier =
+          ChartSettingsNot();
       bool listenerCalled = false;
       currentChartSettingsNotifier.addListener(() {
         listenerCalled = true;
@@ -147,8 +147,8 @@ void main() {
     });
     test('Getting SavedLocation', () async {
       // Test that the CurrentChartSettingsNotifier correctly gets initialk SavedLocation
-      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
-          CurrentChartSettingsNotifier();
+      final ChartSettingsNot currentChartSettingsNotifier =
+          ChartSettingsNot();
       bool listenerCalled = false;
       currentChartSettingsNotifier.addListener(() {
         listenerCalled = true;
@@ -160,8 +160,8 @@ void main() {
       // final String? savedJson = prefs.getString('default_solar_location');
       // print('savedJson: $savedJson');
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
+      final SavedSettingsNot savedLocationNotifier =
+          SavedSettingsNot();
 
       await pumpEventQueue();
       expect(savedLocationNotifier.value?.defaultLocation != null, true);
@@ -174,8 +174,8 @@ void main() {
     });
     test('Loading saved and updating to something else', () async {
       // Test that CurrentChartSettingsNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
-          CurrentChartSettingsNotifier();
+      final ChartSettingsNot currentChartSettingsNotifier =
+          ChartSettingsNot();
       int listenerCalledCounter = 0;
       currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
@@ -193,8 +193,8 @@ void main() {
     });
     test('Changing location to null after a non-null', () async {
       // Test that CurrentChartSettingsNotifier correctly updates to null after having a real location
-      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
-          CurrentChartSettingsNotifier();
+      final ChartSettingsNot currentChartSettingsNotifier =
+          ChartSettingsNot();
       int listenerCalledCounter = 0;
       currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
@@ -203,8 +203,8 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
+      final SavedSettingsNot savedLocationNotifier =
+          SavedSettingsNot();
 
       await pumpEventQueue();
       currentChartSettingsNotifier.updateWithInitialSaved(newLocation: savedLocationNotifier.value?.defaultLocation);
@@ -221,8 +221,8 @@ void main() {
     test('Testing that running update with the same location does NOT call listeners', () async { 
 
       // Test that CurrentChartSettingsNotifier correctly updates its location manually after it has already loaded the savedLocation.
-      final CurrentChartSettingsNotifier currentChartSettingsNotifier =
-          CurrentChartSettingsNotifier();
+      final ChartSettingsNot currentChartSettingsNotifier =
+          ChartSettingsNot();
       int listenerCalledCounter = 0;
       currentChartSettingsNotifier.addListener(() {
         listenerCalledCounter++;
@@ -230,8 +230,8 @@ void main() {
 
       SharedPreferences.setMockInitialValues(defaultPrefPxvMap);
 
-      final SavedSettingsNotifier savedLocationNotifier =
-          SavedSettingsNotifier();
+      final SavedSettingsNot savedLocationNotifier =
+          SavedSettingsNot();
 
       await pumpEventQueue();
       // currentChartSettingsNotifier.updateWithInitialSaved(savedLocationNotifier.value?.defaultLocation);

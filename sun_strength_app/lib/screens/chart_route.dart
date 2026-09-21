@@ -14,7 +14,7 @@ import 'package:sun_strength_app/models/main_notifiers.dart';
 ///
 /// Widget called from the main screen that contains the full chart route/page.
 ///
-/// Its only actual function is to expose the [Consumer] of the [CurrentChartSettingsNotifier] to widgets below.
+/// Its only actual function is to expose the [Consumer] of the [ChartSettingsNot] to widgets below.
 ///
 /// {@endtemplate}
 class ChartRoute extends StatelessWidget {
@@ -28,100 +28,69 @@ class ChartRoute extends StatelessWidget {
       drawer: const MainScaffoldDrawer(),
       body: Builder(
         builder: (context) {
-          if (context.read<CurrentChartSettingsNotifier>().value == null) {
+          if (context.read<ChartSettingsNot>().value == null) {
             return const SizedBox.shrink();
           }
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: MultiProvider(
               providers: [
-                CNP<KNotifier>(
-                  create: (_) => KNotifier(2.0),
-                ),
-                CNPP2<
-                  KNotifier,
-                  CurrentChartSettingsNotifier,
-                  OrbitAndSolarValuesListNotifier
-                >(
+                CNP<KNot>(create: (_) => KNot(2.0)),
+                CNPP2<KNot, ChartSettingsNot, OrbSolValuesListNot>(
                   create: (_) {
-                    return OrbitAndSolarValuesListNotifier(
-                      <OrbitAndSolarValues>[],
-                    );
+                    return OrbSolValuesListNot(<OrbSolValues>[]);
                   },
-                  update:
-                      (
-                        context,
-                        kNotifier,
-                        currentChartSettingsNotifier,
-                        orbitAndSolarValuesListNotifier,
-                      ) {
-                        if (orbitAndSolarValuesListNotifier == null) {
-                          throw 'null previous in ProxyProvider';
+                  update: (context, kNot, chartSettingsNot, orbSolValuesListNot) {
+                    if (orbSolValuesListNot == null) {
+                      throw 'null previous in ProxyProvider';
+                    }
+                    print(
+                      'running update for orbitAndSolarValuesListNotifier.  lastK: ${orbSolValuesListNot.lastK}, lastchart: ${orbSolValuesListNot.lastcurrentChartSettings}, this k: ${kNot.value}',
+                    );
+                    if (orbSolValuesListNot.value.isNotEmpty) {
+                      if (chartSettingsNot.value ==
+                          orbSolValuesListNot.lastcurrentChartSettings) {
+                        if (kNot.value == orbSolValuesListNot.lastK) {
+                          return orbSolValuesListNot;
+                        } else {
+                          final List<OrbSolValues> orbitAndSolarValuesList =
+                              recalculateOrbSolValuesIterNewK(
+                                h: 0,
+                                k: kNot.value,
+                                oldValues: orbSolValuesListNot.value,
+                              ).toList();
+                          return orbSolValuesListNot
+                            ..lastK = kNot.value
+                            ..value = orbitAndSolarValuesList;
                         }
-                        print(
-                          'running update for orbitAndSolarValuesListNotifier.  lastK: ${orbitAndSolarValuesListNotifier.lastK}, lastchart: ${orbitAndSolarValuesListNotifier.lastcurrentChartSettings}, this k: ${kNotifier.value}',
-                        );
-                        if (orbitAndSolarValuesListNotifier.value.isNotEmpty) {
-                          if (currentChartSettingsNotifier.value ==
-                              orbitAndSolarValuesListNotifier
-                                  .lastcurrentChartSettings) {
-                            if (kNotifier.value ==
-                                orbitAndSolarValuesListNotifier.lastK) {
-                              return orbitAndSolarValuesListNotifier;
-                            } else {
-                              final List<OrbitAndSolarValues>
-                              orbitAndSolarValuesList =
-                                  recalculateOrbitAndSolarValuesIterableNewK(
-                                    h: 0,
-                                    k: kNotifier.value,
-                                    oldValues:
-                                        orbitAndSolarValuesListNotifier.value,
-                                  ).toList();
-                              return orbitAndSolarValuesListNotifier
-                                ..lastK = kNotifier.value
-                                ..value = orbitAndSolarValuesList;
-                            }
-                          }
-                        }
+                      }
+                    }
 
-                        final List<OrbitAndSolarValues>
-                        orbitAndSolarValuesList =
-                            calculateOrbitAndSolarValuesIterable(
-                              k: kNotifier.value,
-                              h: 0,
-                              lat: currentChartSettingsNotifier
-                                  .value!
-                                  .location
-                                  .lat,
-                              lon: currentChartSettingsNotifier
-                                  .value!
-                                  .location
-                                  .lon,
-                              timeZone:
-                                  currentChartSettingsNotifier.value!.timeZone,
-                              year: currentChartSettingsNotifier.value!.year,
-                            ).toList();
+                    final List<OrbSolValues> orbitAndSolarValuesList =
+                        calculateOrbSolValuesIter(
+                          k: kNot.value,
+                          h: 0,
+                          lat: chartSettingsNot.value!.location.lat,
+                          lon: chartSettingsNot.value!.location.lon,
+                          timeZone: chartSettingsNot.value!.timeZone,
+                          year: chartSettingsNot.value!.year,
+                        ).toList();
 
-                        return orbitAndSolarValuesListNotifier
-                          ..lastK = kNotifier.value
-                          ..value = orbitAndSolarValuesList
-                          ..lastcurrentChartSettings =
-                              currentChartSettingsNotifier.value;
-                      },
+                    return orbSolValuesListNot
+                      ..lastK = kNot.value
+                      ..value = orbitAndSolarValuesList
+                      ..lastcurrentChartSettings = chartSettingsNot.value;
+                  },
                 ),
-                CNPP<
-                  OrbitAndSolarValuesListNotifier,
-                  DayDataNotifier
-                >(
-                  create: (_) => DayDataNotifier(<OrbitAndSolarValues>[]),
-                  update:
-                      DayDataNotifier.changeNotifierProxyProviderUpdateFunction,
+                CNPP<OrbSolValuesListNot, DayDataNot>(
+                  create: (_) => DayDataNot(<OrbSolValues>[]),
+                  update: DayDataNot.cNPPUpdateFunction,
                 ),
               ],
               builder: (context, child) => Column(
                 children: [
-                  const PinnedChartPageWidget(),
-                  const ScrollableChartPageWidget(),
+                  const PinnedChartPageHeading(),
+                  const ScrollableChartPageContent(),
                 ],
               ),
             ),
@@ -132,8 +101,8 @@ class ChartRoute extends StatelessWidget {
   }
 }
 
-class PinnedChartPageWidget extends StatelessWidget {
-  const PinnedChartPageWidget({super.key});
+class PinnedChartPageHeading extends StatelessWidget {
+  const PinnedChartPageHeading({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -142,17 +111,17 @@ class PinnedChartPageWidget extends StatelessWidget {
         constraints: BoxConstraints(maxWidth: 800),
         child: SizedBox(
           width: double.infinity,
-          child: Consumer<CurrentChartSettingsNotifier>(
-            builder: (context, currentChartSettingsNotifier, child) {
+          child: Consumer<ChartSettingsNot>(
+            builder: (context, chartSettingsNot, child) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    currentChartSettingsNotifier.value!.location.name,
+                    chartSettingsNot.value!.location.name,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Text(
-                    currentChartSettingsNotifier.value!.year.toString(),
+                    chartSettingsNot.value!.year.toString(),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ],
@@ -165,8 +134,8 @@ class PinnedChartPageWidget extends StatelessWidget {
   }
 }
 
-class ScrollableChartPageWidget extends StatelessWidget {
-  const ScrollableChartPageWidget({super.key});
+class ScrollableChartPageContent extends StatelessWidget {
+  const ScrollableChartPageContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -193,6 +162,47 @@ class ScrollableChartPageWidget extends StatelessWidget {
   }
 }
 
+class ScrollableChartPageContentR extends StatelessWidget {
+  const ScrollableChartPageContentR({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+
+            return Flex(
+              direction: constraints.maxWidth > 800 ? Axis.horizontal : Axis.vertical,
+              children: [
+                Column(
+                  spacing: 10,
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: 800),
+                        child: const ChartWidget(
+                          nXAxisBuckets: 12,
+                          nYAxisBuckets: 6,
+                        ),
+                      ),
+                    ),
+                    const ColorScaleWidget(),
+                    const KButtonRow(),
+                    const LocationButtonRow(),
+                    const DropdownColorschemeButton(),
+                  ],
+                ),
+                const AzimuthChart(),
+              ],
+            );
+          }
+        ),
+      ),
+    );
+  }
+}
+
 class DropdownColorschemeButton extends StatelessWidget {
   const DropdownColorschemeButton({super.key});
 
@@ -200,7 +210,7 @@ class DropdownColorschemeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(kButtonTapTargetPadding),
-      child: Selector<SavedSettingsNotifier, MyColorScheme?>(
+      child: Selector<SavedSettingsNot, MyColorScheme?>(
         selector: (_, savedSettingsNotifier) =>
             savedSettingsNotifier.value?.colorScheme,
         builder: (context, colorScheme, child) => DropdownMenu<MyColorScheme>(
@@ -208,9 +218,9 @@ class DropdownColorschemeButton extends StatelessWidget {
           label: const Text('Select Color Scheme'),
           onSelected: (MyColorScheme? value) {
             if (value == null) {
-              context.read<SavedSettingsNotifier>().clearColorScheme();
+              context.read<SavedSettingsNot>().clearColorScheme();
             } else {
-              context.read<SavedSettingsNotifier>().updateColorScheme(value);
+              context.read<SavedSettingsNot>().updateColorScheme(value);
             }
           },
           dropdownMenuEntries: List<DropdownMenuEntry<MyColorScheme>>.generate(
@@ -231,7 +241,7 @@ class KButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<KNotifier>(
+    return Consumer<KNot>(
       builder: (context, kNotifer, child) {
         print('Building k button row, k: ${kNotifer.value}');
         return Row(
@@ -283,7 +293,7 @@ class LocationButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CurrentChartSettingsNotifier>(
+    return Consumer<ChartSettingsNot>(
       builder: (context, currentChartSettingsNotifier, child) {
         return Row(
           spacing: 20,
@@ -291,19 +301,14 @@ class LocationButtonRow extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed:
-                  (context
-                              .read<SavedSettingsNotifier>()
-                              .value
-                              ?.defaultLocation ==
+                  (context.read<SavedSettingsNot>().value?.defaultLocation ==
                           currentChartSettingsNotifier.value?.location ||
                       currentChartSettingsNotifier.value?.location == null)
                   ? null
                   : () async {
-                      await context
-                          .read<SavedSettingsNotifier>()
-                          .updateLocation(
-                            currentChartSettingsNotifier.value!.location,
-                          );
+                      await context.read<SavedSettingsNot>().updateLocation(
+                        currentChartSettingsNotifier.value!.location,
+                      );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -329,7 +334,7 @@ class LocationButtonRow extends StatelessWidget {
               ),
               child: Text('Change location'),
             ),
-            Selector<SavedSettingsNotifier, Location?>(
+            Selector<SavedSettingsNot, Location?>(
               selector: (_, savedSettingsNotifier) =>
                   savedSettingsNotifier.value?.defaultLocation,
               builder: (context, defaultLocation, child) => ElevatedButton(
@@ -341,7 +346,7 @@ class LocationButtonRow extends StatelessWidget {
                     : () => currentChartSettingsNotifier
                           .updateCurrentChartSettings(
                             newLocation: context
-                                .read<SavedSettingsNotifier>()
+                                .read<SavedSettingsNot>()
                                 .value!
                                 .defaultLocation,
                           ),

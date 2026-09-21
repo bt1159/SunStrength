@@ -128,8 +128,8 @@ class Location {
   int get hashCode => Object.hash(name, lat, lon);
 }
 
-class CurrentChartSettings {
-  const CurrentChartSettings({
+class ChartSettings {
+  const ChartSettings({
     required this.location,
     required this.year,
     required this.timeZone,
@@ -143,7 +143,7 @@ class CurrentChartSettings {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is CurrentChartSettings &&
+    return other is ChartSettings &&
         other.location == location &&
         other.year == year &&
         other.timeZone == timeZone &&
@@ -156,8 +156,8 @@ class CurrentChartSettings {
 
 /// This class is a container for all the settings that a user will store between app sessions.  Keep in mind
 /// that these are not necessarily the same as what is displayed in the chart currently.
-class SavedAppSettings {
-  SavedAppSettings({
+class AppSettings {
+  AppSettings({
     this.defaultLocation,
     bool? twelveHour,
     int? defaultYear,
@@ -171,7 +171,7 @@ class SavedAppSettings {
   final int? defaultYear;
   final MyColorScheme colorScheme;
 
-  factory SavedAppSettings.fromSaved(SharedPreferences prefs) {
+  factory AppSettings.fromSaved(SharedPreferences prefs) {
     Location? newDefaultLocation;
     bool twelveHour = true;
     int? newDefaultYear;
@@ -207,7 +207,7 @@ class SavedAppSettings {
       );
     }
 
-    return SavedAppSettings(
+    return AppSettings(
       defaultLocation: newDefaultLocation,
       twelveHour: twelveHour,
       defaultYear: newDefaultYear,
@@ -223,7 +223,7 @@ class SavedAppSettings {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is SavedAppSettings &&
+    return other is AppSettings &&
         other.runtimeType == runtimeType &&
         other.defaultLocation?.name == defaultLocation?.name &&
         other.defaultLocation?.lat == defaultLocation?.lat &&
@@ -269,7 +269,7 @@ typedef TimedOrbitData =
 /// the chart.
 Future<({ui.Image image, List<List<double>> rawMatrixData})>
 generateColorImage({
-  required List<OrbitAndSolarValues> orbitAndSolarValuesList,
+  required List<OrbSolValues> orbitAndSolarValuesList,
   required int pixelWidth,
   Colormap? colormap,
   bool debug = false,
@@ -302,7 +302,7 @@ generateColorImage({
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
-  for (final OrbitAndSolarValues orbitAndSolarValues
+  for (final OrbSolValues orbitAndSolarValues
       in orbitAndSolarValuesList) {
     final double strength =
         orbitAndSolarValues.solarStrengthsLocalRelativeToGlobalMax;
@@ -365,7 +365,7 @@ generateColorImage({
 }
 
 Future<ChartImageContainer> generateColorImageInContainer({
-  required List<OrbitAndSolarValues> orbitAndSolarValuesList,
+  required List<OrbSolValues> orbitAndSolarValuesList,
   required int pixelWidth,
   Colormap? colormap,
 }) async {
@@ -502,8 +502,8 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
 /// J2000
 final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
 
-class OrbitAndSolarValues {
-  const OrbitAndSolarValues({
+class OrbSolValues {
+  const OrbSolValues({
     required this.tzDateTime,
     required this.hOffsetFromJ2000,
     required this.earthRotationAngle,
@@ -518,7 +518,7 @@ class OrbitAndSolarValues {
     required this.solarStrengthsLocalRelativeToGlobalMax,
   });
 
-  OrbitAndSolarValues copyWith({
+  OrbSolValues copyWith({
     tz.TZDateTime? tzDateTime,
     double? hOffsetFromJ2000,
     double? earthRotationAngle,
@@ -531,7 +531,7 @@ class OrbitAndSolarValues {
     double? solarElevationAngle,
     double? solarAzimuthAngle,
     double? solarStrengthsLocalRelativeToGlobalMax,
-  }) => OrbitAndSolarValues(
+  }) => OrbSolValues(
     tzDateTime: tzDateTime ?? this.tzDateTime,
     hOffsetFromJ2000: hOffsetFromJ2000 ?? this.hOffsetFromJ2000,
     earthRotationAngle: earthRotationAngle ?? this.earthRotationAngle,
@@ -548,7 +548,7 @@ class OrbitAndSolarValues {
         this.solarStrengthsLocalRelativeToGlobalMax,
   );
 
-  OrbitAndSolarValues.strengthOnly({
+  OrbSolValues.strengthOnly({
     required this.solarStrengthsLocalRelativeToGlobalMax,
   }) : tzDateTime = date0J2000,
        hOffsetFromJ2000 = 0,
@@ -620,16 +620,16 @@ class ImagePainter extends CustomPainter {
   }
 }
 
-class OrbitAndSolarValuesListNotifier
-    extends ValueNotifier<List<OrbitAndSolarValues>> {
-  OrbitAndSolarValuesListNotifier(
+class OrbSolValuesListNot
+    extends ValueNotifier<List<OrbSolValues>> {
+  OrbSolValuesListNot(
     super.value, {
     this.lastK,
     this.lastcurrentChartSettings,
   });
 
   double? lastK;
-  CurrentChartSettings? lastcurrentChartSettings;
+  ChartSettings? lastcurrentChartSettings;
 }
 
 // /// {@template PathMetricsGradientPainter}
@@ -824,10 +824,10 @@ class MainScaffoldDrawer extends StatelessWidget {
           ListTile(
             onTap: () {
               final bool currentTwelveHour =
-                  context.read<SavedSettingsNotifier>().value?.twelveHour ??
+                  context.read<SavedSettingsNot>().value?.twelveHour ??
                   true;
               print('currentTwelveHour: $currentTwelveHour');
-              context.read<SavedSettingsNotifier>().updateTwelveHour(
+              context.read<SavedSettingsNot>().updateTwelveHour(
                 !currentTwelveHour,
               );
               Navigator.of(context).pop();
@@ -851,7 +851,7 @@ class MainScaffoldDrawer extends StatelessWidget {
             children: [
               ListTile(
                 onTap: () =>
-                    context.read<SavedSettingsNotifier>().clearSettings(),
+                    context.read<SavedSettingsNot>().clearSettings(),
                 title: Text('Wipe defaults'),
               ),
               ListTile(
@@ -884,7 +884,7 @@ class _YearPickerTileState extends State<YearPickerTile> {
   void initState() {
     super.initState();
     int? potentialSavedYear = context
-        .read<SavedSettingsNotifier>()
+        .read<SavedSettingsNot>()
         .value
         ?.defaultYear;
     if (potentialSavedYear != null) {
@@ -912,8 +912,8 @@ class _YearPickerTileState extends State<YearPickerTile> {
         TextButton(
           onPressed: () {
             if (currentYear.year !=
-                context.read<SavedSettingsNotifier>().value?.defaultYear) {
-              context.read<SavedSettingsNotifier>().updateYear(
+                context.read<SavedSettingsNot>().value?.defaultYear) {
+              context.read<SavedSettingsNot>().updateYear(
                 currentYear.year,
               );
             }

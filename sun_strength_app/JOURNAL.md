@@ -270,6 +270,7 @@ That last point seems as first way too subtle, abstract, or inconsequential to w
 There are probably a lot of improvements that could be made.  For now, though, at least make it jump up above pointer if it gets to the bottom (so it doesn't get cut off).
 
 ## Major: responsive design
+Three approaches to the chart screen: Wrap, LayoutBuilder (using contstaints and building two diffrent trees), Flex (with layoutbuilder but it can make a row or a column depending on a member input, so it's the same widget for either one).
 
 ## I could probably make some of my ChangeNotifier's that are currently nullable classes to non-nullable.  Especially if they are exposed via a ChangeNotifierProxyProvider.
 I just learned that, not only does the update function "right" after the create fuction, literally nothing is built in between.  That means, it is completely safe to create the Notifier with some dummy/blank (but not null) value that will get immediately replaced by a real value.

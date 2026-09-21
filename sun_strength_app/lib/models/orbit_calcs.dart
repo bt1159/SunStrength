@@ -59,7 +59,7 @@ final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 /// Vector from center of the Earth to the North Pole.  Used to calculate solar azimuth angle.
 final Vector3 reNorthPole = Vector3(rEarth * sin(tilt), 0, rEarth * cos(tilt));
 
-Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
+Iterable<OrbSolValues> calculateOrbSolValuesIter({
   required double k,
   required double h,
   required num lat,
@@ -101,7 +101,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
   );
 
   /// A custom class containing all relevant data for all of the hour offsets
-  final Iterable<OrbitAndSolarValues> output = hOffsetsFromJ2000.map((
+  final Iterable<OrbSolValues> output = hOffsetsFromJ2000.map((
     hOffsetFromJ2000,
   ) {
     final tz.TZDateTime tzDateTime = calculateTZDateTime(dateTime0, initialHOffsetFromJ2000, hOffsetFromJ2000);
@@ -141,7 +141,7 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
           h: h,
         );
 
-    final OrbitAndSolarValues output = OrbitAndSolarValues(
+    final OrbSolValues output = OrbSolValues(
       tzDateTime: tzDateTime,
       hOffsetFromJ2000: hOffsetFromJ2000,
       earthRotationAngle: earthRotationAngle,
@@ -166,12 +166,12 @@ Iterable<OrbitAndSolarValues> calculateOrbitAndSolarValuesIterable({
   return output;
 }
 
-Iterable<OrbitAndSolarValues> recalculateOrbitAndSolarValuesIterableNewK({
+Iterable<OrbSolValues> recalculateOrbSolValuesIterNewK({
   required double k,
   required double h,
-  required Iterable<OrbitAndSolarValues> oldValues,
+  required Iterable<OrbSolValues> oldValues,
 }) {
-  final Iterable<OrbitAndSolarValues> newValues = oldValues.map((e) {
+  final Iterable<OrbSolValues> newValues = oldValues.map((e) {
     final double updatedSolarStrengthRelativeToGlobalMax =
         calculateSolarStrengthRelativeToGlobalMax(
           k: k,

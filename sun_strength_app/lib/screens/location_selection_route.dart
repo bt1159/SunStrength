@@ -78,7 +78,7 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
     // 1. Initialize the standard Autocomplete service
     service = gmaps_places.AutocompleteService();
     final Location? currentAppLocation = context
-        .read<CurrentChartSettingsNotifier>()
+        .read<ChartSettingsNot>()
         .value
         ?.location;
     if (currentAppLocation != null) {
@@ -448,7 +448,7 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               // Pass _currentPosition (LatLng) to your next 2D heatmap screen
               print("Proceeding with coordinates: $_currentPosition");
               context
-                  .read<CurrentChartSettingsNotifier>()
+                  .read<ChartSettingsNot>()
                   .updateCurrentChartSettings(newLocation: _currentPosition);
               print(
                 "Just finished updating current location CurrentChartSettingsNotifier.  About to pop or push",
@@ -463,11 +463,11 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               }
               print("Just triggerred an navigator route change");
               if (context
-                      .read<SavedSettingsNotifier>()
+                      .read<SavedSettingsNot>()
                       .value
                       ?.defaultLocation ==
                   null) {
-                context.read<SavedSettingsNotifier>().updateLocation(
+                context.read<SavedSettingsNot>().updateLocation(
                   _currentPosition,
                 );
               }
@@ -488,7 +488,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CurrentChartSettingsNotifier>(
+    return Consumer<ChartSettingsNot>(
       builder: (context, currentChartSettingsNotifier, child) {
         return AppBar(
           title: const Text("Select Your Location"),

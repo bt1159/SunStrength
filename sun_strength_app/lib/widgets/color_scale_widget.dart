@@ -15,7 +15,7 @@ class ColorScaleWidget extends StatelessWidget {
     return Builder(
       builder: (context) {
         return ColorScaleRenderObjectWidget(
-          child: Selector<SavedSettingsNotifier, MyColorScheme?>(
+          child: Selector<SavedSettingsNot, MyColorScheme?>(
             selector: (_, savedAppSettingsNotifier) =>
                 savedAppSettingsNotifier.value?.colorScheme,
             shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
@@ -44,11 +44,11 @@ class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
   Future<ui.Image> createScaleImage() async {
     final int vertHeight = 40;
     final int horWidth = 100;
-    List<OrbitAndSolarValues> orbitAndSolarValuesList =
-        List<OrbitAndSolarValues>.generate(vertHeight * horWidth, (index) {
+    List<OrbSolValues> orbitAndSolarValuesList =
+        List<OrbSolValues>.generate(vertHeight * horWidth, (index) {
           final int horIndex = (index / vertHeight).floor();
           final double strength = horIndex / (horWidth - 1);
-          return OrbitAndSolarValues.strengthOnly(
+          return OrbSolValues.strengthOnly(
             solarStrengthsLocalRelativeToGlobalMax: strength,
           );
         });

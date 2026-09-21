@@ -13,9 +13,9 @@ class AzimuthChart extends StatelessWidget {
   const AzimuthChart({super.key});
 
   AzimuthChartData generateLists({
-    required List<OrbitAndSolarValues> osSingleDay,
+    required List<OrbSolValues> osSingleDay,
   }) {
-    final Iterable<OrbitAndSolarValues> visibleSunOnlyData = osSingleDay.where(
+    final Iterable<OrbSolValues> visibleSunOnlyData = osSingleDay.where(
       (element) => element.solarElevationAngle > 0.0001,
     );
     final Iterable<Offset> solarDataOffsets = visibleSunOnlyData.map(
@@ -42,7 +42,7 @@ class AzimuthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DayDataNotifier>(
+    return Consumer<DayDataNot>(
       builder: (context, dayDataNotifier, child) {
         final AzimuthChartData azimuthChartData = generateLists(
           osSingleDay: dayDataNotifier.value,
@@ -134,13 +134,13 @@ class AzimuthChart extends StatelessWidget {
                         Container(
                           width: double.infinity,
                           alignment: Alignment.center,
-                          child: Selector<SavedSettingsNotifier, MyColorScheme?>(
+                          child: Selector<SavedSettingsNot, MyColorScheme?>(
                             selector: (_, savedAppSettingsNotifier) =>
                                 savedAppSettingsNotifier.value?.colorScheme,
                             shouldRebuild: (previous, next) =>
                                 previous?.$1 != next?.$1,
                             builder: (context, myColorScheme, _) =>
-                                Selector<SavedSettingsNotifier, bool>(
+                                Selector<SavedSettingsNot, bool>(
                                   selector: (_, savedAppSettingsNotifier) =>
                                       savedAppSettingsNotifier
                                           .value
@@ -148,7 +148,7 @@ class AzimuthChart extends StatelessWidget {
                                       true,
                                   builder: (context, twelveHour, _) =>
                                       Selector<
-                                        CurrentChartSettingsNotifier,
+                                        ChartSettingsNot,
                                         double
                                       >(
                                         selector:
@@ -160,7 +160,7 @@ class AzimuthChart extends StatelessWidget {
                                                     .latitude ??
                                                 0,
                                         builder: (context, latitude, _) {
-                                          return Consumer<KNotifier>(
+                                          return Consumer<KNot>(
                                             builder: (context, kNotifier, _) {
                                               return Padding(
                                                 padding: const EdgeInsets.all(
@@ -198,7 +198,7 @@ class AzimuthChart extends StatelessWidget {
                                                         h:
                                                             context
                                                                 .read<
-                                                                  CurrentChartSettingsNotifier
+                                                                  ChartSettingsNot
                                                                 >()
                                                                 .value
                                                                 ?.h ??

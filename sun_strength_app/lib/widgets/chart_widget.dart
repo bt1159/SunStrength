@@ -35,11 +35,11 @@ class _ChartWidgetState extends State<ChartWidget> {
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
   static const Offset toolTipFormattingOffset = Offset(0, 40);
 
-  /// This method's purpose is two-fold: 1) update the value of [_tooltipNotifier] and return the single day's [OrbitAndSolarValues], which is then sent to azimuth chart if this chart is clicked.
-  List<OrbitAndSolarValues> _handleChartHover(
+  /// This method's purpose is two-fold: 1) update the value of [_tooltipNotifier] and return the single day's [OrbSolValues], which is then sent to azimuth chart if this chart is clicked.
+  List<OrbSolValues> _handleChartHover(
     Offset chartTextLocalPosition,
     Size chartSize,
-    List<OrbitAndSolarValues> orbitAndSolarValuesList,
+    List<OrbSolValues> orbitAndSolarValuesList,
     tz.Location timeZone,
     int year,
   ) {
@@ -55,7 +55,7 @@ class _ChartWidgetState extends State<ChartWidget> {
     final int dayIndex = (x / pxWidth).floor().clamp(0, nDays - 1);
     final int timeIndex = (96 - 1) - (y / pxHeight).floor().clamp(0, 96 - 1);
     // Look up data parameters safely.  First index is day, then time
-    final List<OrbitAndSolarValues> osSingleDay = orbitAndSolarValuesList
+    final List<OrbSolValues> osSingleDay = orbitAndSolarValuesList
         .sublist(dayIndex * 96, (dayIndex + 1) * 96);
     final double value =
         osSingleDay[timeIndex].solarStrengthsLocalRelativeToGlobalMax;
@@ -113,7 +113,7 @@ class _ChartWidgetState extends State<ChartWidget> {
         Stack(
           clipBehavior: Clip.hardEdge,
           children: [
-            Selector<CurrentChartSettingsNotifier, (int, tz.Location)?>(
+            Selector<ChartSettingsNot, (int, tz.Location)?>(
               selector: (_, currentChartSettingsNotifier) =>
                   currentChartSettingsNotifier.value == null
                   ? null
@@ -124,7 +124,7 @@ class _ChartWidgetState extends State<ChartWidget> {
               builder: (_, currentSettings, _) {
                 if (currentSettings == null) return SizedBox.shrink();
                 final (year, timeZone) = currentSettings;
-                return Selector<SavedSettingsNotifier, bool>(
+                return Selector<SavedSettingsNot, bool>(
                   selector: (_, savedSettingsNotifier) =>
                       savedSettingsNotifier.value?.twelveHour ?? true,
                   builder: (context, twelveHour, child) =>
@@ -135,12 +135,12 @@ class _ChartWidgetState extends State<ChartWidget> {
                         leapYear: isLeapYear(year),
                         chartArrayWidget: child!,
                       ),
-                  child: Consumer<OrbitAndSolarValuesListNotifier>(
+                  child: Consumer<OrbSolValuesListNot>(
                     builder: (context, orbitAndSolarValuesListNotifier, _) {
-                      List<OrbitAndSolarValues> orbitAndSolarValuesList =
+                      List<OrbSolValues> orbitAndSolarValuesList =
                           orbitAndSolarValuesListNotifier.value;
-                      List<OrbitAndSolarValues> osSingleDay =
-                          <OrbitAndSolarValues>[];
+                      List<OrbSolValues> osSingleDay =
+                          <OrbSolValues>[];
                       return MouseRegion(
                         onHover: (event) {
                           final RenderBox box =
@@ -155,10 +155,10 @@ class _ChartWidgetState extends State<ChartWidget> {
                         },
                         onExit: (_) => _hideTooltip(),
                         child: GestureDetector(
-                          onTap: () => context.read<DayDataNotifier>().value =
+                          onTap: () => context.read<DayDataNot>().value =
                               osSingleDay,
                           child:
-                              Selector<SavedSettingsNotifier, MyColorScheme?>(
+                              Selector<SavedSettingsNot, MyColorScheme?>(
                                 selector: (_, savedAppSettingsNotifier) =>
                                     savedAppSettingsNotifier.value?.colorScheme,
                                 shouldRebuild: (previous, next) =>
@@ -197,7 +197,7 @@ class _ChartWidgetState extends State<ChartWidget> {
                             color: Colors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Selector<SavedSettingsNotifier, bool>(
+                          child: Selector<SavedSettingsNot, bool>(
                             selector: (_, savedSettingsNotifier) =>
                                 savedSettingsNotifier.value?.twelveHour ?? true,
                             builder: (_, twelveHour, _) => Stack(
@@ -304,7 +304,7 @@ class FutureBuilderChartImage extends StatefulWidget {
     this.colormap,
   });
 
-  final List<OrbitAndSolarValues> orbitAndSolarValuesIterable;
+  final List<OrbSolValues> orbitAndSolarValuesIterable;
   final Colormap? colormap;
 
   @override
