@@ -953,3 +953,6 @@ List<String> inspectObject(JSObject someJsObject) {
   return dartKeys;
 }
 
+typedef CNP<T extends ChangeNotifier?> = ChangeNotifierProvider<T>;
+typedef CNPP<T, R extends ChangeNotifier?> = ChangeNotifierProxyProvider<T, R>;
+typedef CNPP2<T, T2, R extends ChangeNotifier?> = ChangeNotifierProxyProvider2<T, T2, R>;

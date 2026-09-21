@@ -49,7 +49,7 @@ class AzimuthChart extends StatelessWidget {
         );
         final tz.TZDateTime hoverDateTimeRaw =
             dayDataNotifier.value[12 * 4].tzDateTime;
-        return ChangeNotifierProvider<AzChartSizeNotifier>(
+        return CNP<AzChartSizeNotifier>(
           create: (context) => AzChartSizeNotifier(AzChartSize.large),
           builder: (context, _) {
             return Consumer<AzChartSizeNotifier>(

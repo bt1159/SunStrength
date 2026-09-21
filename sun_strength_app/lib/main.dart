@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
     print('Started build method for MyApp');
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<SavedSettingsNotifier>.value(
+        CNP<SavedSettingsNotifier>.value(
           value: savedSettings,
         ),
         ChangeNotifierProxyProvider<

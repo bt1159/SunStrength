@@ -35,10 +35,10 @@ class ChartRoute extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: MultiProvider(
               providers: [
-                ChangeNotifierProvider<KNotifier>(
+                CNP<KNotifier>(
                   create: (_) => KNotifier(2.0),
                 ),
-                ChangeNotifierProxyProvider2<
+                CNPP2<
                   KNotifier,
                   CurrentChartSettingsNotifier,
                   OrbitAndSolarValuesListNotifier
@@ -47,25 +47,6 @@ class ChartRoute extends StatelessWidget {
                     return OrbitAndSolarValuesListNotifier(
                       <OrbitAndSolarValues>[],
                     );
-                    // print('running create for OrbitAndSolarValuesListNotifier');
-                    // final CurrentChartSettings currentChartSettings = context
-                    //     .read<CurrentChartSettingsNotifier>()
-                    //     .value!;
-                    // final List<OrbitAndSolarValues> orbitAndSolarValuesList =
-                    //     calculateOrbitAndSolarValuesIterable(
-                    //       k: 2,
-                    //       h: 0,
-                    //       lat: currentChartSettings.location.lat,
-                    //       lon: currentChartSettings.location.lon,
-                    //       timeZone: currentChartSettings.timeZone,
-                    //       year: currentChartSettings.year,
-                    //     ).toList();
-                    // print('running CNP<OrbitAndSolarValuesListNotifier>.create');
-                    // return OrbitAndSolarValuesListNotifier(
-                    //   orbitAndSolarValuesList,
-                    //   lastK: 2,
-                    //   lastcurrentChartSettings: currentChartSettings,
-                    // );
                   },
                   update:
                       (
@@ -128,7 +109,7 @@ class ChartRoute extends StatelessWidget {
                               currentChartSettingsNotifier.value;
                       },
                 ),
-                ChangeNotifierProxyProvider<
+                CNPP<
                   OrbitAndSolarValuesListNotifier,
                   DayDataNotifier
                 >(
