@@ -14,6 +14,7 @@ import 'package:sun_strength_app/models/errors.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/main.dart';
+import 'package:flutter/rendering.dart';
 
 const kDebugMode = true;
 
@@ -302,8 +303,7 @@ generateColorImage({
 
   // 2. Iterate once. This triggers the lazy evaluation item-by-item.
   // Memory overhead remains incredibly low because we don't store intermediate lists.
-  for (final OrbSolValues orbitAndSolarValues
-      in orbitAndSolarValuesList) {
+  for (final OrbSolValues orbitAndSolarValues in orbitAndSolarValuesList) {
     final double strength =
         orbitAndSolarValues.solarStrengthsLocalRelativeToGlobalMax;
     // For rawMatrixData, x will index the outer list, or day, and y will index each inner list, or time.
@@ -495,7 +495,7 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
             Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt()),
       )
       .toList();
-  print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
+  // print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
   return (radii, colors);
 });
 
@@ -620,13 +620,8 @@ class ImagePainter extends CustomPainter {
   }
 }
 
-class OrbSolValuesListNot
-    extends ValueNotifier<List<OrbSolValues>> {
-  OrbSolValuesListNot(
-    super.value, {
-    this.lastK,
-    this.lastcurrentChartSettings,
-  });
+class OrbSolValuesListNot extends ValueNotifier<List<OrbSolValues>> {
+  OrbSolValuesListNot(super.value, {this.lastK, this.lastcurrentChartSettings});
 
   double? lastK;
   ChartSettings? lastcurrentChartSettings;
@@ -824,8 +819,7 @@ class MainScaffoldDrawer extends StatelessWidget {
           ListTile(
             onTap: () {
               final bool currentTwelveHour =
-                  context.read<SavedSettingsNot>().value?.twelveHour ??
-                  true;
+                  context.read<SavedSettingsNot>().value?.twelveHour ?? true;
               print('currentTwelveHour: $currentTwelveHour');
               context.read<SavedSettingsNot>().updateTwelveHour(
                 !currentTwelveHour,
@@ -850,8 +844,7 @@ class MainScaffoldDrawer extends StatelessWidget {
             title: Text('Dev only'),
             children: [
               ListTile(
-                onTap: () =>
-                    context.read<SavedSettingsNot>().clearSettings(),
+                onTap: () => context.read<SavedSettingsNot>().clearSettings(),
                 title: Text('Wipe defaults'),
               ),
               ListTile(
@@ -913,9 +906,7 @@ class _YearPickerTileState extends State<YearPickerTile> {
           onPressed: () {
             if (currentYear.year !=
                 context.read<SavedSettingsNot>().value?.defaultYear) {
-              context.read<SavedSettingsNot>().updateYear(
-                currentYear.year,
-              );
+              context.read<SavedSettingsNot>().updateYear(currentYear.year);
             }
             Navigator.of(context).pop<bool>(true);
           },
@@ -955,4 +946,1056 @@ List<String> inspectObject(JSObject someJsObject) {
 
 typedef CNP<T extends ChangeNotifier?> = ChangeNotifierProvider<T>;
 typedef CNPP<T, R extends ChangeNotifier?> = ChangeNotifierProxyProvider<T, R>;
-typedef CNPP2<T, T2, R extends ChangeNotifier?> = ChangeNotifierProxyProvider2<T, T2, R>;
+typedef CNPP2<T, T2, R extends ChangeNotifier?> =
+    ChangeNotifierProxyProvider2<T, T2, R>;
+
+class RowToColumnRenderWidget extends MultiChildRenderObjectWidget {
+  const RowToColumnRenderWidget({
+    super.key,
+    this.rowMainAxisAlignment = MainAxisAlignment.start,
+    this.rowMainAxisSize = MainAxisSize.max,
+    this.rowCrossAxisAlignment = CrossAxisAlignment.start,
+    this.columnMainAxisAlignment = MainAxisAlignment.start,
+    this.columnMainAxisSize = MainAxisSize.max,
+    this.columnCrossAxisAlignment = CrossAxisAlignment.start,
+    this.rowSpacing = 0,
+    this.columnSpacing = 0,
+    super.children,
+  });
+
+  final MainAxisAlignment rowMainAxisAlignment;
+  final MainAxisSize rowMainAxisSize;
+  final CrossAxisAlignment rowCrossAxisAlignment;
+  final MainAxisAlignment columnMainAxisAlignment;
+  final MainAxisSize columnMainAxisSize;
+  final CrossAxisAlignment columnCrossAxisAlignment;
+  final double rowSpacing;
+  final double columnSpacing;
+
+  @override
+  RowToColumnRenderObject createRenderObject(BuildContext context) {
+    return RowToColumnRenderObject(
+      rowMainAxisAlignment: rowMainAxisAlignment,
+      rowMainAxisSize: rowMainAxisSize,
+      rowCrossAxisAlignment: rowCrossAxisAlignment,
+      columnMainAxisAlignment: columnMainAxisAlignment,
+      columnMainAxisSize: columnMainAxisSize,
+      columnCrossAxisAlignment: columnCrossAxisAlignment,
+      rowSpacing: rowSpacing,
+      columnSpacing: columnSpacing,
+    );
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant RowToColumnRenderObject renderObject,
+  ) {
+    renderObject
+      ..rowMainAxisAlignment = rowMainAxisAlignment
+      ..rowMainAxisSize = rowMainAxisSize
+      ..rowCrossAxisAlignment = rowCrossAxisAlignment
+      ..columnMainAxisAlignment = columnMainAxisAlignment
+      ..columnMainAxisSize = columnMainAxisSize
+      ..columnCrossAxisAlignment = columnCrossAxisAlignment
+      ..rowSpacing = rowSpacing
+      ..columnSpacing = columnSpacing;
+  }
+}
+
+class RowToColumnRenderParentData extends FlexParentData {}
+
+class RowToColumnRenderObject extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, RowToColumnRenderParentData>,
+        RenderBoxContainerDefaultsMixin<
+          RenderBox,
+          RowToColumnRenderParentData
+        > {
+  RowToColumnRenderObject({
+    required MainAxisAlignment rowMainAxisAlignment,
+    required MainAxisSize rowMainAxisSize,
+    required CrossAxisAlignment rowCrossAxisAlignment,
+    required MainAxisAlignment columnMainAxisAlignment,
+    required MainAxisSize columnMainAxisSize,
+    required CrossAxisAlignment columnCrossAxisAlignment,
+    required double rowSpacing,
+    required double columnSpacing,
+  }) : _rowMainAxisSize = rowMainAxisSize,
+       _rowCrossAxisAlignment = rowCrossAxisAlignment,
+       _columnMainAxisAlignment = columnMainAxisAlignment,
+       _columnMainAxisSize = columnMainAxisSize,
+       _columnCrossAxisAlignment = columnCrossAxisAlignment,
+       _rowSpacing = rowSpacing,
+       _columnSpacing = columnSpacing,
+       _rowMainAxisAlignment = rowMainAxisAlignment;
+
+  MainAxisAlignment _rowMainAxisAlignment;
+  MainAxisAlignment get rowMainAxisAlignment => _rowMainAxisAlignment;
+  set rowMainAxisAlignment(MainAxisAlignment value) {
+    _rowMainAxisAlignment = value;
+    markNeedsLayout();
+  }
+
+  MainAxisSize _rowMainAxisSize;
+  MainAxisSize get rowMainAxisSize => _rowMainAxisSize;
+  set rowMainAxisSize(MainAxisSize value) {
+    _rowMainAxisSize = value;
+    markNeedsLayout();
+  }
+
+  CrossAxisAlignment _rowCrossAxisAlignment;
+  CrossAxisAlignment get rowCrossAxisAlignment => _rowCrossAxisAlignment;
+  set rowCrossAxisAlignment(CrossAxisAlignment value) {
+    _rowCrossAxisAlignment = value;
+    markNeedsLayout();
+  }
+
+  MainAxisAlignment _columnMainAxisAlignment;
+  MainAxisAlignment get columnMainAxisAlignment => _columnMainAxisAlignment;
+  set columnMainAxisAlignment(MainAxisAlignment value) {
+    _columnMainAxisAlignment = value;
+    markNeedsLayout();
+  }
+
+  MainAxisSize _columnMainAxisSize;
+  MainAxisSize get columnMainAxisSize => _columnMainAxisSize;
+  set columnMainAxisSize(MainAxisSize value) {
+    _columnMainAxisSize = value;
+    markNeedsLayout();
+  }
+
+  CrossAxisAlignment _columnCrossAxisAlignment;
+  CrossAxisAlignment get columnCrossAxisAlignment => _columnCrossAxisAlignment;
+  set columnCrossAxisAlignment(CrossAxisAlignment value) {
+    _columnCrossAxisAlignment = value;
+    markNeedsLayout();
+  }
+
+  double _rowSpacing;
+  double get rowSpacing => _rowSpacing;
+  set rowSpacing(double value) {
+    _rowSpacing = value;
+    markNeedsLayout();
+  }
+
+  double _columnSpacing;
+  double get columnSpacing => _columnSpacing;
+  set columnSpacing(double value) {
+    _columnSpacing = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! RowToColumnRenderParentData) {
+      child.parentData = RowToColumnRenderParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    List<Size> rigidChildSizes = <Size>[];
+    RenderBox? child = firstChild;
+    int totalFlex = 0;
+
+    // Lists to keep track of who is who
+    List<RenderBox> rigidChildren = [];
+    List<RenderBox> flexibleChildren = [];
+
+    // Group children by whether flexible
+    while (child != null) {
+      final FlexParentData childParentData = child.parentData as FlexParentData;
+
+      if (childParentData.flex != null && childParentData.flex! > 0) {
+        // This child is wrapped in Expanded/Flexible.
+        // DO NOT lay it out yet.
+        flexibleChildren.add(child);
+        totalFlex += childParentData.flex!;
+      } else {
+        // This child is rigid. It is safe to use unbounded constraints.
+        rigidChildren.add(child);
+      }
+      child = childParentData.nextSibling;
+    }
+
+    MainAxisSize effectiveRowMainAxisSize = rowMainAxisSize;
+
+    // Decide if row or column by laying out rigid children
+    for (final RenderBox child in rigidChildren) {
+      child.layout(
+        BoxConstraints(
+          minWidth: 0,
+          maxWidth: constraints.maxWidth,
+          minHeight: 0,
+          maxHeight: constraints.maxHeight,
+        ),
+        parentUsesSize: true,
+      );
+      rigidChildSizes.add(child.size);
+    }
+    final double smallestRowWidth =
+        rigidChildSizes.fold<double>(
+          0,
+          (previousValue, element) => previousValue + element.width,
+        ) +
+        rowSpacing * (rigidChildren.length + flexibleChildren.length - 1);
+        print('calculated smallestRowWidth: $smallestRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleChildren.isNotEmpty}');
+
+    if (smallestRowWidth <= constraints.maxWidth) {
+      // layout as a row
+
+      // Now that we know it will be a row, check for row-specific throw conditions
+      if (flexibleChildren.isNotEmpty) {
+        if (constraints.maxWidth.isInfinite) {
+          throw 'RowToColumnRenderObject is trying to be a row but was given inifinite width also given at least one flexible child';
+        } else {
+          effectiveRowMainAxisSize = MainAxisSize.max;
+        }
+      } else if (constraints.maxWidth.isInfinite) {
+        effectiveRowMainAxisSize = MainAxisSize.min;
+      }
+      if (rowCrossAxisAlignment == CrossAxisAlignment.stretch &&
+          constraints.maxHeight.isInfinite) {
+        throw 'RowToColumnRenderOject is trying to be a row but given infinite maxHeight and rowCrossAxisAlingment of stretch and is trying to lay out as a row.  This is not possible.';
+      }
+
+      /// Set up logic for y and height for children according to [rowCrossAxisAlignment].  The logic is set up here, but children are actually laid out below according to [rowMainAxisSize] and [rowMainAxisAlignment]
+      double tempRowLargestChildHeight() {
+        double rowLargestChildHeight = rigidChildSizes.fold(
+          0,
+          (previousValue, element) => max(previousValue, element.height),
+        );
+        if (flexibleChildren.isNotEmpty) {
+          double remainingWidth = constraints.maxWidth - smallestRowWidth;
+          double widthPerFlex = remainingWidth / totalFlex;
+
+          for (final child in flexibleChildren) {
+            RowToColumnRenderParentData parentData =
+                child.parentData as RowToColumnRenderParentData;
+
+            child.layout(
+              BoxConstraints(
+                minWidth: parentData.flex! * widthPerFlex,
+                maxWidth: parentData.flex! * widthPerFlex,
+                minHeight: 0,
+                maxHeight: constraints.maxHeight,
+              ),
+              parentUsesSize: true,
+            );
+
+            rowLargestChildHeight = max(
+              rowLargestChildHeight,
+              child.size.height,
+            );
+          }
+        }
+        return rowLargestChildHeight;
+      }
+
+      double Function(double height) calcY;
+      final double rowChildMinHeight;
+
+      switch (rowCrossAxisAlignment) {
+        case CrossAxisAlignment.start:
+          calcY = (double height) => 0;
+          rowChildMinHeight = 0;
+          break;
+        case CrossAxisAlignment.stretch:
+          calcY = (double height) => 0;
+          rowChildMinHeight = constraints.maxHeight;
+          break;
+        case CrossAxisAlignment.end:
+          calcY = (double height) => tempRowLargestChildHeight() - height;
+          rowChildMinHeight = 0;
+          break;
+        case CrossAxisAlignment.center:
+        case CrossAxisAlignment.baseline:
+          rowChildMinHeight = 0;
+          calcY = (double height) => (tempRowLargestChildHeight() - height) / 2;
+          break;
+      }
+
+      double rowLargestChildHeight = 0;
+      double runningDx = 0;
+
+      /// Branch off layout process by [effectiveRowMainAxisSize].  Start here with min
+      if (effectiveRowMainAxisSize == MainAxisSize.min) {
+        // Since rowMainAxisSize is min, rowMainAxisAlignment is irrelvant.  Proceed to '
+        // 'layout children.  We also know that there are no Expanded children, or this '
+        // 'would have been overriden to max
+        for (final child in rigidChildren) {
+          final RowToColumnRenderParentData childParentData =
+              child.parentData as RowToColumnRenderParentData;
+          child.layout(
+            BoxConstraints(
+              minWidth: 0,
+              maxWidth: constraints.maxWidth,
+              minHeight: rowChildMinHeight,
+              maxHeight: constraints.maxHeight,
+            ),
+            parentUsesSize: true,
+          );
+          rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
+
+          childParentData.offset = Offset(runningDx, calcY(child.size.height));
+          runningDx += child.size.width + rowSpacing;
+        }
+        size = constraints.constrainDimensions(smallestRowWidth, rowLargestChildHeight);
+        print(
+          'just set size: $size.  rowMainAxisSize is min.  There are no flexible children.  Input constraints: $constraints',
+        );
+      } else {
+        /// Since effectiveRowMainAxisSize is max, layout children according to rowMainAxisAlignment
+
+        if (flexibleChildren.isNotEmpty) {
+          // If there are flexible children, rowMainAxisAlignment becomes irrelevant since all options come out the same
+          rowLargestChildHeight = 0;
+          runningDx = 0;
+          double remainingWidth = constraints.maxWidth - smallestRowWidth;
+          double widthPerFlex = remainingWidth / totalFlex;
+          RenderBox? child = firstChild;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
+            if (childParentData.flex != null && childParentData.flex! > 0) {
+              child.layout(
+                BoxConstraints(
+                  minWidth: widthPerFlex * childParentData.flex!,
+                  maxWidth: widthPerFlex * childParentData.flex!,
+                  minHeight: rowChildMinHeight,
+                  maxHeight: constraints.maxHeight,
+                ),
+                parentUsesSize: true,
+              );
+            } else {
+              child.layout(
+                BoxConstraints(
+                  minWidth: 0,
+                  maxWidth: constraints.maxWidth,
+                  minHeight: rowChildMinHeight,
+                  maxHeight: constraints.maxHeight,
+                ),
+                parentUsesSize: true,
+              );
+            }
+            rowLargestChildHeight = max(
+              rowLargestChildHeight,
+              child.size.height,
+            );
+
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height),
+            );
+            runningDx += child.size.width + rowSpacing;
+            child = childParentData.nextSibling;
+          }
+          size = constraints.constrainDimensions(constraints.maxWidth, rowLargestChildHeight);
+          print(
+            'just set size: $size.  rowMainAxisSize is max.  There are flexible children, which means that rowMainAxisAlignment is irrelevant.  Input constraints: $constraints',
+          );
+        } else {
+          /// No flex children and rowMainAxisSize is max, so layout according to rowMainAxisAlignment
+          runningDx = 0;
+          rowLargestChildHeight = 0;
+          final double emptySpace = constraints.maxWidth - smallestRowWidth;
+
+          switch (rowMainAxisAlignment) {
+            case MainAxisAlignment.start:
+              child = firstChild;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                childParentData.offset = Offset(
+                  runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx += child.size.width + rowSpacing;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.end:
+              child = lastChild;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                runningDx += child.size.width;
+                childParentData.offset = Offset(
+                  constraints.maxWidth - runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx += rowSpacing;
+                child = childParentData.previousSibling;
+              }
+              break;
+            case MainAxisAlignment.center:
+              child = firstChild;
+              runningDx = emptySpace / 2;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                childParentData.offset = Offset(
+                  runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx += child.size.width + rowSpacing;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceBetween:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length - 1);
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                childParentData.offset = Offset(
+                  runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx +=
+                    child.size.width + rowSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceAround:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length);
+              runningDx += nominalSpaceAllocation / 2;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                childParentData.offset = Offset(
+                  runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx +=
+                    child.size.width + rowSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceEvenly:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length + 1);
+              runningDx += nominalSpaceAllocation;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                rowLargestChildHeight = max(
+                  rowLargestChildHeight,
+                  child.size.height,
+                );
+
+                childParentData.offset = Offset(
+                  runningDx,
+                  calcY(child.size.height),
+                );
+                runningDx +=
+                    child.size.width + rowSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+          }
+          size = constraints.constrainDimensions(constraints.maxWidth, rowLargestChildHeight);
+          print(
+            'just set size: $size.  rowMainAxisSize is max.  There are no flexible children, which means that rowMainAxisAlignment: $rowMainAxisAlignment matters.  Input constraints: $constraints',
+          );
+        }
+      }
+    } else {
+      /// layout as column
+
+      /// Now that we know it will be a column, check for column-specific throw conditions
+      if (columnCrossAxisAlignment == CrossAxisAlignment.stretch &&
+          constraints.maxWidth.isInfinite) {
+        throw 'RowToColumnRenderOject given infinite maxWidth and columnCrossAxisAlignment of stretch and is trying to lay out as a column.  This is not possible.';
+      }
+
+      MainAxisSize effectiveColumnMainAxisSize = columnMainAxisSize;
+
+      // Check for throwing conditions or overruling conditions
+      if (flexibleChildren.isNotEmpty) {
+        if (constraints.maxHeight.isInfinite) {
+          throw 'RowToColumnRenderObject is trying to be a column but was given inifinite height also given at least one flexible child';
+        } else {
+          effectiveColumnMainAxisSize = MainAxisSize.max;
+        }
+      } else if (constraints.maxHeight.isInfinite) {
+        effectiveColumnMainAxisSize = MainAxisSize.min;
+      }
+      if (columnCrossAxisAlignment == CrossAxisAlignment.stretch &&
+          constraints.maxWidth.isInfinite) {
+        throw 'RowToColumnRenderOject is trying to lay out as column but given infinite maxHeight and rowCrossAxisAlingment of stretch and is trying to lay out as a row.  This is not possible.';
+      }
+
+      final double smallestColumnHeight =
+          rigidChildSizes.fold<double>(
+            0,
+            (previousValue, element) => previousValue + element.height,
+          ) +
+          columnSpacing * (getChildrenAsList().length - 1);
+
+      /// Set up logic for x and width for children according to [columnCrossAxisAlignment].  The logic is set up here, but children are actually laid out below according to [effectiveColumnMainAxisSize] and [columnMainAxisAlignment]
+      double tempColumnLargestChildWidth() {
+        double columnLargestChildWidth = rigidChildSizes.fold(
+          0,
+          (previousValue, element) => max(previousValue, element.width),
+        );
+        if (flexibleChildren.isNotEmpty) {
+          double remainingHeight = constraints.maxHeight - smallestColumnHeight;
+          double heightPerFlex = remainingHeight / totalFlex;
+
+          for (final child in flexibleChildren) {
+            RowToColumnRenderParentData parentData =
+                child.parentData as RowToColumnRenderParentData;
+
+            child.layout(
+              BoxConstraints(
+                minWidth: 0,
+                maxWidth: constraints.maxWidth,
+                minHeight: parentData.flex! * heightPerFlex,
+                maxHeight: parentData.flex! * heightPerFlex,
+              ),
+              parentUsesSize: true,
+            );
+
+            columnLargestChildWidth = max(
+              columnLargestChildWidth,
+              child.size.width,
+            );
+          }
+        }
+        return columnLargestChildWidth;
+      }
+
+      double Function(double width) calcX;
+      final double columnChildMinWidth;
+
+      switch (columnCrossAxisAlignment) {
+        case CrossAxisAlignment.start:
+          calcX = (double width) => 0;
+          columnChildMinWidth = 0;
+          break;
+        case CrossAxisAlignment.stretch:
+          calcX = (double width) => 0;
+          columnChildMinWidth = constraints.maxWidth;
+          break;
+        case CrossAxisAlignment.end:
+          calcX = (double width) => tempColumnLargestChildWidth() - width;
+          columnChildMinWidth = 0;
+          break;
+        case CrossAxisAlignment.center:
+        case CrossAxisAlignment.baseline:
+          calcX = (double width) => (tempColumnLargestChildWidth() - width) / 2;
+          columnChildMinWidth = 0;
+          break;
+      }
+
+      double columnLargestChildWidth = 0;
+      double runningDy = 0;
+
+      /// Branch off layout process by [effectiveColumnMainAxisSize].  Start here with min
+      if (effectiveColumnMainAxisSize == MainAxisSize.min) {
+        // Since effectiveColumnMainAxisSize is min, columnMainAxisAlignment is irrelvant.  Proceed to layout children
+
+        for (final child in rigidChildren) {
+          final RowToColumnRenderParentData childParentData =
+              child.parentData as RowToColumnRenderParentData;
+          child.layout(
+            BoxConstraints(
+              minWidth: columnChildMinWidth,
+              maxWidth: constraints.maxWidth,
+              minHeight: 0,
+              maxHeight: constraints.maxHeight,
+            ),
+            parentUsesSize: true,
+          );
+          columnLargestChildWidth = max(
+            columnLargestChildWidth,
+            child.size.width,
+          );
+
+          childParentData.offset = Offset(calcX(child.size.width), runningDy);
+          runningDy += child.size.height + columnSpacing;
+        }
+        size = constraints.constrainDimensions(columnLargestChildWidth, smallestColumnHeight);
+        print(
+          'just set size: $size.  effectiveColumnMainAxisSize is min.  There are no flexible children.  Input constraints: $constraints',
+        );
+      } else {
+        /// Since [effectiveColumnMainAxisSize] is max, layout children according to columnMainAxisAlignment
+
+        if (flexibleChildren.isNotEmpty) {
+          // If there are flexible children, columnMainAxisAlignment becomes irrelevant since all options come out the same
+          columnLargestChildWidth = 0;
+          runningDy = 0;
+          final double remainingHeight =
+              constraints.maxHeight - smallestColumnHeight;
+          final double heightPerFlex = remainingHeight / totalFlex;
+          RenderBox? child = firstChild;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
+            if (childParentData.flex != null && childParentData.flex! > 0) {
+              child.layout(
+                BoxConstraints(
+                  minWidth: columnChildMinWidth,
+                  maxWidth: constraints.maxWidth,
+                  minHeight: heightPerFlex * childParentData.flex!,
+                  maxHeight: heightPerFlex * childParentData.flex!,
+                ),
+                parentUsesSize: true,
+              );
+            } else {
+              child.layout(
+                BoxConstraints(
+                  minWidth: columnChildMinWidth,
+                  maxWidth: constraints.maxWidth,
+                  minHeight: 0,
+                  maxHeight: constraints.maxHeight,
+                ),
+                parentUsesSize: true,
+              );
+            }
+            columnLargestChildWidth = max(
+              columnLargestChildWidth,
+              child.size.width,
+            );
+
+            childParentData.offset = Offset(calcX(child.size.width), runningDy);
+            runningDy += child.size.height + columnSpacing;
+            child = childParentData.nextSibling;
+          }
+          size = constraints.constrainDimensions(columnLargestChildWidth, constraints.maxHeight);
+          print(
+            'just set size: $size.  effectiveColumnMainAxisSize is max.  There are flexible children, which means that columnMainAxisAlignment is irrelevant.  Input constraints: $constraints',
+          );
+        } else {
+          // No flex children and rowMainAxisSize is max, so layout according to columnMainAxisAlignment
+          columnLargestChildWidth = 0;
+          runningDy = 0;
+          final double emptySpace =
+              constraints.maxHeight - smallestColumnHeight;
+
+          switch (columnMainAxisAlignment) {
+            case MainAxisAlignment.start:
+              child = firstChild;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  runningDy,
+                );
+                runningDy += child.size.height + columnSpacing;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.end:
+              child = lastChild;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                runningDy += child.size.height;
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  constraints.maxHeight - runningDy,
+                );
+                runningDy += columnSpacing;
+                child = childParentData.previousSibling;
+              }
+              break;
+            case MainAxisAlignment.center:
+              child = firstChild;
+              runningDy = emptySpace / 2;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  runningDy,
+                );
+                runningDy += child.size.height + columnSpacing;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceBetween:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length - 1);
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  runningDy,
+                );
+                runningDy +=
+                    child.size.height + columnSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceAround:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length);
+              runningDy += nominalSpaceAllocation / 2;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  runningDy,
+                );
+                runningDy +=
+                    child.size.height + columnSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+            case MainAxisAlignment.spaceEvenly:
+              child = firstChild;
+              final double nominalSpaceAllocation =
+                  emptySpace / (rigidChildren.length + 1);
+              runningDy += nominalSpaceAllocation;
+              while (child != null) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: columnChildMinWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 0,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                columnLargestChildWidth = max(
+                  columnLargestChildWidth,
+                  child.size.width,
+                );
+
+                childParentData.offset = Offset(
+                  calcX(child.size.width),
+                  runningDy,
+                );
+                runningDy +=
+                    child.size.height + columnSpacing + nominalSpaceAllocation;
+                child = childParentData.nextSibling;
+              }
+              break;
+          }
+
+          size = constraints.constrainDimensions(
+            columnLargestChildWidth,
+            constraints.maxHeight,
+          );
+          print(
+            'just set size: $size.  effectiveColumnMainAxisSize is max.  There are no flexible children, which means that columnMainAxisAlignment: $columnMainAxisAlignment matters.  Input constraints: $constraints',
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    defaultPaint(context, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    return defaultHitTestChildren(result, position: position);
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      EnumProperty<MainAxisAlignment>(
+        'rowMainAxisAlignment',
+        rowMainAxisAlignment,
+      ),
+    );
+  }
+}
+
+class RowColumnTester extends StatefulWidget {
+  const RowColumnTester({super.key});
+
+  @override
+  State<RowColumnTester> createState() => _RowColumnTesterState();
+}
+
+class _RowColumnTesterState extends State<RowColumnTester> {
+  bool scrollView = false;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Row and Column tester'),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                scrollView = !scrollView;
+              });
+            },
+            child: Text('Switch scroll view'),
+          ),
+        ],
+      ),
+      body: scrollView
+          ? ListView(
+              children: [
+                RTCForTesting(),
+                RTCForTestingExp(),
+                RTCForTesting(),
+                RTCForTesting(),
+              ],
+            )
+          : RTCForTestingExp(),
+    );
+  }
+}
+
+class RTCForTesting extends StatelessWidget {
+  const RTCForTesting({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return RowToColumnRenderWidget(
+      rowMainAxisAlignment: MainAxisAlignment.center,
+      rowMainAxisSize: MainAxisSize.min,
+      rowCrossAxisAlignment: CrossAxisAlignment.end,
+      columnMainAxisAlignment: MainAxisAlignment.start,
+      columnMainAxisSize: MainAxisSize.max,
+      columnCrossAxisAlignment: CrossAxisAlignment.start,
+      rowSpacing: 10,
+      columnSpacing: 30,
+      children: [
+        Container(
+          width: 100,
+          height: 150,
+          color: Colors.blue,
+          child: Text('SizedBox'),
+        ),
+        Container(
+          width: 80,
+          height: 100,
+          color: Colors.red,
+          child: Text('SizedBox'),
+        ),
+        Container(
+          width: 120,
+          height: 50,
+          color: Colors.green,
+          child: Text('SizedBox'),
+        ),
+        Container(
+          width: 90,
+          height: 150,
+          color: Colors.orange,
+          child: Text('SizedBox'),
+        ),
+      ],
+    );
+  }
+}
+
+class RTCForTestingExp extends StatelessWidget {
+  const RTCForTestingExp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return RowToColumnRenderWidget(
+      rowMainAxisAlignment: MainAxisAlignment.center,
+      rowMainAxisSize: MainAxisSize.min,
+      rowCrossAxisAlignment: CrossAxisAlignment.end,
+      columnMainAxisAlignment: MainAxisAlignment.start,
+      columnMainAxisSize: MainAxisSize.max,
+      columnCrossAxisAlignment: CrossAxisAlignment.start,
+      rowSpacing: 10,
+      columnSpacing: 30,
+      children: [
+        Container(
+          width: 100,
+          height: 150,
+          color: Colors.blue,
+          child: Text('SizedBox'),
+        ),
+        Expanded(
+          child: Container(
+            width: 80,
+            height: 100,
+            color: Colors.red,
+            child: Text('SizedBox'),
+          ),
+        ),
+        Container(
+          width: 120,
+          height: 50,
+          color: Colors.green,
+          child: Text('SizedBox'),
+        ),
+        Container(
+          width: 90,
+          height: 150,
+          color: Colors.orange,
+          child: Text('SizedBox'),
+        ),
+      ],
+    );
+  }
+}

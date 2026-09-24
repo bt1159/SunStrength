@@ -12,9 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 class AzimuthChart extends StatelessWidget {
   const AzimuthChart({super.key});
 
-  AzimuthChartData generateLists({
-    required List<OrbSolValues> osSingleDay,
-  }) {
+  AzimuthChartData generateLists({required List<OrbSolValues> osSingleDay}) {
     final Iterable<OrbSolValues> visibleSunOnlyData = osSingleDay.where(
       (element) => element.solarElevationAngle > 0.0001,
     );
@@ -42,130 +40,159 @@ class AzimuthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DayDataNot>(
-      builder: (context, dayDataNotifier, child) {
-        final AzimuthChartData azimuthChartData = generateLists(
-          osSingleDay: dayDataNotifier.value,
-        );
-        final tz.TZDateTime hoverDateTimeRaw =
-            dayDataNotifier.value[12 * 4].tzDateTime;
-        return CNP<AzChartSizeNotifier>(
-          create: (context) => AzChartSizeNotifier(AzChartSize.large),
-          builder: (context, _) {
-            return Consumer<AzChartSizeNotifier>(
-              builder: (context, azChartSizeNotifier, _) {
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    double maxWidth = constraints.maxWidth;
-                    final AzChartSizeComplete large = (
-                      width: maxWidth,
-                      azChartSize: AzChartSize.large,
-                    );
-                    final AzChartSizeComplete small = (
-                      width: (maxWidth / 4).clamp(200, maxWidth),
-                      azChartSize: AzChartSize.small,
-                    );
-                    final AzChartSizeComplete medium = (
-                      width: (small.width + large.width) / 2,
-                      azChartSize: AzChartSize.medium,
-                    );
-                    void onPressedSmall() =>
-                        azChartSizeNotifier.value == small.azChartSize ||
-                            small.width == large.width
-                        ? null
-                        : azChartSizeNotifier.value = small.azChartSize;
-                    void onPressedMedium() =>
-                        azChartSizeNotifier.value == medium.azChartSize ||
-                            medium.width == large.width
-                        ? null
-                        : azChartSizeNotifier.value = medium.azChartSize;
-                    void onPressedLarge() =>
-                        azChartSizeNotifier.value == large.azChartSize
-                        ? null
-                        : azChartSizeNotifier.value = large.azChartSize;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        print('inside AzimuthChart.build, constraints: $constraints');
+        return Consumer<DayDataNot>(
+          builder: (context, dayDataNotifier, child) {
+            final AzimuthChartData azimuthChartData = generateLists(
+              osSingleDay: dayDataNotifier.value,
+            );
+            final tz.TZDateTime hoverDateTimeRaw =
+                dayDataNotifier.value[12 * 4].tzDateTime;
+            return CNP<AzChartSizeNotifier>(
+              create: (context) => AzChartSizeNotifier(AzChartSize.large),
+              builder: (context, _) {
+                return Consumer<AzChartSizeNotifier>(
+                  builder: (context, azChartSizeNotifier, _) {
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        print(
+                          'inside AzimuthChart.build, constraints passed below Consumer<AzChartSizeNotifier>: $constraints',
+                        );
+                        double maxWidth = constraints.maxWidth;
+                        final AzChartSizeComplete large = (
+                          width: maxWidth,
+                          azChartSize: AzChartSize.large,
+                        );
+                        final AzChartSizeComplete small = (
+                          width: (maxWidth / 4).clamp(200, maxWidth),
+                          azChartSize: AzChartSize.small,
+                        );
+                        final AzChartSizeComplete medium = (
+                          width: (small.width + large.width) / 2,
+                          azChartSize: AzChartSize.medium,
+                        );
+                        void onPressedSmall() =>
+                            azChartSizeNotifier.value == small.azChartSize ||
+                                small.width == large.width
+                            ? null
+                            : azChartSizeNotifier.value = small.azChartSize;
+                        void onPressedMedium() =>
+                            azChartSizeNotifier.value == medium.azChartSize ||
+                                medium.width == large.width
+                            ? null
+                            : azChartSizeNotifier.value = medium.azChartSize;
+                        void onPressedLarge() =>
+                            azChartSizeNotifier.value == large.azChartSize
+                            ? null
+                            : azChartSizeNotifier.value = large.azChartSize;
+    
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            child!,
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 4,
-                              children: [
-                                ElevatedButton(
-                                  onPressed:
-                                      azChartSizeNotifier.value ==
-                                              small.azChartSize ||
-                                          small.width == large.width
-                                      ? null
-                                      : onPressedSmall,
-                                  child: Text('S'),
-                                ),
-                                ElevatedButton(
-                                  onPressed:
-                                      azChartSizeNotifier.value ==
-                                              medium.azChartSize ||
-                                          medium.width == large.width
-                                      ? null
-                                      : onPressedMedium,
-                                  child: Text('M'),
-                                ),
-                                ElevatedButton(
-                                  onPressed:
-                                      azChartSizeNotifier.value ==
-                                          large.azChartSize
-                                      ? null
-                                      : onPressedLarge,
-                                  child: Text('L'),
-                                ),
-                              ],
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                print(
+                                  'inside AzimuthChart.build, constraints passed to Columns first child: $constraints',
+                                );
+                                return Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        print(
+                                          'inside AzimuthChart.build, constraints passed to first child of Row underColumn: $constraints',
+                                        );
+                                        return child!;
+                                      },
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      spacing: 4,
+                                      children: [
+                                        LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            print(
+                                              'inside AzimuthChart.build, constraints passed to first child of Row under Row under Column: $constraints',
+                                            );
+                                            return ElevatedButton(
+                                              onPressed:
+                                                  azChartSizeNotifier.value ==
+                                                          small.azChartSize ||
+                                                      small.width == large.width
+                                                  ? null
+                                                  : onPressedSmall,
+                                              child: Text('S'),
+                                            );
+                                          },
+                                        ),
+                                        ElevatedButton(
+                                          onPressed:
+                                              azChartSizeNotifier.value ==
+                                                      medium.azChartSize ||
+                                                  medium.width == large.width
+                                              ? null
+                                              : onPressedMedium,
+                                          child: Text('M'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed:
+                                              azChartSizeNotifier.value ==
+                                                  large.azChartSize
+                                              ? null
+                                              : onPressedLarge,
+                                          child: Text('L'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        Text(
-                          intl.DateFormat(
-                            'd MMM yyyy',
-                          ).format(hoverDateTimeRaw),
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          child: Selector<SavedSettingsNot, MyColorScheme?>(
-                            selector: (_, savedAppSettingsNotifier) =>
-                                savedAppSettingsNotifier.value?.colorScheme,
-                            shouldRebuild: (previous, next) =>
-                                previous?.$1 != next?.$1,
-                            builder: (context, myColorScheme, _) =>
-                                Selector<SavedSettingsNot, bool>(
+                            Text(
+                              intl.DateFormat(
+                                'd MMM yyyy',
+                              ).format(hoverDateTimeRaw),
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            Container(
+                              // width: double.infinity,
+                              alignment: Alignment.center,
+                              child: Selector<SavedSettingsNot, MyColorScheme?>(
+                                selector: (_, savedAppSettingsNotifier) =>
+                                    savedAppSettingsNotifier.value?.colorScheme,
+                                shouldRebuild: (previous, next) =>
+                                    previous?.$1 != next?.$1,
+                                builder: (context, myColorScheme, _) => Selector<SavedSettingsNot, bool>(
                                   selector: (_, savedAppSettingsNotifier) =>
                                       savedAppSettingsNotifier
                                           .value
                                           ?.twelveHour ??
                                       true,
-                                  builder: (context, twelveHour, _) =>
-                                      Selector<
-                                        ChartSettingsNot,
-                                        double
-                                      >(
-                                        selector:
-                                            (_, currentChartSettingsNotifier) =>
-                                                currentChartSettingsNotifier
-                                                    .value
-                                                    ?.location
-                                                    .latLng
-                                                    .latitude ??
-                                                0,
-                                        builder: (context, latitude, _) {
-                                          return Consumer<KNot>(
-                                            builder: (context, kNotifier, _) {
+                                  builder: (context, twelveHour, _) => Selector<ChartSettingsNot, double>(
+                                    selector:
+                                        (_, currentChartSettingsNotifier) =>
+                                            currentChartSettingsNotifier
+                                                .value
+                                                ?.location
+                                                .latLng
+                                                .latitude ??
+                                            0,
+                                    builder: (context, latitude, _) {
+                                      return Consumer<KNot>(
+                                        builder: (context, kNotifier, _) {
+                                          return LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              print(
+                                                'inside AzimuthChart.build, constraints passed to Padding under ConstrainedBox with double infinity width: $constraints',
+                                              );
                                               return Padding(
                                                 padding: const EdgeInsets.all(
                                                   40.0,
                                                 ),
+                                                // TODO: Move the AzChartSizeNot or whatever it is closer to this.
                                                 child: ConstrainedBox(
                                                   constraints: BoxConstraints(
                                                     maxWidth:
@@ -179,56 +206,93 @@ class AzimuthChart extends StatelessWidget {
                                                             small.width,
                                                         },
                                                   ),
-                                                  child: AspectRatio(
-                                                    aspectRatio: 1.0,
-                                                    child: CustomPaint(
-                                                      painter: CustomPathRibbonPainter(
-                                                        twelveHour: twelveHour,
-                                                        lat: latitude,
-                                                        azimuthChartData:
-                                                            azimuthChartData,
-                                                        colorScheme:
-                                                            myColorScheme ??
-                                                            constMyColorScheme,
-                                                        appBackgroundColor:
-                                                            Theme.of(
-                                                              context,
-                                                            ).colorScheme.surface,
-                                                        k: kNotifier.value,
-                                                        h:
-                                                            context
-                                                                .read<
-                                                                  ChartSettingsNot
-                                                                >()
-                                                                .value
-                                                                ?.h ??
-                                                            0,
-                                                        // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
-                                                      ),
-                                                    ),
+                                                  child: LayoutBuilder(
+                                                    builder: (context, constraints) {
+                                                      print(
+                                                        'inside AzimuthChart.build, constraints passed to AspectRatio: $constraints',
+                                                      );
+                                                      final double
+                                                      reCalcMaxWidth =
+                                                          switch (azChartSizeNotifier
+                                                              .value) {
+                                                            AzChartSize.large =>
+                                                              large.width,
+                                                            AzChartSize
+                                                                .medium =>
+                                                              medium.width,
+                                                            AzChartSize.small =>
+                                                              small.width,
+                                                          };
+                                                      print(
+                                                        'insize AzimuthChart.build, just above AspectRatio, reCalcMaxWidth: $reCalcMaxWidth, azChartSizeNotifier.value: ${azChartSizeNotifier.value}, large.width: ${large.width}, medium.width: ${medium.width}, small.width: ${small.width}, ',
+                                                      );
+                                                      return AspectRatio(
+                                                        aspectRatio: 1.0,
+                                                        child: LayoutBuilder(
+                                                          builder: (context, constraints) {
+                                                            print(
+                                                              'inside AzimuthChart.build, constraints passed to CustomPaint: $constraints',
+                                                            );
+                                                            return CustomPaint(
+                                                              painter: CustomPathRibbonPainter(
+                                                                twelveHour:
+                                                                    twelveHour,
+                                                                lat: latitude,
+                                                                azimuthChartData:
+                                                                    azimuthChartData,
+                                                                colorScheme:
+                                                                    myColorScheme ??
+                                                                    constMyColorScheme,
+                                                                appBackgroundColor:
+                                                                    Theme.of(
+                                                                          context,
+                                                                        )
+                                                                        .colorScheme
+                                                                        .surface,
+                                                                k: kNotifier
+                                                                    .value,
+                                                                h:
+                                                                    context
+                                                                        .read<
+                                                                          ChartSettingsNot
+                                                                        >()
+                                                                        .value
+                                                                        ?.h ??
+                                                                    0,
+                                                                // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
                                                 ),
                                               );
                                             },
                                           );
                                         },
-                                      ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                          ),
-                        ),
-                      ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 );
               },
             );
           },
+          child: Text(
+            'Sun strength and location on a single day',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         );
       },
-      child: Text(
-        'Sun strength and location on a single day',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
     );
   }
 }
@@ -700,12 +764,12 @@ class CustomPathRibbonPainter extends CustomPainter {
       stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
     );
 
-    print(
-      'calculating solarGradient, colors: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$2}',
-    );
-    print(
-      'calculating solarGradient, stops: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$1}',
-    );
+    // print(
+    //   'calculating solarGradient, colors: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$2}',
+    // );
+    // print(
+    //   'calculating solarGradient, stops: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$1}',
+    // );
 
     final List<Offset> correctedPoints = points
         .map((e) => (e) * boundingCircleRadius + centerOffset)

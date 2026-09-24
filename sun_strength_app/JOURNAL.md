@@ -1,4 +1,13 @@
 # Daily log
+## 2026-09-24
+Still working on RowToColumnRenderObject
+
+## 2026-09-23
+I am continuing to work on the RowToColumnRenderWidget.  I just finished it, I think.  Now, I can create a row of items (like the location buttons) such that, if there is not enough wdith, it automatically jumps to a column.  This is the same function as OverflowBar, except that with my custom widget, I can fully set the MainAxisSize, MainAxisAlignment, and CrossAxisAlignment for both the Row and the Column independently.  I can also include seperate spacing for the two different options.
+
+## 2026-09-22
+Trying to figure out the responsive design thing.  First step is to get rid of, temporarily, the max width of 800 at the top.  That is currently forcing the entire Flex to be no more than 800 wide, which makes it always stay vertical.  I actually want all the children to EACH have a max width of 800 rather than the Flex itself having a maxWidth of 800.  Maybe I could move the LayoutBuilder above the ConstrainedBox, but I don't actually think this will work either.
+
 ## 2026-09-21
 I was trying to make a custom widget the essentially wraps an ElevatedButton and makes the greying out cleaner, but it's not worth it.
 Changes to make to pop-up:
@@ -282,3 +291,6 @@ I could do this with an assert in the default constructor's initialization list 
 I am running into issues like making the layout of the text look good and not jittery.  I realize now that the time and date should each stay in the same relative location regrdless of how many digits they are.
 
 ## Come up with a more robust solution for timezone abbreviation.  Currently, if the system supplies something longer than 3 characters, it just gets omitted.
+
+## Fix width in Azimuth chart.
+Currently, the 800 width is applied specifically to the image, but text labels are allowed to overflow.

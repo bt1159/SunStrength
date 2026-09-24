@@ -82,9 +82,9 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
   /// Number of days in the year provided (i.e., is it a leap year)
   final int nDays = isLeapYear(year) ? 366 : 365;
 
-  print(
-    'inside calculateOrbitAndSolarValuesIterable(), nDays: $nDays, timeZone: ${timeZone.name}, year: $year, dateTime0: $dateTime0, other dateTime: ${dateTime0.copyWith(year: dateTime0.year + 1)}',
-  );
+  // print(
+  //   'inside calculateOrbitAndSolarValuesIterable(), nDays: $nDays, timeZone: ${timeZone.name}, year: $year, dateTime0: $dateTime0, other dateTime: ${dateTime0.copyWith(year: dateTime0.year + 1)}',
+  // );
 
   /// Number of hours between J2000 and dateTIme0
   final int initialHOffsetFromJ2000 = dateTime0.difference(date0J2000).inHours;
@@ -96,9 +96,9 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
   );
 
   
-  print(
-    'inside calculateOrbitAndSolarValuesIterable(), hOffsetsFromJ2000: $hOffsetsFromJ2000',
-  );
+  // print(
+  //   'inside calculateOrbitAndSolarValuesIterable(), hOffsetsFromJ2000: $hOffsetsFromJ2000',
+  // );
 
   /// A custom class containing all relevant data for all of the hour offsets
   final Iterable<OrbSolValues> output = hOffsetsFromJ2000.map((

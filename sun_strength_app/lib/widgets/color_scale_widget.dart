@@ -12,8 +12,9 @@ class ColorScaleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Builder(
-      builder: (context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        print('inside ColorScaleWidget.build, constraints: $constraints');
         return ColorScaleRenderObjectWidget(
           child: Selector<SavedSettingsNot, MyColorScheme?>(
             selector: (_, savedAppSettingsNotifier) =>

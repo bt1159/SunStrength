@@ -456,7 +456,7 @@ class _LocationSelectionBodyState extends State<LocationSelectionBody> {
               // If user came from heat map to change location, pop.  If user came here because no saved location, push (or replace?)
               if (widget.isInitialLoad) {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ChartRoute()),
+                  MaterialPageRoute(builder: (_) => const ChartPageRoute()),
                 );
               } else {
                 Navigator.of(context).pop();
@@ -500,7 +500,7 @@ class LocationAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Navigator.of(context).pop();
                     } else {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const ChartRoute()),
+                        MaterialPageRoute(builder: (_) => const ChartPageRoute()),
                       );
                     }
                   },

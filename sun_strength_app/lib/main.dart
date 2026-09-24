@@ -102,7 +102,8 @@ class MyApp extends StatelessWidget {
                 ),
               ),
               themeMode: ThemeMode.dark,
-              home: const InitScreen(),
+              home: const RowColumnTester(),
+              // const InitScreen(),
             );
           }
         },
@@ -131,7 +132,7 @@ class _InitScreenState extends State<InitScreen> {
       if (currentSettingsNotNull) {
         // Replaces InitScreen with ChooseXyzScreen as the base route
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ChartRoute()),
+          MaterialPageRoute(builder: (_) => const ChartPageRoute()),
         );
       } else {
         // Replaces InitScreen with ChartScreen as the base route

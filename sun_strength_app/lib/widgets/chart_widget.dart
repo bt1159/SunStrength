@@ -100,145 +100,155 @@ class _ChartWidgetState extends State<ChartWidget> {
     print(
       'running _PublicChartRenderObjectWidgetState.build, ${_tooltipNotifier.value == null ? '_hoverBoxPosition is null' : '_hoverBoxPosition is not null'}',
     );
-    return Column(
-      children: [
-        Align(
-          alignment: AlignmentGeometry.centerLeft,
-          child: Text(
-            'Sun strength throughout the year',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Stack(
-          clipBehavior: Clip.hardEdge,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        print('inside _ChartWidgetState.build, constraints: $constraints');
+        return Column(
           children: [
-            Selector<ChartSettingsNot, (int, tz.Location)?>(
-              selector: (_, currentChartSettingsNotifier) =>
-                  currentChartSettingsNotifier.value == null
-                  ? null
-                  : (
-                      currentChartSettingsNotifier.value!.year,
-                      currentChartSettingsNotifier.value!.timeZone,
-                    ),
-              builder: (_, currentSettings, _) {
-                if (currentSettings == null) return SizedBox.shrink();
-                final (year, timeZone) = currentSettings;
-                return Selector<SavedSettingsNot, bool>(
-                  selector: (_, savedSettingsNotifier) =>
-                      savedSettingsNotifier.value?.twelveHour ?? true,
-                  builder: (context, twelveHour, child) =>
-                      _ChartRenderObjectWidget(
-                        nXAxisBuckets: widget.nXAxisBuckets,
-                        nYAxisBuckets: widget.nYAxisBuckets,
-                        twelveHour: twelveHour,
-                        leapYear: isLeapYear(year),
-                        chartArrayWidget: child!,
-                      ),
-                  child: Consumer<OrbSolValuesListNot>(
-                    builder: (context, orbitAndSolarValuesListNotifier, _) {
-                      List<OrbSolValues> orbitAndSolarValuesList =
-                          orbitAndSolarValuesListNotifier.value;
-                      List<OrbSolValues> osSingleDay =
-                          <OrbSolValues>[];
-                      return MouseRegion(
-                        onHover: (event) {
-                          final RenderBox box =
-                              context.findRenderObject() as RenderBox;
-                          osSingleDay = _handleChartHover(
-                            event.localPosition,
-                            box.size,
-                            orbitAndSolarValuesList,
-                            timeZone,
-                            year,
-                          );
-                        },
-                        onExit: (_) => _hideTooltip(),
-                        child: GestureDetector(
-                          onTap: () => context.read<DayDataNot>().value =
-                              osSingleDay,
-                          child:
-                              Selector<SavedSettingsNot, MyColorScheme?>(
-                                selector: (_, savedAppSettingsNotifier) =>
-                                    savedAppSettingsNotifier.value?.colorScheme,
-                                shouldRebuild: (previous, next) =>
-                                    previous?.$1 != next?.$1,
-                                builder: (context, colorScheme, child) {
-                                  return FutureBuilderChartImage(
-                                    orbitAndSolarValuesIterable:
-                                        orbitAndSolarValuesListNotifier.value,
-                                    colormap: colorScheme?.$2,
+            Align(
+              alignment: AlignmentGeometry.centerLeft,
+              child: Text(
+                'Sun strength throughout the year',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                LayoutBuilder(
+      builder: (context, constraints) {
+        print('inside _ChartWidgetState.build, constraints given to first stack child: $constraints');
+        return Selector<ChartSettingsNot, (int, tz.Location)?>(
+                      selector: (_, currentChartSettingsNotifier) =>
+                          currentChartSettingsNotifier.value == null
+                          ? null
+                          : (
+                              currentChartSettingsNotifier.value!.year,
+                              currentChartSettingsNotifier.value!.timeZone,
+                            ),
+                      builder: (_, currentSettings, _) {
+                        if (currentSettings == null) return SizedBox.shrink();
+                        final (year, timeZone) = currentSettings;
+                        return Selector<SavedSettingsNot, bool>(
+                          selector: (_, savedSettingsNotifier) =>
+                              savedSettingsNotifier.value?.twelveHour ?? true,
+                          builder: (context, twelveHour, child) =>
+                              _ChartRenderObjectWidget(
+                                nXAxisBuckets: widget.nXAxisBuckets,
+                                nYAxisBuckets: widget.nYAxisBuckets,
+                                twelveHour: twelveHour,
+                                leapYear: isLeapYear(year),
+                                chartArrayWidget: child!,
+                              ),
+                          child: Consumer<OrbSolValuesListNot>(
+                            builder: (context, orbitAndSolarValuesListNotifier, _) {
+                              List<OrbSolValues> orbitAndSolarValuesList =
+                                  orbitAndSolarValuesListNotifier.value;
+                              List<OrbSolValues> osSingleDay =
+                                  <OrbSolValues>[];
+                              return MouseRegion(
+                                onHover: (event) {
+                                  final RenderBox box =
+                                      context.findRenderObject() as RenderBox;
+                                  osSingleDay = _handleChartHover(
+                                    event.localPosition,
+                                    box.size,
+                                    orbitAndSolarValuesList,
+                                    timeZone,
+                                    year,
                                   );
                                 },
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            // 2. The Floating Tooltip Popup Layer
-            ValueListenableBuilder<TooltipInfo?>(
-              valueListenable: _tooltipNotifier,
-              builder: (context, tooltipInfo, child) {
-                if (tooltipInfo != null) {
-                  return Positioned.fill(
-                    child: CustomSingleChildLayout(
-                      delegate: MouseFollowingTooltipDelegate(
-                        hoverBoxPosition: tooltipInfo.hoverBoxPosition,
-                      ),
-                      child: IgnorePointer(
-                        // Prevents the tooltip box from stealing mouse focus
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          // padding: const EdgeInsets.all(0),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(4),
+                                onExit: (_) => _hideTooltip(),
+                                child: GestureDetector(
+                                  onTap: () => context.read<DayDataNot>().value =
+                                      osSingleDay,
+                                  child:
+                                      Selector<SavedSettingsNot, MyColorScheme?>(
+                                        selector: (_, savedAppSettingsNotifier) =>
+                                            savedAppSettingsNotifier.value?.colorScheme,
+                                        shouldRebuild: (previous, next) =>
+                                            previous?.$1 != next?.$1,
+                                        builder: (context, colorScheme, child) {
+                                          return FutureBuilderChartImage(
+                                            orbitAndSolarValuesIterable:
+                                                orbitAndSolarValuesListNotifier.value,
+                                            colormap: colorScheme?.$2,
+                                          );
+                                        },
+                                      ),
+                                ),
+                              );
+                            },
                           ),
-                          child: Selector<SavedSettingsNot, bool>(
-                            selector: (_, savedSettingsNotifier) =>
-                                savedSettingsNotifier.value?.twelveHour ?? true,
-                            builder: (_, twelveHour, _) => Stack(
-                              alignment: Alignment.topRight,
-                              children: [
-                                Opacity(
-                                  opacity: 0,
-                                  child: Text(
-                                    twelveHour
-                                        ? '88 888 8888 88:88 88 XXX\nStrength: 100%'
-                                        : '88 888 8888 88:88 XXX\nStrength: 100%',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
+                        );
+                      },
+                    );
+                  }
+                ),
+                // 2. The Floating Tooltip Popup Layer
+                ValueListenableBuilder<TooltipInfo?>(
+                  valueListenable: _tooltipNotifier,
+                  builder: (context, tooltipInfo, child) {
+                    if (tooltipInfo != null) {
+                      return Positioned.fill(
+                        child: CustomSingleChildLayout(
+                          delegate: MouseFollowingTooltipDelegate(
+                            hoverBoxPosition: tooltipInfo.hoverBoxPosition,
+                          ),
+                          child: IgnorePointer(
+                            // Prevents the tooltip box from stealing mouse focus
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              // padding: const EdgeInsets.all(0),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Selector<SavedSettingsNot, bool>(
+                                selector: (_, savedSettingsNotifier) =>
+                                    savedSettingsNotifier.value?.twelveHour ?? true,
+                                builder: (_, twelveHour, _) => Stack(
+                                  alignment: Alignment.topRight,
+                                  children: [
+                                    Opacity(
+                                      opacity: 0,
+                                      child: Text(
+                                        twelveHour
+                                            ? '88 888 8888 88:88 88 XXX\nStrength: 100%'
+                                            : '88 888 8888 88:88 XXX\nStrength: 100%',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      twelveHour
+                                          ? tooltipInfo.tooltipText12
+                                          : tooltipInfo.tooltipText24,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  twelveHour
-                                      ? tooltipInfo.tooltipText12
-                                      : tooltipInfo.tooltipText24,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
-              },
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      }
     );
   }
 }
@@ -676,6 +686,7 @@ class _ChartRenderObject extends RenderBox
   /// before using, check [markNeedsLayout] tag thing.
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
+    print('_ChartRenderObjectWidget given constraints: $constraints');
     final double maxYAxisLabelWidth = _yAxisLabels
         .map((e) => e?.getDryLayout(constraints.loosen()).width ?? 0)
         .toList()
