@@ -146,7 +146,7 @@ class LocationButtonRow extends StatelessWidget {
               rowSpacing: 20,
               rowCrossAxisAlignment: CrossAxisAlignment.start,
               columnMainAxisSize: MainAxisSize.min,
-              columnCrossAxisAlignment: CrossAxisAlignment.start,
+              columnCrossAxisAlignment: CrossAxisAlignment.center,
               columnSpacing: 5,
               children: [
                 LayoutBuilder(

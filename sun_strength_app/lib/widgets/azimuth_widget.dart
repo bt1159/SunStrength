@@ -44,7 +44,7 @@ class AzimuthChart extends StatelessWidget {
       builder: (context, constraints) {
         print('inside AzimuthChart.build, constraints: $constraints');
         return Consumer<DayDataNot>(
-          builder: (context, dayDataNotifier, child) {
+          builder: (context, dayDataNotifier, _) {
             final AzimuthChartData azimuthChartData = generateLists(
               osSingleDay: dayDataNotifier.value,
             );
@@ -87,69 +87,54 @@ class AzimuthChart extends StatelessWidget {
                             azChartSizeNotifier.value == large.azChartSize
                             ? null
                             : azChartSizeNotifier.value = large.azChartSize;
-    
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                print(
-                                  'inside AzimuthChart.build, constraints passed to Columns first child: $constraints',
-                                );
-                                return Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                            RowToColumnRenderWidget(                              
+                              rowMainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              rowCrossAxisAlignment: CrossAxisAlignment.center,
+                              columnCrossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Sun strength and location on a single day',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  spacing: 4,
                                   children: [
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        print(
-                                          'inside AzimuthChart.build, constraints passed to first child of Row underColumn: $constraints',
-                                        );
-                                        return child!;
-                                      },
+                                    ElevatedButton(
+                                      onPressed:
+                                          azChartSizeNotifier.value ==
+                                                  small.azChartSize ||
+                                              small.width == large.width
+                                          ? null
+                                          : onPressedSmall,
+                                      child: Text('S'),
                                     ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      spacing: 4,
-                                      children: [
-                                        LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            print(
-                                              'inside AzimuthChart.build, constraints passed to first child of Row under Row under Column: $constraints',
-                                            );
-                                            return ElevatedButton(
-                                              onPressed:
-                                                  azChartSizeNotifier.value ==
-                                                          small.azChartSize ||
-                                                      small.width == large.width
-                                                  ? null
-                                                  : onPressedSmall,
-                                              child: Text('S'),
-                                            );
-                                          },
-                                        ),
-                                        ElevatedButton(
-                                          onPressed:
-                                              azChartSizeNotifier.value ==
-                                                      medium.azChartSize ||
-                                                  medium.width == large.width
-                                              ? null
-                                              : onPressedMedium,
-                                          child: Text('M'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed:
-                                              azChartSizeNotifier.value ==
-                                                  large.azChartSize
-                                              ? null
-                                              : onPressedLarge,
-                                          child: Text('L'),
-                                        ),
-                                      ],
+                                    ElevatedButton(
+                                      onPressed:
+                                          azChartSizeNotifier.value ==
+                                                  medium.azChartSize ||
+                                              medium.width == large.width
+                                          ? null
+                                          : onPressedMedium,
+                                      child: Text('M'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed:
+                                          azChartSizeNotifier.value ==
+                                              large.azChartSize
+                                          ? null
+                                          : onPressedLarge,
+                                      child: Text('L'),
                                     ),
                                   ],
-                                );
-                              },
+                                ),
+                              ],
                             ),
                             Text(
                               intl.DateFormat(
@@ -287,10 +272,6 @@ class AzimuthChart extends StatelessWidget {
               },
             );
           },
-          child: Text(
-            'Sun strength and location on a single day',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
         );
       },
     );

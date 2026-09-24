@@ -102,8 +102,9 @@ class MyApp extends StatelessWidget {
                 ),
               ),
               themeMode: ThemeMode.dark,
-              home: const RowColumnTester(),
-              // const InitScreen(),
+              home: 
+              // const RowColumnTester(),
+              const InitScreen(),
             );
           }
         },

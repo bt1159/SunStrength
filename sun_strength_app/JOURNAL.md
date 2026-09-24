@@ -2,6 +2,8 @@
 ## 2026-09-24
 Still working on RowToColumnRenderObject
 
+I think it works.  Now trying to figure out the azimuth chart title bar thing.
+
 ## 2026-09-23
 I am continuing to work on the RowToColumnRenderWidget.  I just finished it, I think.  Now, I can create a row of items (like the location buttons) such that, if there is not enough wdith, it automatically jumps to a column.  This is the same function as OverflowBar, except that with my custom widget, I can fully set the MainAxisSize, MainAxisAlignment, and CrossAxisAlignment for both the Row and the Column independently.  I can also include seperate spacing for the two different options.
 

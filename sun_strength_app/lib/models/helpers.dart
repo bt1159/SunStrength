@@ -1126,7 +1126,8 @@ class RowToColumnRenderObject extends RenderBox
       child.layout(
         BoxConstraints(
           minWidth: 0,
-          maxWidth: constraints.maxWidth,
+          // maxWidth: constraints.maxWidth,
+          maxWidth: double.infinity,
           minHeight: 0,
           maxHeight: constraints.maxHeight,
         ),
@@ -1140,7 +1141,9 @@ class RowToColumnRenderObject extends RenderBox
           (previousValue, element) => previousValue + element.width,
         ) +
         rowSpacing * (rigidChildren.length + flexibleChildren.length - 1);
-        print('calculated smallestRowWidth: $smallestRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleChildren.isNotEmpty}');
+    print(
+      'calculated smallestRowWidth: $smallestRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleChildren.isNotEmpty}',
+    );
 
     if (smallestRowWidth <= constraints.maxWidth) {
       // layout as a row
@@ -1230,7 +1233,7 @@ class RowToColumnRenderObject extends RenderBox
           child.layout(
             BoxConstraints(
               minWidth: 0,
-              maxWidth: constraints.maxWidth,
+              maxWidth: double.infinity,
               minHeight: rowChildMinHeight,
               maxHeight: constraints.maxHeight,
             ),
@@ -1241,7 +1244,10 @@ class RowToColumnRenderObject extends RenderBox
           childParentData.offset = Offset(runningDx, calcY(child.size.height));
           runningDx += child.size.width + rowSpacing;
         }
-        size = constraints.constrainDimensions(smallestRowWidth, rowLargestChildHeight);
+        size = constraints.constrainDimensions(
+          smallestRowWidth,
+          rowLargestChildHeight,
+        );
         print(
           'just set size: $size.  rowMainAxisSize is min.  There are no flexible children.  Input constraints: $constraints',
         );
@@ -1272,7 +1278,7 @@ class RowToColumnRenderObject extends RenderBox
               child.layout(
                 BoxConstraints(
                   minWidth: 0,
-                  maxWidth: constraints.maxWidth,
+                  maxWidth: double.infinity,
                   minHeight: rowChildMinHeight,
                   maxHeight: constraints.maxHeight,
                 ),
@@ -1291,7 +1297,10 @@ class RowToColumnRenderObject extends RenderBox
             runningDx += child.size.width + rowSpacing;
             child = childParentData.nextSibling;
           }
-          size = constraints.constrainDimensions(constraints.maxWidth, rowLargestChildHeight);
+          size = constraints.constrainDimensions(
+            constraints.maxWidth,
+            rowLargestChildHeight,
+          );
           print(
             'just set size: $size.  rowMainAxisSize is max.  There are flexible children, which means that rowMainAxisAlignment is irrelevant.  Input constraints: $constraints',
           );
@@ -1310,7 +1319,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1337,7 +1346,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1366,7 +1375,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1395,7 +1404,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1426,7 +1435,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1457,7 +1466,7 @@ class RowToColumnRenderObject extends RenderBox
                 child.layout(
                   BoxConstraints(
                     minWidth: 0,
-                    maxWidth: constraints.maxWidth,
+                    maxWidth: double.infinity,
                     minHeight: rowChildMinHeight,
                     maxHeight: constraints.maxHeight,
                   ),
@@ -1478,7 +1487,10 @@ class RowToColumnRenderObject extends RenderBox
               }
               break;
           }
-          size = constraints.constrainDimensions(constraints.maxWidth, rowLargestChildHeight);
+          size = constraints.constrainDimensions(
+            constraints.maxWidth,
+            rowLargestChildHeight,
+          );
           print(
             'just set size: $size.  rowMainAxisSize is max.  There are no flexible children, which means that rowMainAxisAlignment: $rowMainAxisAlignment matters.  Input constraints: $constraints',
           );
@@ -1508,6 +1520,21 @@ class RowToColumnRenderObject extends RenderBox
       if (columnCrossAxisAlignment == CrossAxisAlignment.stretch &&
           constraints.maxWidth.isInfinite) {
         throw 'RowToColumnRenderOject is trying to lay out as column but given infinite maxHeight and rowCrossAxisAlingment of stretch and is trying to lay out as a row.  This is not possible.';
+      }
+
+      rigidChildSizes.clear();
+      for (final RenderBox child in rigidChildren) {
+        child.layout(
+          BoxConstraints(
+            minWidth: 0,
+            // maxWidth: constraints.maxWidth,
+            maxWidth: constraints.maxWidth,
+            minHeight: 0,
+            maxHeight: double.infinity,
+          ),
+          parentUsesSize: true,
+        );
+        rigidChildSizes.add(child.size);
       }
 
       final double smallestColumnHeight =
@@ -1588,7 +1615,7 @@ class RowToColumnRenderObject extends RenderBox
               minWidth: columnChildMinWidth,
               maxWidth: constraints.maxWidth,
               minHeight: 0,
-              maxHeight: constraints.maxHeight,
+              maxHeight: double.infinity,
             ),
             parentUsesSize: true,
           );
@@ -1600,7 +1627,10 @@ class RowToColumnRenderObject extends RenderBox
           childParentData.offset = Offset(calcX(child.size.width), runningDy);
           runningDy += child.size.height + columnSpacing;
         }
-        size = constraints.constrainDimensions(columnLargestChildWidth, smallestColumnHeight);
+        size = constraints.constrainDimensions(
+          columnLargestChildWidth,
+          smallestColumnHeight,
+        );
         print(
           'just set size: $size.  effectiveColumnMainAxisSize is min.  There are no flexible children.  Input constraints: $constraints',
         );
@@ -1634,7 +1664,7 @@ class RowToColumnRenderObject extends RenderBox
                   minWidth: columnChildMinWidth,
                   maxWidth: constraints.maxWidth,
                   minHeight: 0,
-                  maxHeight: constraints.maxHeight,
+                  maxHeight: double.infinity,
                 ),
                 parentUsesSize: true,
               );
@@ -1648,7 +1678,10 @@ class RowToColumnRenderObject extends RenderBox
             runningDy += child.size.height + columnSpacing;
             child = childParentData.nextSibling;
           }
-          size = constraints.constrainDimensions(columnLargestChildWidth, constraints.maxHeight);
+          size = constraints.constrainDimensions(
+            columnLargestChildWidth,
+            constraints.maxHeight,
+          );
           print(
             'just set size: $size.  effectiveColumnMainAxisSize is max.  There are flexible children, which means that columnMainAxisAlignment is irrelevant.  Input constraints: $constraints',
           );
@@ -1670,7 +1703,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1697,7 +1730,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1726,7 +1759,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1755,7 +1788,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1786,7 +1819,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1817,7 +1850,7 @@ class RowToColumnRenderObject extends RenderBox
                     minWidth: columnChildMinWidth,
                     maxWidth: constraints.maxWidth,
                     minHeight: 0,
-                    maxHeight: constraints.maxHeight,
+                    maxHeight: double.infinity,
                   ),
                   parentUsesSize: true,
                 );
@@ -1871,131 +1904,131 @@ class RowToColumnRenderObject extends RenderBox
   }
 }
 
-class RowColumnTester extends StatefulWidget {
-  const RowColumnTester({super.key});
+// class RowColumnTester extends StatefulWidget {
+//   const RowColumnTester({super.key});
 
-  @override
-  State<RowColumnTester> createState() => _RowColumnTesterState();
-}
+//   @override
+//   State<RowColumnTester> createState() => _RowColumnTesterState();
+// }
 
-class _RowColumnTesterState extends State<RowColumnTester> {
-  bool scrollView = false;
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Row and Column tester'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                scrollView = !scrollView;
-              });
-            },
-            child: Text('Switch scroll view'),
-          ),
-        ],
-      ),
-      body: scrollView
-          ? ListView(
-              children: [
-                RTCForTesting(),
-                RTCForTestingExp(),
-                RTCForTesting(),
-                RTCForTesting(),
-              ],
-            )
-          : RTCForTestingExp(),
-    );
-  }
-}
+// class _RowColumnTesterState extends State<RowColumnTester> {
+//   bool scrollView = false;
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Row and Column tester'),
+//         actions: [
+//           ElevatedButton(
+//             onPressed: () {
+//               setState(() {
+//                 scrollView = !scrollView;
+//               });
+//             },
+//             child: Text('Switch scroll view'),
+//           ),
+//         ],
+//       ),
+//       body: scrollView
+//           ? ListView(
+//               children: [
+//                 RTCForTesting(),
+//                 RTCForTestingExp(),
+//                 RTCForTesting(),
+//                 RTCForTesting(),
+//               ],
+//             )
+//           : RTCForTestingExp(),
+//     );
+//   }
+// }
 
-class RTCForTesting extends StatelessWidget {
-  const RTCForTesting({super.key});
+// class RTCForTesting extends StatelessWidget {
+//   const RTCForTesting({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 100,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 80,
-          height: 100,
-          color: Colors.red,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 120,
-          height: 50,
-          color: Colors.green,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 90,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return RowToColumnRenderWidget(
+//       rowMainAxisAlignment: MainAxisAlignment.center,
+//       rowMainAxisSize: MainAxisSize.min,
+//       rowCrossAxisAlignment: CrossAxisAlignment.end,
+//       columnMainAxisAlignment: MainAxisAlignment.start,
+//       columnMainAxisSize: MainAxisSize.max,
+//       columnCrossAxisAlignment: CrossAxisAlignment.start,
+//       rowSpacing: 10,
+//       columnSpacing: 30,
+//       children: [
+//         Container(
+//           width: 100,
+//           height: 150,
+//           color: Colors.blue,
+//           child: Text('SizedBox'),
+//         ),
+//         Container(
+//           width: 80,
+//           height: 100,
+//           color: Colors.red,
+//           child: Text('SizedBox'),
+//         ),
+//         Container(
+//           width: 120,
+//           height: 50,
+//           color: Colors.green,
+//           child: Text('SizedBox'),
+//         ),
+//         Container(
+//           width: 90,
+//           height: 150,
+//           color: Colors.orange,
+//           child: Text('SizedBox'),
+//         ),
+//       ],
+//     );
+//   }
+// }
 
-class RTCForTestingExp extends StatelessWidget {
-  const RTCForTestingExp({super.key});
+// class RTCForTestingExp extends StatelessWidget {
+//   const RTCForTestingExp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 100,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        Expanded(
-          child: Container(
-            width: 80,
-            height: 100,
-            color: Colors.red,
-            child: Text('SizedBox'),
-          ),
-        ),
-        Container(
-          width: 120,
-          height: 50,
-          color: Colors.green,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 90,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return RowToColumnRenderWidget(
+//       rowMainAxisAlignment: MainAxisAlignment.center,
+//       rowMainAxisSize: MainAxisSize.min,
+//       rowCrossAxisAlignment: CrossAxisAlignment.end,
+//       columnMainAxisAlignment: MainAxisAlignment.start,
+//       columnMainAxisSize: MainAxisSize.max,
+//       columnCrossAxisAlignment: CrossAxisAlignment.start,
+//       rowSpacing: 10,
+//       columnSpacing: 30,
+//       children: [
+//         Container(
+//           width: 100,
+//           height: 150,
+//           color: Colors.blue,
+//           child: Text('SizedBox'),
+//         ),
+//         Expanded(
+//           child: Container(
+//             width: 80,
+//             height: 100,
+//             color: Colors.red,
+//             child: Text('SizedBox'),
+//           ),
+//         ),
+//         Container(
+//           width: 120,
+//           height: 50,
+//           color: Colors.green,
+//           child: Text('SizedBox'),
+//         ),
+//         Container(
+//           width: 90,
+//           height: 150,
+//           color: Colors.orange,
+//           child: Text('SizedBox'),
+//         ),
+//       ],
+//     );
+//   }
+// }
