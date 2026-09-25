@@ -1579,7 +1579,7 @@ class RowToColumnRenderObject extends RenderBox
           // This child is wrapped in Expanded/Flexible.
           // DO NOT lay it out yet.
           flexibleVChildren.add(child);
-          totalFlexH += childParentData.flexV;
+          totalFlexV += childParentData.flexV;
         } else {
           // This child is rigid. It is safe to use unbounded constraints.
           rigidVChildren.add(child);
@@ -1602,8 +1602,8 @@ class RowToColumnRenderObject extends RenderBox
         throw 'RowToColumnRenderOject is trying to lay out as column but given infinite maxHeight and rowCrossAxisAlingment of stretch and is trying to lay out as a row.  This is not possible.';
       }
 
-      /// Set up [rigidHChildren]
-      for (final RenderBox child in rigidHChildren) {
+      /// Set up [rigidVChildSizes]
+      for (final RenderBox child in rigidVChildren) {
         child.layout(
           BoxConstraints(
             minWidth: 0,
