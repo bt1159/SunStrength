@@ -152,29 +152,33 @@ class ScrollableChartPageContent extends StatelessWidget {
                 print(
                   'inside ScrollableChartPageContentR.build, constraints passed under SingleChildScrollView: $constraints',
                 );
-                final bool rowBool = constraints.maxWidth > 800;
-                return Flex(
-                  direction: rowBool ? Axis.horizontal : Axis.vertical,
-                  crossAxisAlignment: rowBool
-                      ? CrossAxisAlignment.start
-                      : CrossAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      fit: rowBool ? FlexFit.tight : FlexFit.loose,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
-                        child: const YearlyChart(),
-                      ),
-                    ),
-                    Flexible(
-                      fit: rowBool ? FlexFit.tight : FlexFit.loose,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
-                        child: const AzimuthChart(),
-                      ),
-                    ),
-                  ],
+                return RowToColumnRenderWidget(
+                  children: [],
                 );
+                
+                // final bool rowBool = constraints.maxWidth > 800;
+                // return Flex(
+                //   direction: rowBool ? Axis.horizontal : Axis.vertical,
+                //   crossAxisAlignment: rowBool
+                //       ? CrossAxisAlignment.start
+                //       : CrossAxisAlignment.center,
+                //   children: [
+                //     Flexible(
+                //       fit: rowBool ? FlexFit.tight : FlexFit.loose,
+                //       child: ConstrainedBox(
+                //         constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                //         child: const YearlyChart(),
+                //       ),
+                //     ),
+                //     Flexible(
+                //       fit: rowBool ? FlexFit.tight : FlexFit.loose,
+                //       child: ConstrainedBox(
+                //         constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                //         child: const AzimuthChart(),
+                //       ),
+                //     ),
+                //   ],
+                // );
               },
             ),
           );

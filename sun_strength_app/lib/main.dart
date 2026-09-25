@@ -103,8 +103,8 @@ class MyApp extends StatelessWidget {
               ),
               themeMode: ThemeMode.dark,
               home: 
-              // const RowColumnTester(),
-              const InitScreen(),
+              const RowColumnTester(),
+              // const InitScreen(),
             );
           }
         },
