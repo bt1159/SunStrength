@@ -153,9 +153,26 @@ class ScrollableChartPageContent extends StatelessWidget {
                   'inside ScrollableChartPageContentR.build, constraints passed under SingleChildScrollView: $constraints',
                 );
                 return RowToColumnRenderWidget(
-                  children: [],
+                  children: [
+                    FlexibleSometimesWidget(
+                      fitH: FlexFit.tight,
+                      fitV: FlexFit.loose,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                        child: const YearlyChart(),
+                      ),
+                    ),
+                    FlexibleSometimesWidget(
+                      fitH: FlexFit.tight,
+                      fitV: FlexFit.loose,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                        child: const AzimuthChart(),
+                      ),
+                    ),
+                  ],
                 );
-                
+
                 // final bool rowBool = constraints.maxWidth > 800;
                 // return Flex(
                 //   direction: rowBool ? Axis.horizontal : Axis.vertical,
