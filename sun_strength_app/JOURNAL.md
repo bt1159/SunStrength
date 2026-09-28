@@ -1,4 +1,7 @@
 # Daily log
+## 2026-09-28
+I now have VSCode working on my mac so that I can actually use my MAC and also so that I can use the tunnel from my work PC.
+
 ## 2026-09-24
 Still working on RowToColumnRenderObject
 
