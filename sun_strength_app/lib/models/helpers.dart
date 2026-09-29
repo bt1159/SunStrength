@@ -955,6 +955,8 @@ class FlexibleSometimesWidget
   final FlexFit? fitH;
   final int flexV;
   final FlexFit? fitV;
+  final double? rowColumnCutoffWidth;
+  final double? maxWidthRow;
 
   const FlexibleSometimesWidget({
     super.key,
@@ -962,7 +964,7 @@ class FlexibleSometimesWidget
     this.fitH,
     this.flexV = 1,
     this.fitV,
-    required super.child,
+    required super.child, this.rowColumnCutoffWidth,  this.maxWidthRow,
   });
 
   /// This method updates the parentData member of the passed renderObject according to this widget's values.
@@ -979,6 +981,18 @@ class FlexibleSometimesWidget
 
     // 2. Update your custom fields, checking if they actually changed
 
+    
+
+    if (parentData.rowColumnCutoffWidth != rowColumnCutoffWidth) {
+parentData.rowColumnCutoffWidth = rowColumnCutoffWidth;
+needsLayout = true;
+    }
+
+    if (parentData.maxWidthRow != maxWidthRow) {
+      parentData.maxWidthRow = maxWidthRow;
+      needsLayout;
+    }
+    
     if (parentData.flexH != flexH) {
       parentData.flexH = flexH;
       needsLayout = true;
@@ -1076,12 +1090,27 @@ class RowToColumnRenderParentData extends FlexParentData {
     this.flexV = 0,
     this.fitV,
     this.flexH = 0,
-    this.fitH,
-  });
+    this.fitH,double? rowColumnCutoffWidth, double? maxWidthRow,
+  }) : _rowColumnCutoffWidth = rowColumnCutoffWidth ?? 0,
+  _maxWidthRow = maxWidthRow ?? double.infinity;
   int flexV;
   int flexH;
   FlexFit? fitV;
   FlexFit? fitH;
+   double _rowColumnCutoffWidth;
+   double _maxWidthRow;
+
+  double get maxWidthRow => _maxWidthRow;
+  set maxWidthRow(double? value) {
+    if (value == _maxWidthRow) return;
+    _maxWidthRow = value ?? double.infinity;
+  }
+
+  double get rowColumnCutoffWidth => _rowColumnCutoffWidth;
+  set rowColumnCutoffWidth(double? value) {
+    if (value == _rowColumnCutoffWidth) return;
+    _rowColumnCutoffWidth = value ?? 0;
+  }
 
   // Intercept the Expanded widget writing to 'flex'
   @override
@@ -1197,12 +1226,16 @@ class RowToColumnRenderObject extends RenderBox
       'starting performLayout for RowToColumnRenderObject tied to widget with key: $keyText, maxWidth: ${constraints.maxWidth}',
     );
     List<Size> rigidHChildSizes = <Size>[];
+
+    List<Size> minWidthHChildSizes = <Size>[];
+    List<Size> maxWidthHChildSizes = <Size>[];
     RenderBox? child = firstChild;
     int totalFlexH = 0;
 
     // Lists to keep track of who is who
     List<RenderBox> rigidHChildren = [];
     List<RenderBox> flexibleHChildren = [];
+    List<RenderBox> minMaxHChildren=[];
 
     // Group children by whether flexible
     while (child != null) {
@@ -1212,8 +1245,10 @@ class RowToColumnRenderObject extends RenderBox
         'considering a child at the start.  First, check if flexible.  If so, lay it out '
         'so that its width is considered in smallestRowWidth.  For this child, '
         'childParentData.fitH: ${childParentData.fitH}, childParentData.flexH: ${childParentData.flexH}.',
-      );
-      if (childParentData.fitH != null && childParentData.flexH > 0) {
+      );if (childParentData.rowColumnCutoffWidth > 0 || childParentData.maxWidthRow < double.infinity) {
+        minMaxHChildren.add(child);
+      }
+      else if (childParentData.fitH != null && childParentData.flexH > 0) {
         // This child is wrapped in Expanded/Flexible.
         // DO NOT lay it out yet.
         flexibleHChildren.add(child);
@@ -1225,9 +1260,22 @@ class RowToColumnRenderObject extends RenderBox
       child = childParentData.nextSibling;
     }
 
-    MainAxisSize effectiveRowMainAxisSize = rowMainAxisSize;
 
-    // Decide if row or column by laying out rigid children
+double minRowWidth = 0;
+for (final RenderBox child in minMaxHChildren) {
+
+      child.layout(
+        BoxConstraints(
+          minWidth: ,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: constraints.maxHeight,
+        ),
+        parentUsesSize: true,
+      );
+}
+
+    // Decide if row or column by laying out rigid children and min/max Children
     for (final RenderBox child in rigidHChildren) {
       child.layout(
         BoxConstraints(
@@ -1249,6 +1297,10 @@ class RowToColumnRenderObject extends RenderBox
     print(
       'calculated smallestRowWidth: $smallestRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleHChildren.isNotEmpty}',
     );
+
+
+    MainAxisSize effectiveRowMainAxisSize = rowMainAxisSize;
+
 
     if (smallestRowWidth <= constraints.maxWidth) {
       // layout as a row

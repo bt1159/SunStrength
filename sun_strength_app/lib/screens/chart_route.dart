@@ -153,20 +153,24 @@ class ScrollableChartPageContent extends StatelessWidget {
                   'inside ScrollableChartPageContentR.build, constraints passed under SingleChildScrollView: $constraints',
                 );
                 return RowToColumnRenderWidget(
+                  key: ValueKey('Column of two widgets in chart'),
+                  columnCrossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FlexibleSometimesWidget(
-                      fitH: FlexFit.tight,
-                      fitV: FlexFit.loose,
+                      rowColumnCutoffWidth: 400,
+                      maxWidthRow: 600,
+                      // fitV: FlexFit.loose,
                       child: ConstrainedBox(
-                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                        constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
                         child: const YearlyChart(),
                       ),
                     ),
                     FlexibleSometimesWidget(
-                      fitH: FlexFit.tight,
-                      fitV: FlexFit.loose,
+                      rowColumnCutoffWidth: 400,
+                      maxWidthRow: 600,
+                      // fitV: FlexFit.loose,
                       child: ConstrainedBox(
-                        constraints: BoxConstraints.loose(Size.fromWidth(800)),
+                        constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
                         child: const AzimuthChart(),
                       ),
                     ),

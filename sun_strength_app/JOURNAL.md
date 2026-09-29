@@ -2,6 +2,16 @@
 ## 2026-09-28
 I now have VSCode working on my mac so that I can actually use my MAC and also so that I can use the tunnel from my work PC.
 
+I am starting to lose my mind with this.  I realize now that I am trying too hard to stick to Row/Column/Flixible functionality.  I am going to instead put in a minWidthH and maxWidthH value into the FlixbileSometimesWidget.  That way, I can just use those things concretely so that, if the sum of minRowWidths is bigger than the screen width, go column.  Otherwise, go row.  Then, give each child up to the maxRowWidthH.
+
+Not sure how to signal that I want the render object to definitely use the min max.  Currently, I will only use them if at least one of them is NOT the default.  In fact, now that I realize, I simply cannot pass the double.inifinity on as a max...
+
+No, wait.  I have a decision to make.  Should the min/max be passed down as a constraint in the child.layout process OR should I see how much space is allowable and then pass that down tightly to the child as the specific width?  If I do the former, if a child wants a specific size, they will keep that specific size.  The latter would override that.
+
+If I want to make this EVEN MORE broadly useful, I could add ONE MORE parameter that asks whether they min and max ought to be enforced or offered.
+
+For now, though, I have two children only in mind, and both of those are intrinsicallyl flexible and will grow to whatever they are allowed but do not have a minimum (I think).  So, either way would work.
+
 ## 2026-09-24
 Still working on RowToColumnRenderObject
 
