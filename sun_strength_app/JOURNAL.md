@@ -1,4 +1,9 @@
 # Daily log
+## 2026-10-02
+I have an issue with the way I am setting up flexible sometimes.  What happens when I have more space available then the sum of the rigid widget widths and the cutoffWidths?  How do I allocate that space.  Does it all go to the minMax widgets until they all hit their maxes and THEN it goes to the actually flexible ones?
+
+Similarly, I could currently set a min and max value for one of these widgets AND set its flexFitH and flexH values independently.  So, if I set a min and max, should I be able to select a flexfit?  That seems weird.
+
 ## 2026-09-28
 I now have VSCode working on my mac so that I can actually use my MAC and also so that I can use the tunnel from my work PC.
 

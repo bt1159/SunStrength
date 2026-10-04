@@ -1090,15 +1090,18 @@ class RowToColumnRenderParentData extends FlexParentData {
     this.flexV = 0,
     this.fitV,
     this.flexH = 0,
-    this.fitH,double? rowColumnCutoffWidth, double? maxWidthRow,
+    this.fitH,
+    double? rowColumnCutoffWidth, 
+    double? maxWidthRow,
   }) : _rowColumnCutoffWidth = rowColumnCutoffWidth ?? 0,
   _maxWidthRow = maxWidthRow ?? double.infinity;
+
   int flexV;
   int flexH;
   FlexFit? fitV;
   FlexFit? fitH;
-   double _rowColumnCutoffWidth;
-   double _maxWidthRow;
+  double _rowColumnCutoffWidth;
+  double _maxWidthRow;
 
   double get maxWidthRow => _maxWidthRow;
   set maxWidthRow(double? value) {
@@ -1245,10 +1248,10 @@ class RowToColumnRenderObject extends RenderBox
         'considering a child at the start.  First, check if flexible.  If so, lay it out '
         'so that its width is considered in smallestRowWidth.  For this child, '
         'childParentData.fitH: ${childParentData.fitH}, childParentData.flexH: ${childParentData.flexH}.',
-      );if (childParentData.rowColumnCutoffWidth > 0 || childParentData.maxWidthRow < double.infinity) {
+      );
+      if (childParentData.rowColumnCutoffWidth > 0 || childParentData.maxWidthRow < double.infinity) {
         minMaxHChildren.add(child);
-      }
-      else if (childParentData.fitH != null && childParentData.flexH > 0) {
+      } else if (childParentData.fitH != null && childParentData.flexH > 0) {
         // This child is wrapped in Expanded/Flexible.
         // DO NOT lay it out yet.
         flexibleHChildren.add(child);
@@ -1260,19 +1263,21 @@ class RowToColumnRenderObject extends RenderBox
       child = childParentData.nextSibling;
     }
 
-
+/// This is the smallest total partent width that would allow this to be laid out as a row.
 double minRowWidth = 0;
 for (final RenderBox child in minMaxHChildren) {
-
+      final RowToColumnRenderParentData childParentData =
+          child.parentData as RowToColumnRenderParentData;
       child.layout(
         BoxConstraints(
-          minWidth: ,
+          minWidth: childParentData.rowColumnCutoffWidth,
           maxWidth: double.infinity,
           minHeight: 0,
           maxHeight: constraints.maxHeight,
         ),
         parentUsesSize: true,
       );
+      minRowWidth += child.size.width;
 }
 
     // Decide if row or column by laying out rigid children and min/max Children
@@ -1286,23 +1291,26 @@ for (final RenderBox child in minMaxHChildren) {
         ),
         parentUsesSize: true,
       );
-      rigidHChildSizes.add(child.size);
+      // rigidHChildSizes.add(child.size);
+      minRowWidth += child.size.width;
     }
-    final double smallestRowWidth =
-        rigidHChildSizes.fold<double>(
-          0,
-          (previousValue, element) => previousValue + element.width,
-        ) +
-        rowSpacing * (rigidHChildren.length + flexibleHChildren.length - 1);
+
+    minRowWidth += rowSpacing * (minMaxHChildren.length + rigidHChildren.length + flexibleHChildren.length - 1);
+    // final double smallestRowWidth = 0
+        // rigidHChildSizes.fold<double>(
+        //   0,
+        //   (previousValue, element) => previousValue + element.width,
+        // ) +
+        // rowSpacing * (rigidHChildren.length + flexibleHChildren.length - 1);
     print(
-      'calculated smallestRowWidth: $smallestRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleHChildren.isNotEmpty}',
+      'calculated minRowWidth: $minRowWidth, and constraints.maxWidth: ${constraints.maxWidth}, and anyFlexible: ${flexibleHChildren.isNotEmpty}',
     );
 
 
     MainAxisSize effectiveRowMainAxisSize = rowMainAxisSize;
 
 
-    if (smallestRowWidth <= constraints.maxWidth) {
+    if (minRowWidth <= constraints.maxWidth) {
       // layout as a row
 
       // Now that we know it will be a row, check for row-specific throw conditions
