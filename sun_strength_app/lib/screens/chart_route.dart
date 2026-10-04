@@ -152,30 +152,34 @@ class ScrollableChartPageContent extends StatelessWidget {
                 print(
                   'inside ScrollableChartPageContentR.build, constraints passed under SingleChildScrollView: $constraints',
                 );
-                return RowToColumnRenderWidget(
-                  key: ValueKey('Column of two widgets in chart'),
-                  columnCrossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FlexibleSometimesWidget(
-                      rowColumnCutoffWidth: 400,
-                      maxWidthRow: 600,
-                      // fitV: FlexFit.loose,
-                      child: ConstrainedBox(
+                return Column(children: [
+                // RowToColumnRenderWidget(
+                  // key: ValueKey('Column of two widgets in chart'),
+                  // columnCrossAxisAlignment: CrossAxisAlignment.stretch,
+                  // children: [
+                    // FlexibleSometimesWidget(
+                    //   rowColumnCutoffWidth: 400,
+                    //   maxWidthRow: 600,
+                    //   // fitV: FlexFit.loose,
+                    //   child: 
+                      ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
                         child: const YearlyChart(),
                       ),
-                    ),
-                    FlexibleSometimesWidget(
-                      rowColumnCutoffWidth: 400,
-                      maxWidthRow: 600,
-                      // fitV: FlexFit.loose,
-                      child: ConstrainedBox(
+                    // ),
+                    // FlexibleSometimesWidget(
+                    //   rowColumnCutoffWidth: 400,
+                    //   maxWidthRow: 600,
+                    //   // fitV: FlexFit.loose,
+                    //   child: 
+                      ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
                         child: const AzimuthChart(),
                       ),
-                    ),
-                  ],
-                );
+                    // ),
+                  // ],
+                // );
+                ]);
 
                 // final bool rowBool = constraints.maxWidth > 800;
                 // return Flex(

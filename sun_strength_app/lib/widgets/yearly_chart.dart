@@ -141,14 +141,16 @@ class LocationButtonRow extends StatelessWidget {
         print('inside LocationButtonRow.build, constraints: $constraints');
         return Consumer<ChartSettingsNot>(
           builder: (context, currentChartSettingsNotifier, child) {
-            return RowToColumnRenderWidget(
-              rowMainAxisSize: MainAxisSize.min,
-              rowSpacing: 20,
-              rowCrossAxisAlignment: CrossAxisAlignment.start,
-              columnMainAxisSize: MainAxisSize.min,
-              columnCrossAxisAlignment: CrossAxisAlignment.center,
-              columnSpacing: 5,
-              children: [
+            return 
+            Column(children: [
+            // RowToColumnRenderWidget(
+            //   rowMainAxisSize: MainAxisSize.min,
+            //   rowSpacing: 20,
+            //   rowCrossAxisAlignment: CrossAxisAlignment.start,
+            //   columnMainAxisSize: MainAxisSize.min,
+            //   columnCrossAxisAlignment: CrossAxisAlignment.center,
+            //   columnSpacing: 5,
+            //   children: [
                 LayoutBuilder(
                   builder: (context, constraints) {
                     print(
@@ -222,8 +224,9 @@ class LocationButtonRow extends StatelessWidget {
                     child: Text('Reset chart to default location'),
                   ),
                 ),
-              ],
-            );
+            //   ],
+            // );
+            ],);
           },
         );
       },

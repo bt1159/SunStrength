@@ -91,11 +91,12 @@ class AzimuthChart extends StatelessWidget {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            RowToColumnRenderWidget(                              
-                              rowMainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              rowCrossAxisAlignment: CrossAxisAlignment.center,
-                              columnCrossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
+                            Row(children: [
+                            // RowToColumnRenderWidget(                              
+                            //   rowMainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            //   rowCrossAxisAlignment: CrossAxisAlignment.center,
+                            //   columnCrossAxisAlignment: CrossAxisAlignment.stretch,
+                            //   children: [
                                 Text(
                                   'Sun strength and location on a single day',
                                   style: Theme.of(
@@ -134,8 +135,9 @@ class AzimuthChart extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                            //   ],
+                            // ),
+                            ],),
                             Text(
                               intl.DateFormat(
                                 'd MMM yyyy',
