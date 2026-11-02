@@ -251,6 +251,8 @@ You don't mock thing you are trying to test.  You mock things that need to be in
 
 
 # Future work
+## A much better idea for the solar path chart is found on the bottom right, here: https://ccnmtl.github.io/astro-simulations/lunar-phase-simulator/ called the "Horizon Diagram".
+
 ## Add a note about DST (pop up changes to always be correct local time, but y axis is solar time).
 
 ## Add some way of adjusting the number of y and x axis labels.  Either a setting or, even better, window size.
