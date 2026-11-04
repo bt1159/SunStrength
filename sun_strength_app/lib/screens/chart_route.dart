@@ -174,6 +174,7 @@ class ScrollableChartPageContent extends StatelessWidget {
                         child: const AzimuthChart(),
                       ),
                     ),
+                    
                   ],
                 );
 

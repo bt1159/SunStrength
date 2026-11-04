@@ -46,6 +46,7 @@ dependencies:
   lat_lng_to_timezone: ^0.2.0
   intl: ^0.20.3
   color_map: ^1.0.0
+  # vector_math: ^2.2.0
   vector_math: ^2.2.0
   web: ^1.1.1
   geolocator: ^14.0.3
