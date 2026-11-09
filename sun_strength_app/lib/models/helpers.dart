@@ -1281,8 +1281,17 @@ class RowToColumnRenderObject extends RenderBox
     /// These children are laid out simply and directly.
     List<RenderBox> rigidHChildren = [];
 
+    /// These children are flexible with flexfit loose when in a row layout.
+    List<RenderBox> looseHChildren = [];
+
+    /// These children are flexible with flexfit expanded when in a row layout.
+    List<RenderBox> expandedHChildren = [];
+
     /// These children are flexible when in a row layout.
-    List<RenderBox> flexibleHChildren = [];
+    List<RenderBox> flexibleHChildren() => [
+      ...looseHChildren,
+      ...expandedHChildren,
+    ];
 
     /// These children have either a rowColumnCutoffWidth or a maxWidthRow.  A rowColumnCutoffWidth is a
     /// minimum width that, if they are only allowed less width, they force this Render object to layout
@@ -1302,10 +1311,17 @@ class RowToColumnRenderObject extends RenderBox
       if (childParentData.rowColumnCutoffWidth > 0 ||
           childParentData.maxWidthRow < double.infinity) {
         minMaxHChildren.add(child);
-      } else if (childParentData.fitH != null && childParentData.flexH > 0) {
+      } else if (childParentData.fitH == FlexFit.loose &&
+          childParentData.flexH > 0) {
         // This child is wrapped in Expanded/Flexible.
         // DO NOT lay it out yet.
-        flexibleHChildren.add(child);
+        looseHChildren.add(child);
+        totalFlexH += childParentData.flexH;
+      } else if (childParentData.fitH == FlexFit.tight &&
+          childParentData.flexH > 0) {
+        // This child is wrapped in Expanded/Flexible.
+        // DO NOT lay it out yet.
+        expandedHChildren.add(child);
         totalFlexH += childParentData.flexH;
       } else {
         // This child is rigid. It is safe to use unbounded constraints.
@@ -1314,37 +1330,38 @@ class RowToColumnRenderObject extends RenderBox
       child = childParentData.nextSibling;
     }
 
+    final int qtyAllChildren = rigidHChildren.length + minMaxHChildren.length + flexibleHChildren().length;
+
+    double Function(double height, double rowLargestChildHeight) calcY;
+    final double rowChildMinHeight;
+
+    switch (rowCrossAxisAlignment) {
+      case CrossAxisAlignment.start:
+        calcY = (double height, double rowLargestChildHeight) => 0;
+        rowChildMinHeight = 0;
+        break;
+      case CrossAxisAlignment.stretch:
+        calcY = (double height, double rowLargestChildHeight) => 0;
+        rowChildMinHeight = constraints.maxHeight;
+        break;
+      case CrossAxisAlignment.end:
+        calcY = (double height, double rowLargestChildHeight) =>
+            rowLargestChildHeight - height;
+        rowChildMinHeight = 0;
+        break;
+      case CrossAxisAlignment.center:
+      case CrossAxisAlignment.baseline:
+        rowChildMinHeight = 0;
+        calcY = (double height, double rowLargestChildHeight) =>
+            (rowLargestChildHeight - height) / 2;
+        break;
+    }
+
     /// This is the smallest total parent width that would allow this to be laid out as a row.
     double minRowWidthRequiredByAllChildren = 0;
-    double minRowWidthRequiredByMinMaxChildren = 0;
 
-
-      double Function(double height, double rowLargestChildHeight) calcY;
-      final double rowChildMinHeight;
-
-      switch (rowCrossAxisAlignment) {
-        case CrossAxisAlignment.start:
-          calcY = (double height, double rowLargestChildHeight) => 0;
-          rowChildMinHeight = 0;
-          break;
-        case CrossAxisAlignment.stretch:
-          calcY = (double height, double rowLargestChildHeight) => 0;
-          rowChildMinHeight = constraints.maxHeight;
-          break;
-        case CrossAxisAlignment.end:
-          calcY = (double height, double rowLargestChildHeight) =>
-              rowLargestChildHeight - height;
-          rowChildMinHeight = 0;
-          break;
-        case CrossAxisAlignment.center:
-        case CrossAxisAlignment.baseline:
-          rowChildMinHeight = 0;
-          calcY = (double height, double rowLargestChildHeight) =>
-              (rowLargestChildHeight - height) / 2;
-          break;
-      }
-
-    /// Decide if row or column by laying out min/max Children and rigid children
+    /// Decide if row or column by laying out min/max Children and rigid children.   Loose and
+    /// Expanded children are allowed to be given zero width.
     for (final RenderBox child in minMaxHChildren) {
       final RowToColumnRenderParentData childParentData =
           child.parentData as RowToColumnRenderParentData;
@@ -1358,7 +1375,6 @@ class RowToColumnRenderObject extends RenderBox
         parentUsesSize: true,
       );
       minRowWidthRequiredByAllChildren += child.size.width;
-      minRowWidthRequiredByMinMaxChildren += child.size.width;
     }
 
     for (final RenderBox child in rigidHChildren) {
@@ -1379,7 +1395,7 @@ class RowToColumnRenderObject extends RenderBox
         rowSpacing *
         (minMaxHChildren.length +
             rigidHChildren.length +
-            flexibleHChildren.length -
+            flexibleHChildren().length -
             1);
     // final double smallestRowWidth = 0
     // rigidHChildSizes.fold<double>(
@@ -1388,22 +1404,24 @@ class RowToColumnRenderObject extends RenderBox
     // ) +
     // rowSpacing * (rigidHChildren.length + flexibleHChildren.length - 1);
 
-    final double maxRowWidthAllowedByConstraints = constraints.maxWidth;
     print(
-      'calculated minRowWidth: $minRowWidthRequiredByAllChildren, and maxRowWidthAllowedByConstraints: $maxRowWidthAllowedByConstraints, and anyFlexible: ${flexibleHChildren.isNotEmpty}',
+      'calculated minRowWidth: $minRowWidthRequiredByAllChildren, and constraints.maxWidth: $constraints.maxWidth, and anyFlexible: ${flexibleHChildren().isNotEmpty}',
     );
 
     MainAxisSize effectiveRowMainAxisSize =
         rowMainAxisSize; // Move this into the if statements for better clarity
 
-    if (minRowWidthRequiredByAllChildren <= maxRowWidthAllowedByConstraints) {
+    if (minRowWidthRequiredByAllChildren <= constraints.maxWidth) {
       // layout as a row
 
+      double takenWidth =
+          0; // This value tracks how much width is used by children and then is used in layout out their x locations.
+
       // Now that we know it will be a row, check for row-specific throw conditions
-      if (flexibleHChildren.isNotEmpty) {
+      if (expandedHChildren.isNotEmpty) {
         effectiveRowMainAxisSize = MainAxisSize.max;
         if (constraints.maxWidth.isInfinite) {
-          throw 'RowToColumnRenderObject is trying to be a row but was given inifinite width also given at least one flexible child';
+          throw 'RowToColumnRenderObject is trying to be a row but was given inifinite width also given at least one expanded child';
         }
       } else if (constraints.maxWidth.isInfinite) {
         effectiveRowMainAxisSize = MainAxisSize.min;
@@ -1415,7 +1433,7 @@ class RowToColumnRenderObject extends RenderBox
 
       /// Figure out situation of width, compared to minMax children's preferences, for instance.
 
-      double rowWidthRequestedByAllChildren = 0;
+      double rowWidthRequestedByRigidAndMinMaxChildren = 0;
 
       for (final RenderBox child in minMaxHChildren) {
         final RowToColumnRenderParentData childParentData =
@@ -1429,450 +1447,433 @@ class RowToColumnRenderObject extends RenderBox
           ),
           parentUsesSize: true,
         );
-        rowWidthRequestedByAllChildren += child.size.width;
+        rowWidthRequestedByRigidAndMinMaxChildren += child.size.width;
       }
 
       for (final RenderBox child in rigidHChildren) {
-        rowWidthRequestedByAllChildren += child.size.width;
+        rowWidthRequestedByRigidAndMinMaxChildren += child.size.width;
       }
 
-      rowWidthRequestedByAllChildren +=
+      rowWidthRequestedByRigidAndMinMaxChildren +=
           rowSpacing *
           (minMaxHChildren.length +
               rigidHChildren.length +
-              flexibleHChildren.length -
+              flexibleHChildren().length -
               1);
 
       final bool minMaxHChildrenGetRequestedWidths =
-          rowWidthRequestedByAllChildren <= maxRowWidthAllowedByConstraints;
-      final double rowWidthAvailableToFlexHChildren = max(
-        maxRowWidthAllowedByConstraints - rowWidthRequestedByAllChildren,
-        0,
-      );
-
-      /// Set up logic for y and height for children according to
-      /// [rowCrossAxisAlignment].  The logic is set up here, but children
-      /// are actually laid out below according to [rowMainAxisSize] and
-      /// [rowMainAxisAlignment].  Start by finding the largest height among
-      /// the children.
-
-      // double rowLargestChildHeight = rigidHChildren.fold(
-      //   0,
-      //   (previousValue, rigidHChild) =>
-      //       max(previousValue, rigidHChild.size.height),
-      // );
-      // for (final RenderBox child in minMaxHChildren) {
-      //   final RowToColumnRenderParentData childParentData =
-      //       child.parentData as RowToColumnRenderParentData;
-      //   child.layout(
-      //     BoxConstraints(
-      //       minWidth: childParentData.rowColumnCutoffWidth,
-      //       maxWidth: childParentData.rowColumnCutoffWidth,
-      //       minHeight: 0,
-      //       maxHeight: constraints.maxHeight,
-      //     ),
-      //     parentUsesSize: true,
-      //   );
-      // }
-
-      // if (flexibleHChildren.isNotEmpty) {
-      //   double remainingWidth = constraints.maxWidth - smallestRowWidth;
-      //   double widthPerFlex = remainingWidth / totalFlexH;
-
-      //   for (final child in flexibleHChildren) {
-      //     RowToColumnRenderParentData parentData =
-      //         child.parentData as RowToColumnRenderParentData;
-
-      //     child.layout(
-      //       BoxConstraints(
-      //         minWidth: parentData.fitH == FlexFit.loose
-      //             ? 0
-      //             : parentData.flexH * widthPerFlex,
-      //         maxWidth: parentData.flexH * widthPerFlex,
-      //         minHeight: 0,
-      //         maxHeight: constraints.maxHeight,
-      //       ),
-      //       parentUsesSize: true,
-      //     );
-
-      //     rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
-      //   }
-      // }
-
+          rowWidthRequestedByRigidAndMinMaxChildren <= constraints.maxWidth;
 
       double rowLargestChildHeight = 0;
-      // double runningDx = 0;
+      final double renderObjectWidth;
 
-      /// Split out layout process by [effectiveRowMainAxisSize].  Start here with min
-      if (effectiveRowMainAxisSize == MainAxisSize.min) {
-        /// Since effectiveRowMainAxisSize is min, we know that there are NO flexible
-        /// children and we know that either the maxWidth is infinite OR it was set to
-        /// min manually (or both)
-        /// 
-        final double renderObjectWdith;
+      for (final child in rigidHChildren) {
+        rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
+      }
 
-        /// First, size children.  Lay them out later, since that potentially depends on each other's heights
-        for (final child in rigidHChildren) {
-          final RowToColumnRenderParentData childParentData =
-              child.parentData as RowToColumnRenderParentData;
+      MainAxisAlignment effectiveRowMainAxisAlignment = rowMainAxisAlignment;
+
+      if (minMaxHChildrenGetRequestedWidths) {
+        /// There is enough available width for minmax children to get their full
+        /// requested widths.  They will get exactly that and not be forced bigger.
+        /// Any extra width will therefore need to be allocated to flexible and/or
+        /// expanded children, if they exist.
+
+        for (final child in minMaxHChildren) {
+          rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
+        }
+
+        if (effectiveRowMainAxisSize == MainAxisSize.min) {
+          /// Since effectiveRowMainAxisSize is min, we know that there are NO Expanded
+          /// children.  There still could be flexible loose children, however.  If they
+          /// are able to reach their desired widths, then they function like non-flexible
+          /// children.
+          ///
+          /// We also know that, if maxWidth was finite and MainAxisSize.max,
+          /// MainAxisSize would have been forced to become min.
+
+          // ADD SOMETHING HERE TO DEAL WITH LOOSE CHILDREN!!!!!!!
+
+          effectiveRowMainAxisAlignment = MainAxisAlignment
+              .start; // Since MainAxisSize.min, MainAxisAlignment becomes moot.
+
+          takenWidth = rowWidthRequestedByRigidAndMinMaxChildren;
+
+          if (looseHChildren.isNotEmpty) {
+            List<RenderBox> flexibleHChildrenRequiringLayout =
+                flexibleHChildren();
+            int nextIterationTotalFlexH = totalFlexH;
+            int thisIterationTotalFlexH = 0;
+
+            /// During this loop, thisIterationTotalFlexH tracks the sum of flex values for children that have not yet hit a maximum in previous iterations.  nextIterationTotalFlexH keeps a running tally of children who, after this iteration still have not hit their max.  These values will be different at the end of an iteration if and only if at least one child hits its maximum.  If that doesn't happen during an iteration, you can stop looping because nothing will change any more.
+            while (flexibleHChildrenRequiringLayout.isNotEmpty &&
+                thisIterationTotalFlexH != nextIterationTotalFlexH) {
+              thisIterationTotalFlexH = nextIterationTotalFlexH;
+              nextIterationTotalFlexH = 0;
+              double remainingWidth = constraints.maxWidth - takenWidth;
+              double widthPerFlex =
+                  remainingWidth / max(thisIterationTotalFlexH, 1);
+              for (final RenderBox child in [
+                ...flexibleHChildrenRequiringLayout,
+              ]) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                final double maxWidthThisChild =
+                    widthPerFlex * childParentData.flexH;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: maxWidthThisChild,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                if (child.size.width < maxWidthThisChild) {
+                  flexibleHChildrenRequiringLayout.remove(child);
+                  takenWidth += child.size.width;
+                  rowLargestChildHeight = max(
+                    rowLargestChildHeight,
+                    child.size.height,
+                  );
+                } else {
+                  nextIterationTotalFlexH += childParentData.flexH;
+                }
+              }
+            }
+            for (final RenderBox child in flexibleHChildrenRequiringLayout) {
+              takenWidth += child.size.width;
+              rowLargestChildHeight = max(
+                rowLargestChildHeight,
+                child.size.height,
+              );
+            }
+          }
+
+          renderObjectWidth = takenWidth;
+
+          size = constraints.constrainDimensions(
+            renderObjectWidth,
+            rowLargestChildHeight,
+          );
+        } else {
+          // effectiveMainAxisSize is max
+
+          // There is enough available width for minmax children to get their full
+          // requested widths and there may be additional space available.  All of
+          // that additional space, if available, will be given to the flexible
+          // children, if they exist.  The minmax children will not be forced
+          // bigger.  Since MainAxisSize.max, we know maxWidth is finite.
+
+          renderObjectWidth = constraints.maxWidth;
+          takenWidth = rowWidthRequestedByRigidAndMinMaxChildren;
+
+          if (flexibleHChildren().isNotEmpty) {
+            List<RenderBox> flexibleHChildrenRequiringLayout =
+                flexibleHChildren();
+            int nextIterationTotalFlexH = totalFlexH;
+            int thisIterationTotalFlexH = 0;
+
+            /// During this loop, thisIterationTotalFlexH tracks the sum of flex values for children that have not yet hit a maximum in previous iterations.  nextIterationTotalFlexH keeps a running tally of children who, after this iteration still have not hit their max.  These values will be different at the end of an iteration if and only if at least one child hits its maximum.  If that doesn't happen during an iteration, you can stop looping because nothing will change any more.
+            while (flexibleHChildrenRequiringLayout.isNotEmpty &&
+                thisIterationTotalFlexH != nextIterationTotalFlexH) {
+              thisIterationTotalFlexH = nextIterationTotalFlexH;
+              nextIterationTotalFlexH = 0;
+              double remainingWidth = constraints.maxWidth - takenWidth;
+              double widthPerFlex =
+                  remainingWidth / max(thisIterationTotalFlexH, 1);
+              for (final RenderBox child in [
+                ...flexibleHChildrenRequiringLayout,
+              ]) {
+                final RowToColumnRenderParentData childParentData =
+                    child.parentData as RowToColumnRenderParentData;
+                final double maxWidthThisChild =
+                    widthPerFlex * childParentData.flexH;
+                child.layout(
+                  BoxConstraints(
+                    minWidth: childParentData.fitH == FlexFit.loose
+                        ? 0
+                        : maxWidthThisChild,
+                    maxWidth: maxWidthThisChild,
+                    minHeight: rowChildMinHeight,
+                    maxHeight: constraints.maxHeight,
+                  ),
+                  parentUsesSize: true,
+                );
+                if (childParentData.fitH == FlexFit.loose &&
+                    child.size.width < maxWidthThisChild) {
+                  flexibleHChildrenRequiringLayout.remove(child);
+                  takenWidth += child.size.width;
+                  rowLargestChildHeight = max(
+                    rowLargestChildHeight,
+                    child.size.height,
+                  );
+                } else {
+                  nextIterationTotalFlexH += childParentData.flexH;
+                }
+              }
+            }
+            for (final RenderBox child in flexibleHChildrenRequiringLayout) {
+              takenWidth += child.size.width;
+              rowLargestChildHeight = max(
+                rowLargestChildHeight,
+                child.size.height,
+              );
+            }
+          }
+
+          size = constraints.constrainDimensions(
+            renderObjectWidth,
+            rowLargestChildHeight,
+          );
+        }
+      } else {
+        // Since there is NOT enough room for ALL the minmax children to get
+        // their requested widths, they will each get the same amount, until
+        // any of them hit their requested amount.  This RenderObject will
+        // take the entire contraints.maxWidth, which means that MainAxisSize
+        // has become irrelevant.  I do need still layout the flex children,
+        // if they exist, but give them 0 width.  Their height could still
+        // impact the other children's location and if
+        // CrossAxisAlignment.stretch, size.
+
+        effectiveRowMainAxisAlignment = MainAxisAlignment.start;
+        renderObjectWidth = constraints.maxWidth;
+        takenWidth = 0;
+
+        final List<MinMaxChildTableRow> listMinMaxChildTableRow =
+            minMaxHChildren.createCalculationTableRows();
+
+        // Using map objects set up above, determine current scenario
+        // using maxWidth
+
+        final List<MinMaxChildTableRowWithFinalWidth>
+        listMinMaxChildTableRowWithFinalWidth = listMinMaxChildTableRow
+            .allocateWidth(constraints.maxWidth);
+
+        // Given current scenario, layout minMaxChildren such that
+        // those below the threshold get their full requested width
+        // and those above it equally split what remains
+        for (final MinMaxChildTableRowWithFinalWidth childWithStuff
+            in listMinMaxChildTableRowWithFinalWidth) {
+          final RenderBox child = childWithStuff.minMaxChildTableRow.child;
+          if (childWithStuff.maxedOut) {
+            child.layout(
+              BoxConstraints(
+                minWidth: childWithStuff.finalWidth,
+                maxWidth: childWithStuff.finalWidth,
+                minHeight: rowChildMinHeight,
+                maxHeight: constraints.maxHeight,
+              ),
+              parentUsesSize: true,
+            );
+            takenWidth += child.size.width;
+            rowLargestChildHeight = max(
+              rowLargestChildHeight,
+              child.size.height,
+            );
+          } else {
+            // No need to layout since child already was laid out with its intrinsic desired width
+            rowLargestChildHeight = max(
+              rowLargestChildHeight,
+              child.size.height,
+            );
+            takenWidth += child.size.width;
+          }
+        }
+
+        // Now lay out flexible children with zero width.
+        for (final RenderBox child in flexibleHChildren()) {
           child.layout(
             BoxConstraints(
               minWidth: 0,
-              maxWidth: constraints.maxWidth,
+              maxWidth: 0,
               minHeight: rowChildMinHeight,
               maxHeight: constraints.maxHeight,
             ),
             parentUsesSize: true,
           );
+
           rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
-          print(
-            'Just finished sizing child, size: ${child.size}.  This child is ${(childParentData.fitH != null && childParentData.flexH > 0) ? '' : 'not '}flexible${(childParentData.fitH != null && childParentData.flexH > 0) ? ', fit: ${childParentData.fitH}' : ''}',
-          );
-
-          // childParentData.offset = Offset(runningDx, calcY(child.size.height));
-          // print('just set child offset.dx: ${childParentData.offset.dx}');
-          // runningDx += child.size.width + rowSpacing;
-        }
-
-        // THIS LOGIC STILL ISN'T RIGHT.  EVEN IF THEY GET THEIR REQUESTED WIDTH, THEY MIGHT GET EXTRA.  THERE SHOULD BE OTHER POSSIBILITIES HERE.
-        // No, wait.  one of the minmax children should never be forced to be wider than it requests to be.  That would be weird.
-
-        if (minMaxHChildrenGetRequestedWidths) {
-          renderObjectWdith = rowWidthRequestedByAllChildren;
-          // There is enough available width for minmax children to get their full requested widths.  They will get exactly that and not be forced bigger.
-          for (final child in minMaxHChildren) {
-            
-            
-            
-            // already laid out the same way
-
-
-
-
-            // final RowToColumnRenderParentData childParentData =
-            //     child.parentData as RowToColumnRenderParentData;
-            // child.layout(
-            //   BoxConstraints(
-            //     minWidth: childParentData.rowColumnCutoffWidth,
-            //     maxWidth: childParentData.maxWidthRow,
-            //     minHeight: rowChildMinHeight,
-            //     maxHeight: constraints.maxHeight,
-            //   ),
-            //   parentUsesSize: true,
-            // );
-
-
-            rowLargestChildHeight = max(
-              rowLargestChildHeight,
-              child.size.height,
-            );
-          }
-        } else {          
-          renderObjectWdith = constraints.maxWidth;
-          // Since there is NOT enough room for ALL the minmax children to get their requested widths, they will each get the same amount, until any of them hit their requested amount.
-          // final double allowableWidthGrowthFactorMinMaxChildren = (maxRowWidthAllowedByConstraints - minRowWidthRequiredByChildren) / minRowWidthRequiredByMinMaxChildren + 1;
-          List<Map<String, Object?>>
-          minMaxChildrenWithMaxWidthMapsSortedAsc = minMaxHChildren
-              .map((child) {
-                return {
-                  'maxWidth': child
-                      .size
-                      .width, // These were already laid out with the cutOff as minWidth and the rowMaXWidth as maxWidth.  child.size.width is therefore the widest this child should get
-                  'child': child,
-                };
-              })
-              .sorted(
-                (a, b) => (a['maxWidth'] as double).compareTo(
-                  b['maxWidth'] as double,
-                ),
-              );
-          double runningSumOfMaxes = 0;
-          for (final (int index, Map<String, Object?> childMap)
-              in minMaxChildrenWithMaxWidthMapsSortedAsc.indexed) {
-            childMap['index'] = index;
-            childMap['qtyAtOrBelow'] =
-                minMaxChildrenWithMaxWidthMapsSortedAsc.length - index;
-            childMap['qtyAtOrBelowTimesThisMax'] =
-                (childMap['qtyAtOrBelow'] as int) *
-                (childMap['maxWidth'] as double);
-            childMap['sumOfMaxes'] = runningSumOfMaxes;
-            childMap['runningTotalWidthsUsed'] =
-                (childMap['qtyAtOrBelowTimesThisMax'] as double) +
-                (childMap['sumOfMaxes'] as double);
-            runningSumOfMaxes += (childMap['maxWidth'] as double);
-          }
-
-          final int lastIndexBeforeAllowedSize =
-              minMaxChildrenWithMaxWidthMapsSortedAsc.lastWhere(
-                    (childMap) =>
-                        (childMap['runningSumOfMaxes'] as double) <=
-                        maxRowWidthAllowedByConstraints,
-                  )['index']
-                  as int;
-          final double unallocatedWidth =
-              minMaxChildrenWithMaxWidthMapsSortedAsc[lastIndexBeforeAllowedSize]['runningSumOfMaxes']
-                  as double;
-          final int qtyChildrenGettingExtraWidth =
-              minMaxChildrenWithMaxWidthMapsSortedAsc.length -
-              lastIndexBeforeAllowedSize -
-              1;
-          final double extraWidthForEachChild =
-              unallocatedWidth / qtyChildrenGettingExtraWidth;
-          final double widthForEachRemainingChild =
-              (minMaxChildrenWithMaxWidthMapsSortedAsc[lastIndexBeforeAllowedSize]['maxWidth']
-                  as double) +
-              extraWidthForEachChild;
-          for (final Map<String, Object?> childMap
-              in minMaxChildrenWithMaxWidthMapsSortedAsc) {
-            if ((childMap['index'] as int) <= lastIndexBeforeAllowedSize) {
-              final RenderBox child = childMap['child'] as RenderBox;
-              // final RowToColumnRenderParentData childParentData =
-              //     child.parentData as RowToColumnRenderParentData;
-              // child.layout(
-              //   BoxConstraints(
-              //     minWidth: childParentData.rowColumnCutoffWidth,
-              //     maxWidth: childParentData.maxWidthRow,
-              //     minHeight: rowChildMinHeight,
-              //     maxHeight: constraints.maxHeight,
-              //   ),
-              //   parentUsesSize: true,
-              // );
-
-
-              // already laid out the same way
-
-              rowLargestChildHeight = max(
-                rowLargestChildHeight,
-                child.size.height,
-              );
-            } else {
-              final RenderBox child = childMap['child'] as RenderBox;
-              child.layout(
-                BoxConstraints(
-                  minWidth: widthForEachRemainingChild,
-                  maxWidth: widthForEachRemainingChild,
-                  minHeight: rowChildMinHeight,
-                  maxHeight: constraints.maxHeight,
-                ),
-                parentUsesSize: true,
-              );
-            }
-          }
         }
 
         size = constraints.constrainDimensions(
-          renderObjectWdith,
+          renderObjectWidth,
           rowLargestChildHeight,
         );
-        print(
-          'Just sized RTC, size: $size, constraints: $constraints, with rowMainAxisSize is min.  There are no flexible children.  Input constraints: $constraints',
-        );
-      } else {
+      }
 
-        /// START HERE AFTER 2026-11-04
+      // I don't think I am handling rowSpacing correctly!!!!!!!!!!  Am I even looking at it when there is not enough room for minMax and I use all those special objects?
 
+      /// Now that all children have a set size (particularly width), proceed by setting offsets.
+      /// If takenWidth is equal to constraints.maxWidth, there is no extra space to allocate
+      /// between children, and the code for any RowMainAxisAlignment would yield the same,
+      /// correct results.  For simplicity, we force it to use MainAxisAlignment.start
 
+      if (takenWidth == renderObjectWidth || expandedHChildren.isNotEmpty) {
+        effectiveRowMainAxisAlignment = MainAxisAlignment.start;
+      }
 
+      print(
+        'about to start setting offsets.  rowMainAxisAlignment: $rowMainAxisAlignment, effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+      );
 
+      double runningDx = 0;
+      switch (effectiveRowMainAxisAlignment) {
+        case MainAxisAlignment.start:
+          child = firstChild;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        /// EffectiveRowMainAxisSize is max.  We will set each child's size first.  Rigid children's
-        /// sizes are determined the same way regardless of whether there are also flexible children.
-        /// Since we already have laid out the rigid children to determine smallestRowWidth, if there
-        /// are flexible children, we pass them their portion of the allocatable width as maxWidth.  If
-        /// the flexible child is tight (i.e., Expanded), it will also get that width as its minWidth.
-        /// If it is loose, it will get 0 as minWidth.  After setting each child's size, we will go back
-        /// through to set offsets (according to MainAxisAlignment).   The only time MainAxisAlignment
-        /// irrlevant is if there are more than zero tight flexible children AND (either zero loose
-        /// flexible children OR all loose flexible children have actual width's less than the given
-        /// maxWidth).
-
-        print(
-          'starting section for effectiveRowMainAxisSize.max.  First step is to size children.',
-        );
-        double takenWidth = 0;
-        rowLargestChildHeight = 0;
-        double remainingWidth = constraints.maxWidth - smallestRowWidth;
-
-        /// Since the same code is used regardless of the existence of flexible children,
-        /// when there are none, widthPerFlex will get ignored.  To avoid throwing in that
-        /// case, however, we force totalFlex to be at least 1.
-        double widthPerFlex = remainingWidth / max(totalFlexH, 1);
-        RenderBox? child = firstChild;
-        print(
-          'about to size children, remainingWidth: $remainingWidth, widthPerFlex: $widthPerFlex',
-        );
-        while (child != null) {
-          final RowToColumnRenderParentData childParentData =
-              child.parentData as RowToColumnRenderParentData;
-          if (childParentData.fitH != null && childParentData.flexH > 0) {
-            child.layout(
-              BoxConstraints(
-                minWidth: childParentData.fitH == FlexFit.loose
-                    ? 0
-                    : widthPerFlex * childParentData.flexH,
-                maxWidth: widthPerFlex * childParentData.flexH,
-                minHeight: rowChildMinHeight,
-                maxHeight: constraints.maxHeight,
-              ),
-              parentUsesSize: true,
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height, rowLargestChildHeight),
             );
-          } else {
-            child.layout(
-              BoxConstraints(
-                minWidth: 0,
-                maxWidth: double.infinity,
-                minHeight: rowChildMinHeight,
-                maxHeight: constraints.maxHeight,
-              ),
-              parentUsesSize: true,
-            );
+            print('just set child offset.dx: ${childParentData.offset.dx}');
+            runningDx += child.size.width + rowSpacing;
+            child = childParentData.nextSibling;
           }
-          takenWidth += child.size.width;
-          rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
-          print(
-            'Just finished sizing child, size: ${child.size}.  This child is ${(childParentData.fitH != null && childParentData.flexH > 0) ? '' : 'not '}flexible${(childParentData.fitH != null && childParentData.flexH > 0) ? ', fit: ${childParentData.fitH}' : ''}',
-          );
-          child = childParentData.nextSibling;
-        }
+          break;
+        case MainAxisAlignment.end:
+        // There cannot be any expanded children
+        // MainAxisSize must be max
+        // There may be flexible loose children, but they have acheieved their full intrinsic width
+          child = lastChild;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        takenWidth += (getChildrenAsList().length - 1) * rowSpacing;
+            runningDx += child.size.width;
+            childParentData.offset = Offset(
+              constraints.maxWidth -
+                  runningDx, // Since MainAxisAlignment.end only matters with MainAxisSize.max, I can just use contraints.maxWidth
+              calcY(child.size.height, rowLargestChildHeight),
+            );
+            print('just set child offset.dx: ${childParentData.offset.dx}');
+            runningDx += rowSpacing;
+            child = childParentData.previousSibling;
+          }
+          break;
+        case MainAxisAlignment.center:
+        // There cannot be any expanded children
+        // MainAxisSize must be max
+        // There may be flexible loose children, but they have acheieved their full intrinsic width
+          child = firstChild;
+          runningDx = (constraints.maxWidth - takenWidth) / 2;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        size = constraints.constrainDimensions(
-          constraints.maxWidth,
-          rowLargestChildHeight,
-        );
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height, rowLargestChildHeight),
+            );
+            print(
+              'just set child offset.dx: ${childParentData.offset.dx}, and size: ${child.size}',
+            );
+            runningDx += child.size.width + rowSpacing;
+            child = childParentData.nextSibling;
+          }
+          break;
+        case MainAxisAlignment.spaceBetween:
+        // There cannot be any expanded children
+        // MainAxisSize must be max
+        // There may be flexible loose children, but they have acheieved their full intrinsic width
+          child = firstChild;
+          final double nominalSpaceAllocation =
+              (constraints.maxWidth - takenWidth) / (qtyAllChildren - 1);
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        print(
-          'Just sized RTC, size: $size, constraints: $constraints, with rowMainAxisSize is max, takenWidth: $takenWidth',
-        );
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height, rowLargestChildHeight),
+            );
+            print('just set child offset.dx: ${childParentData.offset.dx}');
+            runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
+            child = childParentData.nextSibling;
+          }
+          break;
+        case MainAxisAlignment.spaceAround:
+        // There cannot be any expanded children
+        // MainAxisSize must be max
+        // There may be flexible loose children, but they have acheieved their full intrinsic width
+          child = firstChild;
+          final double nominalSpaceAllocation =
+              (constraints.maxWidth - takenWidth) / (qtyAllChildren);
+          runningDx += nominalSpaceAllocation / 2;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        /// Now that all children have a set size (particularly width), proceed by setting offsets.
-        /// If takenWidth is equal to constraints.maxWidth, there is no extra space to allocate
-        /// between children, and the code for any RowMainAxisAlignment would yield the same,
-        /// correct results.  For simplicity, we force it to use MainAxisAlignment.start
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height, rowLargestChildHeight),
+            );
+            print('just set child offset.dx: ${childParentData.offset.dx}');
+            runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
+            child = childParentData.nextSibling;
+          }
+          break;
+        case MainAxisAlignment.spaceEvenly:
+        // There cannot be any expanded children
+        // MainAxisSize must be max
+        // There may be flexible loose children, but they have acheieved their full intrinsic width
+          child = firstChild;
+          final double nominalSpaceAllocation =
+              (constraints.maxWidth - takenWidth) / (qtyAllChildren + 1);
+          runningDx += nominalSpaceAllocation;
+          while (child != null) {
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
 
-        MainAxisAlignment effectiveRowMainAxisAlignment = rowMainAxisAlignment;
-        if (takenWidth == constraints.maxWidth) {
-          effectiveRowMainAxisAlignment = MainAxisAlignment.start;
-        }
-
-        print(
-          'about to start setting offsets.  rowMainAxisAlignment: $rowMainAxisAlignment, effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-        );
-
-        double runningDx = 0;
-        switch (effectiveRowMainAxisAlignment) {
-          case MainAxisAlignment.start:
-            child = firstChild;
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              childParentData.offset = Offset(
-                runningDx,
-                calcY(child.size.height),
-              );
-              print('just set child offset.dx: ${childParentData.offset.dx}');
-              runningDx += child.size.width + rowSpacing;
-              child = childParentData.nextSibling;
-            }
-            break;
-          case MainAxisAlignment.end:
-            child = lastChild;
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              runningDx += child.size.width;
-              childParentData.offset = Offset(
-                constraints.maxWidth - runningDx,
-                calcY(child.size.height),
-              );
-              print('just set child offset.dx: ${childParentData.offset.dx}');
-              runningDx += rowSpacing;
-              child = childParentData.previousSibling;
-            }
-            break;
-          case MainAxisAlignment.center:
-            child = firstChild;
-            runningDx = (constraints.maxWidth - takenWidth) / 2;
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              childParentData.offset = Offset(
-                runningDx,
-                calcY(child.size.height),
-              );
-              print(
-                'just set child offset.dx: ${childParentData.offset.dx}, and size: ${child.size}',
-              );
-              runningDx += child.size.width + rowSpacing;
-              child = childParentData.nextSibling;
-            }
-            break;
-          case MainAxisAlignment.spaceBetween:
-            child = firstChild;
-            final double nominalSpaceAllocation =
-                (constraints.maxWidth - takenWidth) /
-                (rigidHChildren.length - 1);
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              childParentData.offset = Offset(
-                runningDx,
-                calcY(child.size.height),
-              );
-              print('just set child offset.dx: ${childParentData.offset.dx}');
-              runningDx +=
-                  child.size.width + rowSpacing + nominalSpaceAllocation;
-              child = childParentData.nextSibling;
-            }
-            break;
-          case MainAxisAlignment.spaceAround:
-            child = firstChild;
-            final double nominalSpaceAllocation =
-                (constraints.maxWidth - takenWidth) / (rigidHChildren.length);
-            runningDx += nominalSpaceAllocation / 2;
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              childParentData.offset = Offset(
-                runningDx,
-                calcY(child.size.height),
-              );
-              print('just set child offset.dx: ${childParentData.offset.dx}');
-              runningDx +=
-                  child.size.width + rowSpacing + nominalSpaceAllocation;
-              child = childParentData.nextSibling;
-            }
-            break;
-          case MainAxisAlignment.spaceEvenly:
-            child = firstChild;
-            final double nominalSpaceAllocation =
-                (constraints.maxWidth - takenWidth) /
-                (rigidHChildren.length + 1);
-            runningDx += nominalSpaceAllocation;
-            while (child != null) {
-              final RowToColumnRenderParentData childParentData =
-                  child.parentData as RowToColumnRenderParentData;
-
-              childParentData.offset = Offset(
-                runningDx,
-                calcY(child.size.height),
-              );
-              print('just set child offset.dx: ${childParentData.offset.dx}');
-              runningDx +=
-                  child.size.width + rowSpacing + nominalSpaceAllocation;
-              child = childParentData.nextSibling;
-            }
-            break;
-        }
+            childParentData.offset = Offset(
+              runningDx,
+              calcY(child.size.height, rowLargestChildHeight),
+            );
+            print('just set child offset.dx: ${childParentData.offset.dx}');
+            runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
+            child = childParentData.nextSibling;
+          }
+          break;
       }
     } else {
       /// layout as column
+      print('this will layout as a column once I build it...');
+      size = Size(constraints.maxWidth, constraints.maxHeight);
+      for (final RenderBox child in rigidHChildren) {
+        child.layout(BoxConstraints.tight(Size(0,0)));
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
+
+            childParentData.offset = Offset(
+              0,
+              0,
+            );
+      }
+      for (final RenderBox child in minMaxHChildren) {
+        child.layout(BoxConstraints.tight(Size(0,0)));
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
+
+            childParentData.offset = Offset(
+              0,
+              0,
+            );
+      }
+      for (final RenderBox child in flexibleHChildren()) {
+        child.layout(BoxConstraints.tight(Size(0,0)));
+            final RowToColumnRenderParentData childParentData =
+                child.parentData as RowToColumnRenderParentData;
+
+            childParentData.offset = Offset(
+              0,
+              0,
+            );
+      }
+      return;
 
       MainAxisSize effectiveColumnMainAxisSize = columnMainAxisSize;
 
@@ -2486,5 +2487,103 @@ class RTCForTestingFlExp extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class MinMaxChildTableRow {
+  const MinMaxChildTableRow({
+    required this.child,
+    required this.maxWidth,
+    required this.qtyAtOrBigger,
+    required this.qtyAtOrBiggerTimesThisMax,
+    required this.sumOfSmallerMaxes,
+  });
+
+  /// The actual renderbox that this row applies to
+  final RenderBox child;
+
+  /// This MinMaxChild's maximum allowable width.  The final list is sorted on this, ascending
+  final double maxWidth;
+
+  /// The number of MinMaxChildren with this same maxWidth or bigger
+  final int qtyAtOrBigger;
+
+  /// The total width that would be used if this row's maxWidth was the biggest width allowed
+  final int qtyAtOrBiggerTimesThisMax;
+
+  /// Sum of the maxWidths below this one.  In other words, the width used by all smaller children than this, if they are all maxed out.
+  final double sumOfSmallerMaxes;
+
+  /// Sum of the smaller actual maxWidths and all children at or bigger using this row's maxWidth
+  double get runningTotalWidthsUsed =>
+      sumOfSmallerMaxes + qtyAtOrBiggerTimesThisMax;
+}
+
+extension ListMinMaxChildTableRow on List<RenderBox> {
+  List<MinMaxChildTableRow> createCalculationTableRows() {
+    final List<RenderBox> sortedList = sorted(
+      (a, b) => (a.size.width).compareTo(b.size.width),
+    );
+    double previousSumOfMaxes = 0;
+    final List<MinMaxChildTableRow> output = sortedList.mapIndexed((index, e) {
+      final MinMaxChildTableRow output = MinMaxChildTableRow(
+        child: e,
+        maxWidth: e.size.width,
+        qtyAtOrBigger: sortedList.length - index,
+        qtyAtOrBiggerTimesThisMax: 0,
+        sumOfSmallerMaxes: previousSumOfMaxes,
+      );
+      previousSumOfMaxes += output.maxWidth;
+      return output;
+    }).toList();
+    return output;
+  }
+}
+
+class MinMaxChildTableRowWithFinalWidth {
+  const MinMaxChildTableRowWithFinalWidth({
+    required this.minMaxChildTableRow,
+    required this.finalWidth,
+  });
+
+  final MinMaxChildTableRow minMaxChildTableRow;
+  final double finalWidth;
+  bool get maxedOut => finalWidth <= minMaxChildTableRow.maxWidth;
+}
+
+extension SizingCalculations on List<MinMaxChildTableRow> {
+  List<MinMaxChildTableRowWithFinalWidth> allocateWidth(double maxWidth) {
+    final int firstIndexOverAllowedSize = indexWhere(
+      (element) => element.runningTotalWidthsUsed > maxWidth,
+    );
+    if (firstIndexOverAllowedSize > -1) {
+      final double unallocatedWidth =
+          maxWidth - elementAt(firstIndexOverAllowedSize).sumOfSmallerMaxes;
+      final int qtyChildrenSplittingUnallocatedWidth =
+          length - firstIndexOverAllowedSize;
+      final double widthPerRemainingChildren =
+          unallocatedWidth / qtyChildrenSplittingUnallocatedWidth;
+      final List<MinMaxChildTableRowWithFinalWidth> output = mapIndexed(
+        (index, e) => index < firstIndexOverAllowedSize
+            ? MinMaxChildTableRowWithFinalWidth(
+                minMaxChildTableRow: e,
+                finalWidth: e.maxWidth,
+              )
+            : MinMaxChildTableRowWithFinalWidth(
+                minMaxChildTableRow: e,
+                finalWidth: widthPerRemainingChildren,
+              ),
+      ).toList();
+      return output;
+    } else {
+      // they all get their maxWidth
+      final List<MinMaxChildTableRowWithFinalWidth> output = map(
+        (e) => MinMaxChildTableRowWithFinalWidth(
+          minMaxChildTableRow: e,
+          finalWidth: e.maxWidth,
+        ),
+      ).toList();
+      return output;
+    }
   }
 }
