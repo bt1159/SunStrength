@@ -91,7 +91,8 @@ class AzimuthChart extends StatelessWidget {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            RowToColumnRenderWidget(                              
+                            RowToColumnRenderWidget(
+                              key: ValueKey('Azimuth chart'),                           
                               rowMainAxisAlignment: MainAxisAlignment.spaceBetween,
                               rowCrossAxisAlignment: CrossAxisAlignment.center,
                               columnCrossAxisAlignment: CrossAxisAlignment.stretch,

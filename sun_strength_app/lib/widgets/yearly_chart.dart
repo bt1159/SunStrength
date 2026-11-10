@@ -142,6 +142,7 @@ class LocationButtonRow extends StatelessWidget {
         return Consumer<ChartSettingsNot>(
           builder: (context, currentChartSettingsNotifier, child) {
             return RowToColumnRenderWidget(
+              key: ValueKey('LocationButtonRow'),
               rowMainAxisSize: MainAxisSize.min,
               rowSpacing: 20,
               rowCrossAxisAlignment: CrossAxisAlignment.start,
