@@ -12,19 +12,14 @@ class ColorScaleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        print('inside ColorScaleWidget.build, constraints: $constraints');
-        return ColorScaleRenderObjectWidget(
-          child: Selector<SavedSettingsNot, MyColorScheme?>(
-            selector: (_, savedAppSettingsNotifier) =>
-                savedAppSettingsNotifier.value?.colorScheme,
-            shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
-            builder: (context, colorScheme, child) =>
-                FutureBuilderColorScale(colormap: colorScheme?.$2),
-          ),
-        );
-      },
+    return ColorScaleRenderObjectWidget(
+      child: Selector<SavedSettingsNot, MyColorScheme?>(
+        selector: (_, savedAppSettingsNotifier) =>
+            savedAppSettingsNotifier.value?.colorScheme,
+        shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
+        builder: (context, colorScheme, child) =>
+            FutureBuilderColorScale(colormap: colorScheme?.$2),
+      ),
     );
   }
 }
@@ -45,14 +40,16 @@ class _FutureBuilderColorScaleState extends State<FutureBuilderColorScale> {
   Future<ui.Image> createScaleImage() async {
     final int vertHeight = 40;
     final int horWidth = 100;
-    List<OrbSolValues> orbitAndSolarValuesList =
-        List<OrbSolValues>.generate(vertHeight * horWidth, (index) {
-          final int horIndex = (index / vertHeight).floor();
-          final double strength = horIndex / (horWidth - 1);
-          return OrbSolValues.strengthOnly(
-            solarStrengthsLocalRelativeToGlobalMax: strength,
-          );
-        });
+    List<OrbSolValues> orbitAndSolarValuesList = List<OrbSolValues>.generate(
+      vertHeight * horWidth,
+      (index) {
+        final int horIndex = (index / vertHeight).floor();
+        final double strength = horIndex / (horWidth - 1);
+        return OrbSolValues.strengthOnly(
+          solarStrengthsLocalRelativeToGlobalMax: strength,
+        );
+      },
+    );
     final (:image, :rawMatrixData) = await generateColorImage(
       orbitAndSolarValuesList: orbitAndSolarValuesList,
       pixelWidth: horWidth,

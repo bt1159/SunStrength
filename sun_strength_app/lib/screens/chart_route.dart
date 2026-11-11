@@ -141,70 +141,31 @@ class ScrollableChartPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          print(
-            'inside ScrollableChartPageContentR.build, constraints passed under Expanded: $constraints',
-          );
-          return SingleChildScrollView(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                print(
-                  'inside ScrollableChartPageContentR.build, constraints passed under SingleChildScrollView: $constraints',
-                );
-                return RowToColumnRenderWidget(
-                  key: ValueKey('Column of two widgets in chart'),
-                  columnCrossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FlexibleSometimesWidget(
-                      rowColumnCutoffWidth: 400,
-                      maxWidthRow: 600,
-                      // fitV: FlexFit.loose,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
-                        child: const YearlyChart(),
-                      ),
-                    ),
-                    FlexibleSometimesWidget(
-                      rowColumnCutoffWidth: 400,
-                      maxWidthRow: 600,
-                      // fitV: FlexFit.loose,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
-                        child: const AzimuthChart(),
-                      ),
-                    ),
-                    
-                  ],
-                );
-
-                // final bool rowBool = constraints.maxWidth > 800;
-                // return Flex(
-                //   direction: rowBool ? Axis.horizontal : Axis.vertical,
-                //   crossAxisAlignment: rowBool
-                //       ? CrossAxisAlignment.start
-                //       : CrossAxisAlignment.center,
-                //   children: [
-                //     Flexible(
-                //       fit: rowBool ? FlexFit.tight : FlexFit.loose,
-                //       child: ConstrainedBox(
-                //         constraints: BoxConstraints.loose(Size.fromWidth(800)),
-                //         child: const YearlyChart(),
-                //       ),
-                //     ),
-                //     Flexible(
-                //       fit: rowBool ? FlexFit.tight : FlexFit.loose,
-                //       child: ConstrainedBox(
-                //         constraints: BoxConstraints.loose(Size.fromWidth(800)),
-                //         child: const AzimuthChart(),
-                //       ),
-                //     ),
-                //   ],
-                // );
-              },
+      child: SingleChildScrollView(
+        child: RowToColumnRenderWidget(
+          key: ValueKey('Column of two widgets in chart'),
+          columnCrossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FlexibleSometimesWidget(
+              rowColumnCutoffWidth: 400,
+              maxWidthRow: 600,
+              // fitV: FlexFit.loose,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
+                child: const YearlyChart(),
+              ),
             ),
-          );
-        },
+            FlexibleSometimesWidget(
+              rowColumnCutoffWidth: 400,
+              maxWidthRow: 600,
+              // fitV: FlexFit.loose,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
+                child: const AzimuthChart(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1271,7 +1271,9 @@ class RowToColumnRenderObject extends RenderBox
     print(
       'starting performLayout for RowToColumnRenderObject tied to widget with key: $keyText, maxWidth: ${constraints.maxWidth}, minWidth: ${constraints.minWidth}',
     );
-
+    print('Constraints: $constraints');
+    print('Attached: $attached');
+    print('Parent data dirty/null: ${parentData == null}');
     print(StackTrace.current);
 
     RenderBox? child = firstChild;
