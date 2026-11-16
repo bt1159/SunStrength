@@ -376,10 +376,6 @@ Future<ChartImageContainer> generateColorImageInContainer({
     );
   }
 
-  // print(
-  //   'running generateColorImageInContainer, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
-  // );
-
   final (:image, :rawMatrixData) = await generateColorImage(
     orbitAndSolarValuesList: orbitAndSolarValuesList,
     pixelWidth: pixelWidth,
@@ -452,7 +448,8 @@ abstract class ColorMapPicker {
       .$2;
 }
 
-double solarStrengthsLocalRelativeToGlobalMax({
+// TODO: Is this the same as the formula in orbit_calcs calculateSolarStrengthRelativeToGlobalMax?
+double solarStrengthLocalRelativeToGlobalMax({
   required double k,
   required double h,
   required double theta,
@@ -483,18 +480,13 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
   final List<Vector4> colorVectors = thetas
       .map(
         (theta) => colorValuesFromMap(
-          solarStrengthsLocalRelativeToGlobalMax(k: k, h: h, theta: theta),
+          solarStrengthLocalRelativeToGlobalMax(k: k, h: h, theta: theta),
           false,
           colorSchemes[index].$2,
         ),
       )
       .toList();
-  final List<Color> colors = colorVectors
-      .map(
-        (e) =>
-            Color.fromARGB(e.w.toInt(), e.x.toInt(), e.y.toInt(), e.z.toInt()),
-      )
-      .toList();
+  final List<Color> colors = colorVectors.map((e) => e.toColor).toList();
   // print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
   return (radii, colors);
 });
@@ -502,6 +494,7 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
 /// J2000
 final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
 
+/// The final solar strength and all the supporting orbital values for a single moment
 class OrbSolValues {
   const OrbSolValues({
     required this.tzDateTime,
@@ -944,6 +937,7 @@ List<String> inspectObject(JSObject someJsObject) {
   return dartKeys;
 }
 
+typedef C<T extends ChangeNotifier?> = Consumer<T>;
 typedef CNP<T extends ChangeNotifier?> = ChangeNotifierProvider<T>;
 typedef CNPP<T, R extends ChangeNotifier?> = ChangeNotifierProxyProvider<T, R>;
 typedef CNPP2<T, T2, R extends ChangeNotifier?> =
@@ -956,30 +950,69 @@ typedef CNPP2<T, T2, R extends ChangeNotifier?> =
 /// {@endtemplate}
 class FlexibleSometimesWidget
     extends ParentDataWidget<RowToColumnRenderParentData> {
+  /// The flex value when this widget is laid out horizontally.  This is ignored if rowColumnCutoffWidth or maxWidthRow is set.
   final int flexH;
+
+  /// The FlexFit setting when this widget is laid out horizontally.  This is ignored if rowColumnCutoffWidth or maxWidthRow is set.
   final FlexFit? fitH;
+
+  /// The flex value when this widget is laid out vertically.  This is never ignored.
   final int flexV;
+
+  /// The FlexFit setting when this widget is laid out vertically.  This is never ignored.
   final FlexFit? fitV;
 
   /// Theoretically, a manually set minimum width this widget needs before it triggers a
   /// column layout.  The widget could easily be laid out than this if it requests to be.
+  /// Setting this causes flexH and fitH to be ignored.
   final double? rowColumnCutoffWidth;
 
   /// An artificial cap on the width of this widget when laid out in a row.  Even if it
   /// asks to be more, it will not be allowed to be, when laid out in a row.
+  /// Setting this causes flexH and fitH to be ignored.
   final double? maxWidthRow;
 
   /// {@macro FlexibleSometimesWidget}
-  const FlexibleSometimesWidget({
+  // const FlexibleSometimesWidget._({
+  //   super.key,
+  //   this.flexH = 1,
+  //   this.fitH,
+  //   this.flexV = 1,
+  //   this.fitV,
+  //   this.rowColumnCutoffWidth,
+  //   this.maxWidthRow,
+  //   required super.child,
+  // });
+
+  const FlexibleSometimesWidget.minMax({
     super.key,
-    this.flexH = 1,
-    this.fitH,
+    this.rowColumnCutoffWidth,
+    this.maxWidthRow,
     this.flexV = 1,
     this.fitV,
     required super.child,
-    this.rowColumnCutoffWidth,
-    this.maxWidthRow,
-  });
+  }) : fitH = null,
+       flexH = 1;
+
+  const FlexibleSometimesWidget.flexH({
+    super.key,
+    this.flexH = 1,
+    required this.fitH,
+    this.flexV = 1,
+    this.fitV,
+    required super.child,
+  }) : rowColumnCutoffWidth = null,
+       maxWidthRow = null;
+
+  const FlexibleSometimesWidget.rigidH({
+    super.key,
+    this.flexV = 1,
+    this.fitV,
+    required super.child,
+  }) : fitH = null,
+       flexH = 1,
+       rowColumnCutoffWidth = null,
+       maxWidthRow = null;
 
   /// This method updates the parentData member of the passed renderObject according to
   /// this widget's values.  The [RenderObject] passed to this method is that created
@@ -1136,8 +1169,8 @@ class RowToColumnRenderParentData extends FlexParentData {
        _maxWidthRow = maxWidthRow ?? double.infinity;
 
   int flexV;
-  int flexH;
   FlexFit? fitV;
+  int flexH;
   FlexFit? fitH;
   double _rowColumnCutoffWidth;
   double _maxWidthRow;
@@ -1259,12 +1292,19 @@ class RowToColumnRenderObject extends RenderBox
     markNeedsLayout();
   }
 
+  /// This method is critical.  This makes sure that any child of this render object whose ParentData is not already a RowToColumnParentData becomes one now.  I have already made sure
   @override
   void setupParentData(RenderBox child) {
     if (child.parentData is! RowToColumnRenderParentData) {
       child.parentData = RowToColumnRenderParentData();
     }
   }
+
+  // @override
+  // void markNeedsLayout() {
+  //   print(StackTrace.current);
+  //   super.markNeedsLayout();
+  // }
 
   @override
   void performLayout() {
@@ -1274,7 +1314,6 @@ class RowToColumnRenderObject extends RenderBox
     print('Constraints: $constraints');
     print('Attached: $attached');
     print('Parent data dirty/null: ${parentData == null}');
-    print(StackTrace.current);
 
     RenderBox? child = firstChild;
     int totalFlexH = 0;
@@ -1769,7 +1808,10 @@ class RowToColumnRenderObject extends RenderBox
             rowSpacing * (qtyAllChildren - 1);
 
         final List<MinMaxChildTableRow> listMinMaxChildTableRow =
-            minMaxHChildren.createCalculationTableRows();
+            minMaxHChildren.createCalculationTableRows(
+              constraints,
+              rowChildMinHeight,
+            );
 
         // Using map objects set up above, determine current scenario
         // using maxWidth.  This step actually decides what width each
@@ -2530,257 +2572,26 @@ class RowToColumnRenderObject extends RenderBox
   }
 }
 
-class RowColumnTester extends StatefulWidget {
-  const RowColumnTester({super.key});
-
-  @override
-  State<RowColumnTester> createState() => _RowColumnTesterState();
-}
-
-class _RowColumnTesterState extends State<RowColumnTester> {
-  bool scrollView = true;
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Row and Column tester'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                scrollView = !scrollView;
-              });
-            },
-            child: Text('Switch scroll view'),
-          ),
-        ],
-      ),
-      body: scrollView
-          ? ListView(
-              children: [
-                RTCForTesting(),
-                RTCForTestingExp(),
-                RTCForTestingFl(),
-                RTCForTestingFlExp(),
-              ],
-            )
-          : RTCForTestingExp(),
-    );
-  }
-}
-
-class RTCForTesting extends StatelessWidget {
-  const RTCForTesting({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      key: ValueKey('RTCForTesting'),
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 250,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 180,
-          height: 100,
-          color: Colors.red,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 420,
-          height: 50,
-          color: Colors.green,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 190,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
-
-class RTCForTestingExp extends StatelessWidget {
-  const RTCForTestingExp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      key: ValueKey('RTCForTestingExp'),
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 250,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        FlexibleSometimesWidget(
-          fitH: FlexFit.tight,
-          child: Container(
-            width: 180,
-            height: 100,
-            color: Colors.red,
-            child: Text('SizedBox'),
-          ),
-        ),
-        Container(
-          width: 420,
-          height: 50,
-          color: Colors.green,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 190,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
-
-class RTCForTestingFl extends StatelessWidget {
-  const RTCForTestingFl({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      key: ValueKey('RTCForTestingFl'),
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 250,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        FlexibleSometimesWidget(
-          fitH: FlexFit.loose,
-          child: Container(
-            width: 180,
-            height: 100,
-            color: Colors.red,
-            child: Text('SizedBox'),
-          ),
-        ),
-        Container(
-          width: 420,
-          height: 50,
-          color: Colors.green,
-          child: Text('SizedBox'),
-        ),
-        Container(
-          width: 190,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
-
-class RTCForTestingFlExp extends StatelessWidget {
-  const RTCForTestingFlExp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return RowToColumnRenderWidget(
-      key: ValueKey('RTCForTestingFlExp'),
-      rowMainAxisAlignment: MainAxisAlignment.center,
-      rowMainAxisSize: MainAxisSize.min,
-      rowCrossAxisAlignment: CrossAxisAlignment.end,
-      columnMainAxisAlignment: MainAxisAlignment.start,
-      columnMainAxisSize: MainAxisSize.max,
-      columnCrossAxisAlignment: CrossAxisAlignment.start,
-      rowSpacing: 10,
-      columnSpacing: 30,
-      children: [
-        Container(
-          width: 250,
-          height: 150,
-          color: Colors.blue,
-          child: Text('SizedBox'),
-        ),
-        FlexibleSometimesWidget(
-          fitH: FlexFit.loose,
-          child: Container(
-            width: 180,
-            height: 100,
-            color: Colors.red,
-            child: Text('SizedBox'),
-          ),
-        ),
-        FlexibleSometimesWidget(
-          fitH: FlexFit.tight,
-          child: Container(
-            width: 420,
-            height: 50,
-            color: Colors.green,
-            child: Text('SizedBox'),
-          ),
-        ),
-        Container(
-          width: 190,
-          height: 150,
-          color: Colors.orange,
-          child: Text('SizedBox'),
-        ),
-      ],
-    );
-  }
-}
-
 class MinMaxChildTableRow {
   const MinMaxChildTableRow({
     required this.child,
-    required this.maxWidth,
+    required this.maxDesiredWidth,
     required this.qtyAtOrBigger,
-    required this.qtyAtOrBiggerTimesThisMax,
     required this.sumOfSmallerMaxes,
   });
 
   /// The actual renderbox that this row applies to
   final RenderBox child;
 
-  /// This MinMaxChild's maximum allowable width.  The final list is sorted on this, ascending
-  final double maxWidth;
+  /// This MinMaxChild's maximum desired width.  The final list is sorted on this, ascending
+  final double maxDesiredWidth;
 
   /// The number of MinMaxChildren with this same maxWidth or bigger
   final int qtyAtOrBigger;
 
   /// The total width that would be used if this row's maxWidth was the biggest width allowed
-  final int qtyAtOrBiggerTimesThisMax;
+  // final double qtyAtOrBiggerTimesThisMax;
+  double get qtyAtOrBiggerTimesThisMax => qtyAtOrBigger * maxDesiredWidth;
 
   /// Sum of the maxWidths below this one.  In other words, the width used by all smaller children than this, if they are all maxed out.
   final double sumOfSmallerMaxes;
@@ -2788,23 +2599,44 @@ class MinMaxChildTableRow {
   /// Sum of the smaller actual maxWidths and all children at or bigger using this row's maxWidth
   double get runningTotalWidthsUsed =>
       sumOfSmallerMaxes + qtyAtOrBiggerTimesThisMax;
+
+  @override
+  String toString() =>
+      'MinMaxChildTableRow: maxWidth: $maxDesiredWidth, qtyAtOrBigger: $qtyAtOrBigger, qtyAtOrBiggerTimesThisMax: $qtyAtOrBiggerTimesThisMax, sumOfSmallerMaxes: $sumOfSmallerMaxes, child: ${child.toStringSunStrength()},';
 }
 
 extension ListMinMaxChildTableRow on List<RenderBox> {
-  List<MinMaxChildTableRow> createCalculationTableRows() {
+  List<MinMaxChildTableRow> createCalculationTableRows(
+    BoxConstraints constraints,
+    double rowChildMinHeight,
+  ) {
     final List<RenderBox> sortedList = sorted(
       (a, b) => (a.size.width).compareTo(b.size.width),
     );
     double previousSumOfMaxes = 0;
-    final List<MinMaxChildTableRow> output = sortedList.mapIndexed((index, e) {
+    final List<MinMaxChildTableRow> output = sortedList.mapIndexed((
+      index,
+      child,
+    ) {
+      final RowToColumnRenderParentData childParentData =
+          child.parentData as RowToColumnRenderParentData;
+      child.layout(
+        BoxConstraints(
+          minWidth: childParentData.rowColumnCutoffWidth,
+          maxWidth: childParentData.maxWidthRow,
+          minHeight: rowChildMinHeight,
+          maxHeight: constraints.maxHeight,
+        ),
+        parentUsesSize: true,
+      );
+      final double maxDesiredWidth = child.size.width;
       final MinMaxChildTableRow output = MinMaxChildTableRow(
-        child: e,
-        maxWidth: e.size.width,
+        child: child,
+        maxDesiredWidth: maxDesiredWidth,
         qtyAtOrBigger: sortedList.length - index,
-        qtyAtOrBiggerTimesThisMax: 0,
         sumOfSmallerMaxes: previousSumOfMaxes,
       );
-      previousSumOfMaxes += output.maxWidth;
+      previousSumOfMaxes += output.maxDesiredWidth;
       return output;
     }).toList();
     return output;
@@ -2818,8 +2650,16 @@ class MinMaxChildTableRowWithFinalWidth {
   });
 
   final MinMaxChildTableRow minMaxChildTableRow;
+
+  /// The width allocated to this child
   final double finalWidth;
-  bool get maxedOut => finalWidth <= minMaxChildTableRow.maxWidth;
+
+  /// If true, this child will get as much of the remaining space as it can and will still not reach its own max
+  bool get maxedOut => finalWidth <= minMaxChildTableRow.maxDesiredWidth;
+
+  @override
+  String toString() =>
+      'finalWidth: $finalWidth, maxedOut: $maxedOut: minMaxChildTableRow: $minMaxChildTableRow';
 }
 
 extension SizingCalculations on List<MinMaxChildTableRow> {
@@ -2838,7 +2678,7 @@ extension SizingCalculations on List<MinMaxChildTableRow> {
         (index, e) => index < firstIndexOverAllowedSize
             ? MinMaxChildTableRowWithFinalWidth(
                 minMaxChildTableRow: e,
-                finalWidth: e.maxWidth,
+                finalWidth: e.maxDesiredWidth,
               )
             : MinMaxChildTableRowWithFinalWidth(
                 minMaxChildTableRow: e,
@@ -2851,10 +2691,64 @@ extension SizingCalculations on List<MinMaxChildTableRow> {
       final List<MinMaxChildTableRowWithFinalWidth> output = map(
         (e) => MinMaxChildTableRowWithFinalWidth(
           minMaxChildTableRow: e,
-          finalWidth: e.maxWidth,
+          finalWidth: e.maxDesiredWidth,
         ),
       ).toList();
       return output;
     }
   }
 }
+
+extension RenderBoxToString on RenderBox {
+  String toStringSunStrength() =>
+      'RenderBox: runtimeType: $runtimeType, constraints: $constraints, attached: $attached, Parent data dirty/null: ${parentData == null}';
+}
+
+class CelestialCoordinates {
+  const CelestialCoordinates({required this.alpha, required this.theta});
+
+  final double alpha;
+  final double theta;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is CelestialCoordinates) {
+      return other.alpha == alpha && other.theta == theta;
+    } else {
+      return false;
+    }
+  }
+
+  @override
+  int get hashCode => Object.hash(alpha, theta);
+
+  @override
+  String toString() {
+    return 'AngleMap(alpha: $alpha, theta: $theta)';
+  }
+}
+
+// At the top of this page is this line: import 'package:vector_math/vector_math_64.dart' hide Colors;
+
+extension Vector2ToOffset on Vector2 {
+  Offset get toOffset => Offset(x, y);
+}
+
+extension Vector4ToColor on Vector4 {
+  Color get toColor =>
+      Color.fromARGB(w.toInt(), x.toInt(), y.toInt(), z.toInt());
+}
+
+typedef SolarPathHourlyData = ({
+  tz.TZDateTime tzDateTime,
+  Offset centerPoint,
+  Offset normalVHat,
+});
+
+enum AzChartSize { small, medium, large }
+
+class AzChartSizeNotifier extends ValueNotifier<AzChartSize> {
+  AzChartSizeNotifier(super.value);
+}
+
+typedef AzChartSizeComplete = ({double width, AzChartSize azChartSize});

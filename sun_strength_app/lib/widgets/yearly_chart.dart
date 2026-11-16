@@ -7,15 +7,15 @@ import 'package:sun_strength_app/screens/location_selection_route.dart';
 import 'package:sun_strength_app/widgets/chart_widget.dart';
 import 'package:sun_strength_app/widgets/color_scale_widget.dart';
 
-class YearlyChart extends StatelessWidget {
-  const YearlyChart({super.key});
+class YearlyChartWindow extends StatelessWidget {
+  const YearlyChartWindow({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       spacing: 10,
       children: [
-        Center(child: const ChartWidget(nXAxisBuckets: 12, nYAxisBuckets: 6)),
+        Center(child: const YearlyChart(nXAxisBuckets: 12, nYAxisBuckets: 6)),
         const ColorScaleWidget(),
         const KButtonRow(),
         const LocationButtonRow(),
@@ -116,85 +116,76 @@ class LocationButtonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ChartSettingsNot>(
-        builder: (context, currentChartSettingsNotifier, child) {
-          return RowToColumnRenderWidget(
-            key: ValueKey('LocationButtonRow'),
-            rowMainAxisSize: MainAxisSize.min,
-            rowSpacing: 20,
-            rowCrossAxisAlignment: CrossAxisAlignment.start,
-            columnMainAxisSize: MainAxisSize.min,
-            columnCrossAxisAlignment: CrossAxisAlignment.center,
-            columnSpacing: 5,
-            children: [
-              ElevatedButton(
-                  onPressed:
-                      (context
-                                  .read<SavedSettingsNot>()
-                                  .value
-                                  ?.defaultLocation ==
-                              currentChartSettingsNotifier
-                                  .value
-                                  ?.location ||
-                          currentChartSettingsNotifier.value?.location ==
-                              null)
-                      ? null
-                      : () async {
-                          await context
-                              .read<SavedSettingsNot>()
-                              .updateLocation(
-                                currentChartSettingsNotifier
-                                    .value!
-                                    .location,
-                              );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'Location saved as default',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                                duration: const Duration(seconds: 2),
-                                width:
-                                    200, // Narrows the width to look like a toast
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                  child: const Text('Save as default location'),
-                ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const LocationSelectionRoute(),
-                  ),
-                ),
-                child: Text('Change location'),
-              ),
-              Selector<SavedSettingsNot, Location?>(
-                selector: (_, savedSettingsNotifier) =>
-                    savedSettingsNotifier.value?.defaultLocation,
-                builder: (context, defaultLocation, child) => ElevatedButton(
-                  onPressed:
-                      (defaultLocation == null ||
-                          currentChartSettingsNotifier.value?.location ==
-                              defaultLocation)
-                      ? null
-                      : () => currentChartSettingsNotifier
-                            .updateCurrentChartSettings(
-                              newLocation: context
-                                  .read<SavedSettingsNot>()
-                                  .value!
-                                  .defaultLocation,
+      builder: (context, currentChartSettingsNotifier, child) {
+        return RowToColumnRenderWidget(
+          key: ValueKey('LocationButtonRow'),
+          rowMainAxisSize: MainAxisSize.min,
+          rowSpacing: 20,
+          rowCrossAxisAlignment: CrossAxisAlignment.start,
+          columnMainAxisSize: MainAxisSize.min,
+          columnCrossAxisAlignment: CrossAxisAlignment.center,
+          columnSpacing: 5,
+          children: [
+            ElevatedButton(
+              key: ValueKey('Save as default location button'),
+              onPressed:
+                  (context.read<SavedSettingsNot>().value?.defaultLocation ==
+                          currentChartSettingsNotifier.value?.location ||
+                      currentChartSettingsNotifier.value?.location == null)
+                  ? null
+                  : () async {
+                      await context.read<SavedSettingsNot>().updateLocation(
+                        currentChartSettingsNotifier.value!.location,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Location saved as default'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            width:
+                                200, // Narrows the width to look like a toast
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                  child: Text('Reset chart to default location'),
+                          ),
+                        );
+                      }
+                    },
+              child: const Text('Save as default location'),
+            ),
+            ElevatedButton(
+              key: ValueKey('Change location button'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const LocationSelectionRoute(),
                 ),
               ),
-            ],
-          );
-        },
-      );
+              child: Text('Change location'),
+            ),
+            Selector<SavedSettingsNot, Location?>(
+              key: ValueKey('Reset chart to default location button, wrapped'),
+              selector: (_, savedSettingsNotifier) =>
+                  savedSettingsNotifier.value?.defaultLocation,
+              builder: (context, defaultLocation, child) => ElevatedButton(
+                onPressed:
+                    (defaultLocation == null ||
+                        currentChartSettingsNotifier.value?.location ==
+                            defaultLocation)
+                    ? null
+                    : () => currentChartSettingsNotifier
+                          .updateCurrentChartSettings(
+                            newLocation: context
+                                .read<SavedSettingsNot>()
+                                .value!
+                                .defaultLocation,
+                          ),
+                child: Text('Reset chart to default location'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

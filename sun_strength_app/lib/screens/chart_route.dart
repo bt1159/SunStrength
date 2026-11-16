@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/screens/location_selection_route.dart';
 import 'package:sun_strength_app/widgets/yearly_chart.dart';
 import 'package:sun_strength_app/widgets/azimuth_widget.dart';
-import 'package:sun_strength_app/widgets/color_scale_widget.dart';
-// import 'package:timezone/timezone.dart' as tz;
 import '../models/orbit_calcs.dart';
-import 'package:sun_strength_app/widgets/chart_widget.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 
-/// {@template ChartHomePage}
-///
+/// {@template ChartHomePage}///
 /// Widget called from the main screen that contains the full chart route/page.
 ///
 /// Its only actual function is to expose the [Consumer] of the [ChartSettingsNot] to widgets below.
@@ -144,25 +139,21 @@ class ScrollableChartPageContent extends StatelessWidget {
       child: SingleChildScrollView(
         child: RowToColumnRenderWidget(
           key: ValueKey('Column of two widgets in chart'),
+          rowSpacing: 40,
           columnCrossAxisAlignment: CrossAxisAlignment.stretch,
+          columnSpacing: 10,
           children: [
-            FlexibleSometimesWidget(
+            FlexibleSometimesWidget.minMax(
               rowColumnCutoffWidth: 400,
               maxWidthRow: 600,
               // fitV: FlexFit.loose,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
-                child: const YearlyChart(),
-              ),
+              child: const YearlyChartWindow(),
             ),
-            FlexibleSometimesWidget(
+            FlexibleSometimesWidget.minMax(
               rowColumnCutoffWidth: 400,
               maxWidthRow: 600,
               // fitV: FlexFit.loose,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 800, minWidth: 400),
-                child: const AzimuthChart(),
-              ),
+              child: const AzimuthChartWindow(),
             ),
           ],
         ),

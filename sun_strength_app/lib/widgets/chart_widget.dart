@@ -15,9 +15,9 @@ import 'package:color_map/color_map.dart';
 /// {@template PublicChartRenderObjectWidget}
 /// Public Widget that constains the a [_ChartRenderObjectWidget] and also super-imposes the hover tooltip when showing.
 /// {@endtemplate}
-class ChartWidget extends StatefulWidget {
+class YearlyChart extends StatefulWidget {
   /// {@macro PublicChartRenderObjectWidget}
-  const ChartWidget({
+  const YearlyChart({
     super.key,
     required this.nXAxisBuckets,
     required this.nYAxisBuckets,
@@ -27,10 +27,10 @@ class ChartWidget extends StatefulWidget {
   final int nYAxisBuckets;
 
   @override
-  State<ChartWidget> createState() => _ChartWidgetState();
+  State<YearlyChart> createState() => _YearlyChartState();
 }
 
-class _ChartWidgetState extends State<ChartWidget> {
+class _YearlyChartState extends State<YearlyChart> {
   int ticks = DateTime.now().millisecondsSinceEpoch;
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
   static const Offset toolTipFormattingOffset = Offset(0, 40);
@@ -273,12 +273,12 @@ class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
       x = 0;
     }
 
-    _ChartWidgetState.toolTipFormattingOffset.dy;
+    _YearlyChartState.toolTipFormattingOffset.dy;
     // Clamp to the bottom edge
     if (y + childSize.height > size.height) {
       y =
           hoverBoxPosition.dy -
-          _ChartWidgetState.toolTipFormattingOffset.dy -
+          _YearlyChartState.toolTipFormattingOffset.dy -
           childSize.height;
     }
 
