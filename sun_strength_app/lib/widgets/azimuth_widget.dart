@@ -80,7 +80,7 @@ class AzimuthChartWindow extends StatelessWidget {
             Container(
               // width: double.infinity,
               alignment: Alignment.center,
-              child: const GlobeWidget(),
+              child: const GlobeVizHolder(),
               // const BirdsEyeWidget(),
             ),
           ],

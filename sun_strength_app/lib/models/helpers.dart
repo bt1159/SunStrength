@@ -16,7 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:sun_strength_app/main.dart';
 import 'package:flutter/rendering.dart';
 
-const kDebugMode = true;
+const kDebugMode = false;
 
 double interpolate(
   double ind0,
@@ -49,31 +49,51 @@ Vector4 colorValuesFromMap(
   final double a = vector.w * 255;
   final Vector4 output = Vector4(r, g, b, a);
   if (debug) {
-    print('a: $a');
-    print('r: $r');
-    print('g: $g');
-    print('b: $b');
-    print('output: $output');
+    if (kDebugMode) {
+      print('a: $a');
+    }
+    if (kDebugMode) {
+      print('r: $r');
+    }
+    if (kDebugMode) {
+      print('g: $g');
+    }
+    if (kDebugMode) {
+      print('b: $b');
+    }
+    if (kDebugMode) {
+      print('output: $output');
+    }
   }
   return output;
 }
 
 Uint8List pixelByte(double strength, Colormap? colormap, [bool debug = false]) {
   if (debug) {
-    print('starting color work for next pixel');
+    if (kDebugMode) {
+      print('starting color work for next pixel');
+    }
   }
   final Vector4 vector = colorValuesFromMap(strength, debug, colormap);
   if (debug) {
-    print('vector: $vector');
+    if (kDebugMode) {
+      print('vector: $vector');
+    }
   }
   final Uint8List output = Uint8List(4);
   final int r = vector.x.toInt(); // R
   final int g = vector.y.toInt(); // G
   final int b = vector.z.toInt(); // B
   if (debug) {
-    print('r:$r');
-    print('g:$g');
-    print('b:$b');
+    if (kDebugMode) {
+      print('r:$r');
+    }
+    if (kDebugMode) {
+      print('g:$g');
+    }
+    if (kDebugMode) {
+      print('b:$b');
+    }
   }
 
   output[0] = r; // R
@@ -81,7 +101,9 @@ Uint8List pixelByte(double strength, Colormap? colormap, [bool debug = false]) {
   output[2] = b; // B
   output[3] = 255; // A (Opaque)
   if (debug) {
-    print('output: $output');
+    if (kDebugMode) {
+      print('output: $output');
+    }
   }
   return output;
 }
@@ -242,21 +264,6 @@ class AppSettings {
 typedef TimedOrbitData =
     Iterable<({double earthRotationAngle, double trueAnomaly})>;
 
-// Iterable<Iterable<double>> createRawMatrixData({
-//   required Iterable<double> valueIterable,
-//   required int nDays,
-// }) {
-//   final int nTimes = (valueIterable.length / nDays).toInt();
-//   final Iterable<Iterable<double>> output = Iterable.generate(nDays, (
-//     dayIndex,
-//   ) {
-//     final int start = dayIndex * nTimes;
-//     final int end = start + nTimes;
-//     return valueIterable.toList().sublist(start, end).reversed;
-//   });
-//   return output;
-// }
-
 /// [Future] function that actually generates the sun strength chart image given the data point.  That image is actually returned
 /// inside of an [ChartImageContainer].  This [Future] is called, received, and handled by [HeatMap].
 ///
@@ -276,10 +283,6 @@ generateColorImage({
   bool debug = false,
   bool chart = false,
 }) async {
-  // print(
-  //   'running generateColorMapImage, chronologicalSunStrength.length: ${orbitAndSolarValuesList.length}, pixelWidth: $pixelWidth, colormap: ${colormap == null ? 'null' : ColorMapPicker.getName(colormap)}}',
-  // );
-
   const int bytesPerPixel = 4; // RGBA
   final int pixelHeight = (orbitAndSolarValuesList.length / pixelWidth).toInt();
 
@@ -287,16 +290,10 @@ generateColorImage({
   final Uint8List pixelBuffer = Uint8List(
     pixelWidth * pixelHeight * bytesPerPixel,
   );
-  // print(
-  //   'inside generateColorMap, just created pixelBuffer with length, ${pixelBuffer.length}',
-  // );
   final List<List<double>> rawMatrixData = List.generate(
     pixelWidth,
     (_) => List.filled(pixelHeight, 0.0),
   );
-  // print(
-  //   'inside generateColorMap, just created rawMatrixData with length, ${rawMatrixData.length} and inside legnth: ${rawMatrixData.first.length}',
-  // );
 
   int horIndex = -1;
   int vertIndex = 0;
@@ -320,10 +317,14 @@ generateColorImage({
     // final bool debug = horIndex == (pixelWidth / 2).toInt();
 
     if (debug) {
-      print(
-        'about to overwrite pixels, strength: $strength, starting at targetByteIndex: $targetByteIndex',
-      );
-      print('about to setRange');
+      if (kDebugMode) {
+        print(
+          'about to overwrite pixels, strength: $strength, starting at targetByteIndex: $targetByteIndex',
+        );
+      }
+      if (kDebugMode) {
+        print('about to setRange');
+      }
     }
     pixelBuffer.setRange(
       targetByteIndex,
@@ -331,7 +332,9 @@ generateColorImage({
       pixelByte(strength, colormap, debug),
     );
     if (debug) {
-      print('just setRange');
+      if (kDebugMode) {
+        print('just setRange');
+      }
     }
 
     rawMatrixData[horIndex][vertIndexReversed] = strength;
@@ -342,10 +345,6 @@ generateColorImage({
       vertIndex = 0;
     }
   }
-
-  // print(
-  //   'inside generateColorMap, just finished assigning data to rawMatrixData and pixelBuffer',
-  // );
 
   // 3. Hand the perfectly ordered buffer over to the engine
   final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
@@ -389,24 +388,6 @@ Future<ChartImageContainer> generateColorImageInContainer({
   );
   return output;
 }
-
-// /// {@template ImageContainer}
-// ///
-// /// Lightweight wrapper widget that pairs an [ui.Image], [image], along with the data explaining whether
-// /// this image is of a leap year, [leapYear], and also along with the raw data points, [rawMatrixData].
-// ///
-// /// [image] will get used by the [HeatMapPainter].  [rawMatrixData] will get passed to
-// /// [ChartWidget] and used to fill out the hover text.
-// ///
-// /// {@endtemplate}
-// class BasicImageContainer {
-//   /// {@macro ImageContainer}
-//   BasicImageContainer({
-//     required this.image,
-//   });
-
-//   final ui.Image image;
-// }
 
 /// {@template ImageContainer}
 ///
@@ -487,7 +468,6 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
       )
       .toList();
   final List<Color> colors = colorVectors.map((e) => e.toColor).toList();
-  // print('inside myColorSchemesDiscrete: radii: $radii, colors: $colors');
   return (radii, colors);
 });
 
@@ -620,90 +600,6 @@ class OrbSolValuesListNot extends ValueNotifier<List<OrbSolValues>> {
   ChartSettings? lastcurrentChartSettings;
 }
 
-// /// {@template PathMetricsGradientPainter}
-// /// CustomPainter that paints the multi-colored line for solar azimuth and strength.
-// ///
-// /// Note: make sure to filter the path and strengths so that only positive strengths
-// /// and their associated paths are sent.  Otherwise, no error will occur, but it will
-// /// be inefficient.
-// ///
-// /// {@endtemplate}
-// class PathMetricsGradientPainter extends CustomPainter {
-//   final Path path;
-//   final List<double> positiveStrengths;
-//   final Colormap colormap;
-
-//   PathMetricsGradientPainter({
-//     required this.path,
-//     required this.colormap,
-//     required this.positiveStrengths,
-//   });
-
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     final PathMetrics metrics = path.computeMetrics();
-
-//     // Loop though each contour where a contour goes from one time data point to the next
-//     for (final PathMetric metric in metrics) {
-//       final double startingStrength = positiveStrengths[metric.contourIndex];
-//       final double endingStrength = positiveStrengths[metric.contourIndex + 1];
-
-//       if (startingStrength < 0 && endingStrength < 0) continue;
-
-//       final double totalLength = metric.length;
-//       final double step = 2.0; // Resolution: 2px per step
-
-//       final Paint paint = Paint()
-//         ..style = PaintingStyle.stroke
-//         ..strokeWidth = 20.0
-//         ..strokeCap = StrokeCap.round;
-
-//       // Loop through however many steps make up a single countour.  Each step will have a
-//       // constant color based on the fraction of the length of this contour of the start
-//       // of this step.
-//       for (double d = 0; d < totalLength; d += step) {
-//         final double nextD = (d + step).clamp(0.0, totalLength);
-
-//         // Calculate normalized fraction [0.0 to 1.0] along the curve length
-//         final double fraction = d / totalLength;
-//         final double strengthAtStep =
-//             lerpDouble(startingStrength, endingStrength, fraction) ??
-//             startingStrength;
-
-//         if (strengthAtStep < 0) continue;
-
-//         final Vector4 colorVector = colorValuesFromMap(
-//           strengthAtStep,
-//           false,
-//           colormap,
-//         );
-//         final Color color = Color.fromARGB(
-//           colorVector.w.toInt(),
-//           colorVector.x.toInt(),
-//           colorVector.y.toInt(),
-//           colorVector.z.toInt(),
-//         );
-
-//         paint.color = color;
-
-//         // Extract segment geometry
-//         final Path segmentPath = metric.extractPath(d, nextD);
-//         canvas.drawPath(segmentPath, paint);
-//       }
-//     }
-//   }
-
-//   @override
-//   bool shouldRepaint(covariant PathMetricsGradientPainter oldDelegate) {
-//     // Optimization: Only repaint if the image object has actually changed
-//     final bool hasAnythingChanged =
-//         path != oldDelegate.path ||
-//         positiveStrengths != oldDelegate.positiveStrengths ||
-//         colormap != oldDelegate.colormap;
-//     return hasAnythingChanged;
-//   }
-// }
-
 typedef TooltipInfo = ({
   Offset hoverBoxPosition,
   String tooltipText12,
@@ -754,36 +650,6 @@ extension TZDateTimeOnHour on tz.TZDateTime {
   return (p1: p1, p2: p2);
 }
 
-// Offset calculateLabelPoint({
-//   required Offset hourMarkerPoint,
-//   required Offset circleCenter,
-//   required double spacing,
-//   required bool labelAbove,
-// }) {
-//   spacing = labelAbove ? -spacing : spacing;
-
-//   // 1. Get the direction vector from circleCenter to centerPoint
-//   Offset direction = hourMarkerPoint - circleCenter;
-//   double distance = direction.distance;
-
-//   // Handle edge case where both centers are at the exact same coordinates
-//   if (distance == 0) {
-//     return hourMarkerPoint + Offset(0, spacing);
-//   }
-
-//   // 2. Normalize the vector to get a unit direction vector
-//   Offset unitDirection = direction / distance;
-
-//   // 3. Find half the length to offset from the centerPoint
-//   double halfLength = strokeWidth / 2.0;
-
-//   // 4. Calculate p1 and p2 symmetrically around centerPoint
-//   Offset p1 = centerPoint - (unitDirection * halfLength);
-//   Offset p2 = centerPoint + (unitDirection * halfLength);
-
-//   return (p1: p1, p2: p2);
-// }
-
 Offset getPerpendicularUnitVector(Offset p1, Offset p2) {
   final double dx = p2.dx - p1.dx;
   final double dy = p2.dy - p1.dy;
@@ -813,7 +679,9 @@ class MainScaffoldDrawer extends StatelessWidget {
             onTap: () {
               final bool currentTwelveHour =
                   context.read<SavedSettingsNot>().value?.twelveHour ?? true;
-              print('currentTwelveHour: $currentTwelveHour');
+              if (kDebugMode) {
+                print('currentTwelveHour: $currentTwelveHour');
+              }
               context.read<SavedSettingsNot>().updateTwelveHour(
                 !currentTwelveHour,
               );
@@ -932,7 +800,6 @@ List<String> inspectObject(JSObject someJsObject) {
       .toList();
 
   // Now you can safely use it like a regular list:
-  // print("Available keys: $dartKeys"); // e.g. ['location', 'displayName']
 
   return dartKeys;
 }
@@ -971,18 +838,6 @@ class FlexibleSometimesWidget
   /// asks to be more, it will not be allowed to be, when laid out in a row.
   /// Setting this causes flexH and fitH to be ignored.
   final double? maxWidthRow;
-
-  /// {@macro FlexibleSometimesWidget}
-  // const FlexibleSometimesWidget._({
-  //   super.key,
-  //   this.flexH = 1,
-  //   this.fitH,
-  //   this.flexV = 1,
-  //   this.fitV,
-  //   this.rowColumnCutoffWidth,
-  //   this.maxWidthRow,
-  //   required super.child,
-  // });
 
   const FlexibleSometimesWidget.minMax({
     super.key,
@@ -1124,7 +979,9 @@ class RowToColumnRenderWidget extends MultiChildRenderObjectWidget {
 
   @override
   RowToColumnRenderObject createRenderObject(BuildContext context) {
-    print('Running RowToColumnRenderWidget.creatRenderObject for key: $key');
+    if (kDebugMode) {
+      print('Running RowToColumnRenderWidget.creatRenderObject for key: $key');
+    }
     return RowToColumnRenderObject(
       rowMainAxisAlignment: rowMainAxisAlignment,
       rowMainAxisSize: rowMainAxisSize,
@@ -1143,7 +1000,9 @@ class RowToColumnRenderWidget extends MultiChildRenderObjectWidget {
     BuildContext context,
     covariant RowToColumnRenderObject renderObject,
   ) {
-    print('Running RowToColumnRenderWidget.updateRenderObject for key: $key');
+    if (kDebugMode) {
+      print('Running RowToColumnRenderWidget.updateRenderObject for key: $key');
+    }
     renderObject
       ..rowMainAxisAlignment = rowMainAxisAlignment
       ..rowMainAxisSize = rowMainAxisSize
@@ -1300,20 +1159,22 @@ class RowToColumnRenderObject extends RenderBox
     }
   }
 
-  // @override
-  // void markNeedsLayout() {
-  //   print(StackTrace.current);
-  //   super.markNeedsLayout();
-  // }
-
   @override
   void performLayout() {
-    print(
-      'starting performLayout for RowToColumnRenderObject tied to widget with key: $keyText, maxWidth: ${constraints.maxWidth}, minWidth: ${constraints.minWidth}',
-    );
-    print('Constraints: $constraints');
-    print('Attached: $attached');
-    print('Parent data dirty/null: ${parentData == null}');
+    if (kDebugMode) {
+      print(
+        'starting performLayout for RowToColumnRenderObject tied to widget with key: $keyText, maxWidth: ${constraints.maxWidth}, minWidth: ${constraints.minWidth}',
+      );
+    }
+    if (kDebugMode) {
+      print('Constraints: $constraints');
+    }
+    if (kDebugMode) {
+      print('Attached: $attached');
+    }
+    if (kDebugMode) {
+      print('Parent data dirty/null: ${parentData == null}');
+    }
 
     RenderBox? child = firstChild;
     int totalFlexH = 0;
@@ -1344,10 +1205,12 @@ class RowToColumnRenderObject extends RenderBox
     while (child != null) {
       final RowToColumnRenderParentData childParentData =
           child.parentData as RowToColumnRenderParentData;
-      print(
-        '$keyText: categorizing a child at the start.  Child data: '
-        'childParentData.fitH: ${childParentData.fitH}, childParentData.flexH: ${childParentData.flexH}.',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: categorizing a child at the start.  Child data: '
+          'childParentData.fitH: ${childParentData.fitH}, childParentData.flexH: ${childParentData.flexH}.',
+        );
+      }
       if (childParentData.rowColumnCutoffWidth > 0 ||
           childParentData.maxWidthRow < double.infinity) {
         minMaxHChildren.add(child);
@@ -1403,25 +1266,31 @@ class RowToColumnRenderObject extends RenderBox
     /// This is the smallest total parent width that would allow this to be laid out as a row.
     double minRowWidthRequiredByAllChildren = 0;
 
-    print(
-      '$keyText: first step after categorizing children is to lay out minMaxChildren with given cutoff row width and rigid children to determine if it can be a row',
-    );
+    if (kDebugMode) {
+      print(
+        '$keyText: first step after categorizing children is to lay out minMaxChildren with given cutoff row width and rigid children to determine if it can be a row',
+      );
+    }
 
     /// Decide if row or column by laying out min/max Children and rigid children.   Loose and
     /// Expanded children are allowed to be given zero width.
     for (final RenderBox child in minMaxHChildren) {
-      print(
-        '$keyText: beginning to lay out a minMaxChild with rowColumnCutoffWidth, child.runtimeType: ${child.runtimeType}',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: beginning to lay out a minMaxChild with rowColumnCutoffWidth, child.runtimeType: ${child.runtimeType}',
+        );
+      }
       final RowToColumnRenderParentData childParentData =
           child.parentData as RowToColumnRenderParentData;
       minRowWidthRequiredByAllChildren += childParentData.rowColumnCutoffWidth;
     }
 
     for (final RenderBox child in rigidHChildren) {
-      print(
-        '$keyText: beginning to lay out a rigid child, child.runtimeType: ${child.runtimeType}',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: beginning to lay out a rigid child, child.runtimeType: ${child.runtimeType}',
+        );
+      }
       child.layout(
         BoxConstraints(
           minWidth: 0,
@@ -1436,9 +1305,11 @@ class RowToColumnRenderObject extends RenderBox
 
     minRowWidthRequiredByAllChildren += rowSpacing * (qtyAllChildren - 1);
 
-    print(
-      '$keyText: calculated minRowWidth: $minRowWidthRequiredByAllChildren, and constraints.maxWidth: $constraints.maxWidth, and anyFlexible: ${flexibleHChildren().isNotEmpty}',
-    );
+    if (kDebugMode) {
+      print(
+        '$keyText: calculated minRowWidth: $minRowWidthRequiredByAllChildren, and constraints.maxWidth: $constraints.maxWidth, and anyFlexible: ${flexibleHChildren().isNotEmpty}',
+      );
+    }
 
     MainAxisSize effectiveRowMainAxisSize =
         rowMainAxisSize; // Move this into the if statements for better clarity
@@ -1446,9 +1317,11 @@ class RowToColumnRenderObject extends RenderBox
     if (minRowWidthRequiredByAllChildren <= constraints.maxWidth) {
       // layout as a row
 
-      print(
-        '$keyText, going to lay out as a row because minRowWidthRequiredByAllChildren <= constraints.maxWidth',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText, going to lay out as a row because minRowWidthRequiredByAllChildren <= constraints.maxWidth',
+        );
+      }
 
       double takenWidth =
           0; // This value tracks how much width is used by children and then is used in layout out their x locations.
@@ -1470,14 +1343,18 @@ class RowToColumnRenderObject extends RenderBox
       /// Figure out situation of width, compared to minMax children's preferences, for instance.
       double rowWidthRequestedByRigidAndMinMaxChildren = 0;
 
-      print(
-        '$keyText: now we need to know if there is enough width for all minMaxChildren to get their desired widths.  So, we will lay them each out as big as thier self-imposed maxRowWidth is to see what they actually WANT to be.  Then, we will check that against the space we have.',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: now we need to know if there is enough width for all minMaxChildren to get their desired widths.  So, we will lay them each out as big as thier self-imposed maxRowWidth is to see what they actually WANT to be.  Then, we will check that against the space we have.',
+        );
+      }
 
       for (final RenderBox child in minMaxHChildren) {
-        print(
-          '$keyText: laying out a minMaxChild with min at rowColumnCutoffWidth and max at maxWidthRow, child.runtimeType: ${child.runtimeType}',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: laying out a minMaxChild with min at rowColumnCutoffWidth and max at maxWidthRow, child.runtimeType: ${child.runtimeType}',
+          );
+        }
         final RowToColumnRenderParentData childParentData =
             child.parentData as RowToColumnRenderParentData;
         child.layout(
@@ -1508,9 +1385,11 @@ class RowToColumnRenderObject extends RenderBox
 
       MainAxisAlignment effectiveRowMainAxisAlignment = rowMainAxisAlignment;
 
-      print(
-        '$keyText: minMaxHChildrenGetRequestedWidths: $minMaxHChildrenGetRequestedWidths, rowWidthRequestedByRigidAndMinMaxChildren: $rowWidthRequestedByRigidAndMinMaxChildren',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: minMaxHChildrenGetRequestedWidths: $minMaxHChildrenGetRequestedWidths, rowWidthRequestedByRigidAndMinMaxChildren: $rowWidthRequestedByRigidAndMinMaxChildren',
+        );
+      }
 
       if (minMaxHChildrenGetRequestedWidths) {
         /// There is enough available width for minmax children to get their full
@@ -1529,9 +1408,11 @@ class RowToColumnRenderObject extends RenderBox
           /// children. We also know that, if maxWidth was finite and MainAxisSize.max,
           /// MainAxisSize would have been forced to become min.
 
-          print(
-            '$keyText: effectiveRowMainAxisSize: $effectiveRowMainAxisSize, now inside .min.  takenWidth will be set equal to rowWidthRequestedByRigidAndMinMaxChildren.  If there are looseHChildren, they will be laid out and their widths added to it.  If not, takenWidth is done.',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisSize: $effectiveRowMainAxisSize, now inside .min.  takenWidth will be set equal to rowWidthRequestedByRigidAndMinMaxChildren.  If there are looseHChildren, they will be laid out and their widths added to it.  If not, takenWidth is done.',
+            );
+          }
 
           effectiveRowMainAxisAlignment = MainAxisAlignment
               .start; // Since MainAxisSize.min, MainAxisAlignment becomes moot.
@@ -1539,13 +1420,17 @@ class RowToColumnRenderObject extends RenderBox
           takenWidth = rowWidthRequestedByRigidAndMinMaxChildren;
 
           if (looseHChildren.isNotEmpty) {
-            print(
-              '$keyText: looseHChildren.isNotEmpty: $looseHChildren.isNotEmpty, looseHChildren.isNotEmpty found to be true',
-            );
-            if (takenWidth < constraints.maxWidth) {
+            if (kDebugMode) {
               print(
-                '$keyText: after laying our rigid children, and given MainAxisSize.min, there is remaining width allocatable to loose children',
+                '$keyText: looseHChildren.isNotEmpty: $looseHChildren.isNotEmpty, looseHChildren.isNotEmpty found to be true',
               );
+            }
+            if (takenWidth < constraints.maxWidth) {
+              if (kDebugMode) {
+                print(
+                  '$keyText: after laying our rigid children, and given MainAxisSize.min, there is remaining width allocatable to loose children',
+                );
+              }
               List<RenderBox> flexibleHChildrenRequiringLayout =
                   flexibleHChildren();
               int nextIterationTotalFlexH = totalFlexH;
@@ -1597,13 +1482,17 @@ class RowToColumnRenderObject extends RenderBox
                   child.size.height,
                 );
               }
-              print(
-                '$keyText: finished laying out flexible loose children.  now, takenWidth: $takenWidth',
-              );
+              if (kDebugMode) {
+                print(
+                  '$keyText: finished laying out flexible loose children.  now, takenWidth: $takenWidth',
+                );
+              }
             } else {
-              print(
-                '$keyText: after laying our rigid children, there is no space left for flexible loose children.  They will now be laid out with 0 width.',
-              );
+              if (kDebugMode) {
+                print(
+                  '$keyText: after laying our rigid children, there is no space left for flexible loose children.  They will now be laid out with 0 width.',
+                );
+              }
               for (final RenderBox child in looseHChildren) {
                 child.layout(
                   BoxConstraints(
@@ -1621,12 +1510,16 @@ class RowToColumnRenderObject extends RenderBox
               }
             }
           } else {
-            print('$keyText: no looseHChildren found');
+            if (kDebugMode) {
+              print('$keyText: no looseHChildren found');
+            }
           }
 
-          print(
-            '$keyText: takenWidth: $takenWidth, rowLargestChildHeight: $rowLargestChildHeight',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: takenWidth: $takenWidth, rowLargestChildHeight: $rowLargestChildHeight',
+            );
+          }
 
           renderObjectWidth = takenWidth;
 
@@ -1635,13 +1528,17 @@ class RowToColumnRenderObject extends RenderBox
             rowLargestChildHeight,
           );
 
-          print('$keyText: size: $size');
+          if (kDebugMode) {
+            print('$keyText: size: $size');
+          }
         } else {
           // effectiveMainAxisSize is max
 
-          print(
-            '$keyText: effectiveMainAxisSize is max, effectiveRowMainAxisSize: $effectiveRowMainAxisSize.  This means that there COULD be expanded children and that contraints.maxWidth CANNOT be infinite',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveMainAxisSize is max, effectiveRowMainAxisSize: $effectiveRowMainAxisSize.  This means that there COULD be expanded children and that contraints.maxWidth CANNOT be infinite',
+            );
+          }
 
           // There is enough available width for minmax children to get their full
           // requested widths and there may be additional space available.  All of
@@ -1651,22 +1548,30 @@ class RowToColumnRenderObject extends RenderBox
 
           renderObjectWidth = constraints.maxWidth;
           takenWidth = rowWidthRequestedByRigidAndMinMaxChildren;
-          print(
-            '$keyText: before checking for flexible children, takenWidth: $takenWidth and renderObjectWidth/constraints.maxWidth: $renderObjectWidth',
-          );
-          if (flexibleHChildren().isNotEmpty) {
+          if (kDebugMode) {
             print(
-              '$keyText: flexibleHChildren is NOT empty.  Since rigid and minMax children were already laid out and get their entire desired widths, we will no just lay out the flexible children with the algorithm',
+              '$keyText: before checking for flexible children, takenWidth: $takenWidth and renderObjectWidth/constraints.maxWidth: $renderObjectWidth',
             );
+          }
+          if (flexibleHChildren().isNotEmpty) {
+            if (kDebugMode) {
+              print(
+                '$keyText: flexibleHChildren is NOT empty.  Since rigid and minMax children were already laid out and get their entire desired widths, we will no just lay out the flexible children with the algorithm',
+              );
+            }
 
             if (takenWidth < constraints.maxWidth) {
-              print(
-                '$keyText: after laying out rigid children, and given MainAxisSize.max, there is remaining width allocatable to flexbile children',
-              );
-              if (looseHChildren.isNotEmpty) {
+              if (kDebugMode) {
                 print(
-                  '$keyText: there are more than zero loose children, so the full looping algorithm must be used',
+                  '$keyText: after laying out rigid children, and given MainAxisSize.max, there is remaining width allocatable to flexbile children',
                 );
+              }
+              if (looseHChildren.isNotEmpty) {
+                if (kDebugMode) {
+                  print(
+                    '$keyText: there are more than zero loose children, so the full looping algorithm must be used',
+                  );
+                }
                 List<RenderBox> flexibleHChildrenRequiringLayout =
                     flexibleHChildren();
                 int nextIterationTotalFlexH = totalFlexH;
@@ -1723,9 +1628,11 @@ class RowToColumnRenderObject extends RenderBox
                   );
                 }
               } else {
-                print(
-                  '$keyText: there are no loose children, only expanded, so the looping algorithm is not necessary',
-                );
+                if (kDebugMode) {
+                  print(
+                    '$keyText: there are no loose children, only expanded, so the looping algorithm is not necessary',
+                  );
+                }
                 final double remainingWidth = max(
                   0,
                   constraints.maxWidth - takenWidth,
@@ -1753,9 +1660,11 @@ class RowToColumnRenderObject extends RenderBox
                 }
               }
             } else {
-              print(
-                '$keyText: after laying out rigid children, there is no space left for flexible children.  They will now be laid out with 0 width.',
-              );
+              if (kDebugMode) {
+                print(
+                  '$keyText: after laying out rigid children, there is no space left for flexible children.  They will now be laid out with 0 width.',
+                );
+              }
               for (final RenderBox child in flexibleHChildren()) {
                 child.layout(
                   BoxConstraints(
@@ -1772,20 +1681,26 @@ class RowToColumnRenderObject extends RenderBox
                 );
               }
             }
-            print(
-              '$keyText: finished laying out flexible children.  Now takenWidth: $takenWidth',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: finished laying out flexible children.  Now takenWidth: $takenWidth',
+              );
+            }
           } else {
-            print(
-              '$keyText: flexibleHChildren IS EMPTY.  Since rigid and minMax children were already laid out and get to have their entire width, no more layouts required.',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: flexibleHChildren IS EMPTY.  Since rigid and minMax children were already laid out and get to have their entire width, no more layouts required.',
+              );
+            }
           }
 
           size = constraints.constrainDimensions(
             renderObjectWidth,
             rowLargestChildHeight,
           );
-          print('$keyText: size: $size');
+          if (kDebugMode) {
+            print('$keyText: size: $size');
+          }
         }
       } else {
         // Since there is NOT enough room for ALL the minmax children to get
@@ -1797,9 +1712,11 @@ class RowToColumnRenderObject extends RenderBox
         // impact the other children's location and if
         // CrossAxisAlignment.stretch, size.
 
-        print(
-          '$keyText: there is NOT enough width for the minMaxChildren to get their full widths.  They will split up the available width, but flexible children will get 0 width.  This also means that effectiveRowMainAxisAlignment becomes start no matter what',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: there is NOT enough width for the minMaxChildren to get their full widths.  They will split up the available width, but flexible children will get 0 width.  This also means that effectiveRowMainAxisAlignment becomes start no matter what',
+          );
+        }
 
         effectiveRowMainAxisAlignment = MainAxisAlignment.start;
         renderObjectWidth = constraints.maxWidth;
@@ -1866,9 +1783,11 @@ class RowToColumnRenderObject extends RenderBox
           rowLargestChildHeight = max(rowLargestChildHeight, child.size.height);
         }
 
-        print(
-          '$keyText: now finished allocating widths to minMaxChildren, laying them out, and laying out any flexible children with 0 width, takenWidth should be the same as renderObjectWidth and constraints.maxWidth, takenWidth: $takenWidth, renderObjectWidth: $renderObjectWidth, constraints.maxWidth: ${constraints.maxWidth}',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: now finished allocating widths to minMaxChildren, laying them out, and laying out any flexible children with 0 width, takenWidth should be the same as renderObjectWidth and constraints.maxWidth, takenWidth: $takenWidth, renderObjectWidth: $renderObjectWidth, constraints.maxWidth: ${constraints.maxWidth}',
+          );
+        }
 
         size = constraints.constrainDimensions(
           renderObjectWidth,
@@ -1885,16 +1804,20 @@ class RowToColumnRenderObject extends RenderBox
         effectiveRowMainAxisAlignment = MainAxisAlignment.start;
       }
 
-      print(
-        'about to start setting offsets.  rowMainAxisAlignment: $rowMainAxisAlignment, effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-      );
+      if (kDebugMode) {
+        print(
+          'about to start setting offsets.  rowMainAxisAlignment: $rowMainAxisAlignment, effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+        );
+      }
 
       double runningDx = 0;
       switch (effectiveRowMainAxisAlignment) {
         case MainAxisAlignment.start:
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = firstChild;
           while (child != null) {
             final RowToColumnRenderParentData childParentData =
@@ -1904,7 +1827,9 @@ class RowToColumnRenderObject extends RenderBox
               runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print('just set child offset.dx: ${childParentData.offset.dx}');
+            if (kDebugMode) {
+              print('just set child offset.dx: ${childParentData.offset.dx}');
+            }
             runningDx += child.size.width + rowSpacing;
             child = childParentData.nextSibling;
           }
@@ -1913,9 +1838,11 @@ class RowToColumnRenderObject extends RenderBox
           // There cannot be any expanded children
           // MainAxisSize must be max
           // There may be flexible loose children, but they have acheieved their full intrinsic width
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = lastChild;
           while (child != null) {
             final RowToColumnRenderParentData childParentData =
@@ -1926,7 +1853,9 @@ class RowToColumnRenderObject extends RenderBox
               renderObjectWidth - runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print('just set child offset.dx: ${childParentData.offset.dx}');
+            if (kDebugMode) {
+              print('just set child offset.dx: ${childParentData.offset.dx}');
+            }
             runningDx += rowSpacing;
             child = childParentData.previousSibling;
           }
@@ -1935,9 +1864,11 @@ class RowToColumnRenderObject extends RenderBox
           // There cannot be any expanded children
           // MainAxisSize must be max
           // There may be flexible loose children, but they have acheieved their full intrinsic width
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = firstChild;
           runningDx = (renderObjectWidth - takenWidth) / 2;
           while (child != null) {
@@ -1948,9 +1879,11 @@ class RowToColumnRenderObject extends RenderBox
               runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print(
-              'just set child offset.dx: ${childParentData.offset.dx}, and size: ${child.size}',
-            );
+            if (kDebugMode) {
+              print(
+                'just set child offset.dx: ${childParentData.offset.dx}, and size: ${child.size}',
+              );
+            }
             runningDx += child.size.width + rowSpacing;
             child = childParentData.nextSibling;
           }
@@ -1959,9 +1892,11 @@ class RowToColumnRenderObject extends RenderBox
           // There cannot be any expanded children
           // MainAxisSize must be max
           // There may be flexible loose children, but they have acheieved their full intrinsic width
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectWidth - takenWidth) / (qtyAllChildren - 1);
@@ -1973,7 +1908,9 @@ class RowToColumnRenderObject extends RenderBox
               runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print('just set child offset.dx: ${childParentData.offset.dx}');
+            if (kDebugMode) {
+              print('just set child offset.dx: ${childParentData.offset.dx}');
+            }
             runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
@@ -1982,9 +1919,11 @@ class RowToColumnRenderObject extends RenderBox
           // There cannot be any expanded children
           // MainAxisSize must be max
           // There may be flexible loose children, but they have acheieved their full intrinsic width
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectWidth - takenWidth) / (qtyAllChildren);
@@ -1997,7 +1936,9 @@ class RowToColumnRenderObject extends RenderBox
               runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print('just set child offset.dx: ${childParentData.offset.dx}');
+            if (kDebugMode) {
+              print('just set child offset.dx: ${childParentData.offset.dx}');
+            }
             runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
@@ -2006,9 +1947,11 @@ class RowToColumnRenderObject extends RenderBox
           // There cannot be any expanded children
           // MainAxisSize must be max
           // There may be flexible loose children, but they have acheieved their full intrinsic width
-          print(
-            '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveRowMainAxisAlignment: $effectiveRowMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectWidth - takenWidth) / (qtyAllChildren + 1);
@@ -2021,19 +1964,25 @@ class RowToColumnRenderObject extends RenderBox
               runningDx,
               calcY(child.size.height, rowLargestChildHeight),
             );
-            print('just set child offset.dx: ${childParentData.offset.dx}');
+            if (kDebugMode) {
+              print('just set child offset.dx: ${childParentData.offset.dx}');
+            }
             runningDx += child.size.width + rowSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
           break;
       }
-      print(
-        '$keyText: just finished setting offsets, and now finished performLayout, as a row',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: just finished setting offsets, and now finished performLayout, as a row',
+        );
+      }
     } else {
       /// layout as column
 
-      print('$keyText: beginning to layout as a column');
+      if (kDebugMode) {
+        print('$keyText: beginning to layout as a column');
+      }
 
       MainAxisSize effectiveColumnMainAxisSize = columnMainAxisSize;
 
@@ -2051,7 +2000,9 @@ class RowToColumnRenderObject extends RenderBox
 
       // IT SEEMS LIKE, ONCE WE MOVE TO COLUMN, MINMAXHCHILDREN ARE TREATED IDENTICALLY TO EXPANDED OR LOOSE CHILDREN.  SOMETHING FEELS WEIRD ABOUT THAT.
 
-      print('$keyText: the first step is to categorize children');
+      if (kDebugMode) {
+        print('$keyText: the first step is to categorize children');
+      }
 
       // Group children by whether flexible
       while (child != null) {
@@ -2077,7 +2028,9 @@ class RowToColumnRenderObject extends RenderBox
         child = childParentData.nextSibling;
       }
 
-      print('$keyText: next, look for throw conditions');
+      if (kDebugMode) {
+        print('$keyText: next, look for throw conditions');
+      }
 
       /// Now that we know it will be a column, check for column-specific throw conditions
       if (expandedVChildren.isNotEmpty) {
@@ -2094,9 +2047,11 @@ class RowToColumnRenderObject extends RenderBox
         throw 'RowToColumnRenderOject is trying to lay out as column but given infinite maxHeight and rowCrossAxisAlingment of stretch and is trying to lay out as a row.  This is not possible.';
       }
 
-      print(
-        '$keyText: next, define calcX and columnChildMinWidth based on columnCrossAxisAlignment',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: next, define calcX and columnChildMinWidth based on columnCrossAxisAlignment',
+        );
+      }
 
       double Function(double width, double columnLargestChildWidth) calcX;
       final double columnChildMinWidth;
@@ -2123,9 +2078,11 @@ class RowToColumnRenderObject extends RenderBox
           break;
       }
 
-      print(
-        '$keyText: now that all the column set up is done, start by laying out the rigid children since this will be the same regardless of MainAxisSize',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: now that all the column set up is done, start by laying out the rigid children since this will be the same regardless of MainAxisSize',
+        );
+      }
 
       double columnHeightRequiredByRigidChildren = 0;
       double takenHeight = 0;
@@ -2157,23 +2114,29 @@ class RowToColumnRenderObject extends RenderBox
           columnSpacing * (qtyAllChildren - 1);
 
       if (effectiveColumnMainAxisSize == MainAxisSize.min) {
-        print(
-          '$keyText: effectiveColumnMainAxisSize is min, which means there are not any Expanded children.',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: effectiveColumnMainAxisSize is min, which means there are not any Expanded children.',
+          );
+        }
 
         effectiveColumnMainAxisAlignment = MainAxisAlignment
             .start; // Since MainAxisSize.min, MainAxisAlignemnt becomes moot.
 
         takenHeight = columnHeightRequiredByRigidChildren;
         if (looseVChildren.isNotEmpty) {
-          print(
-            '$keyText: looseVChildren is NOT empty, so they will now be laid out',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: looseVChildren is NOT empty, so they will now be laid out',
+            );
+          }
 
           if (takenHeight < constraints.maxHeight) {
-            print(
-              '$keyText: after laying our rigid children, and given MainAxisSize.min, there is remaining height allocatable to loose children',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: after laying our rigid children, and given MainAxisSize.min, there is remaining height allocatable to loose children',
+              );
+            }
             List<RenderBox> flexibleVChildrenRequiringLayout =
                 flexibleVChildren();
             int nextIterationTotalFlexV = totalFlexV;
@@ -2225,13 +2188,17 @@ class RowToColumnRenderObject extends RenderBox
                 child.size.width,
               );
             }
-            print(
-              '$keyText: finished laying our flexible loose children.  now, takenHeight: $takenHeight',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: finished laying our flexible loose children.  now, takenHeight: $takenHeight',
+              );
+            }
           } else {
-            print(
-              '$keyText: after laying our rigid children, there is no space left for flexible loose children.  They will now be laid out with 0 height.',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: after laying our rigid children, there is no space left for flexible loose children.  They will now be laid out with 0 height.',
+              );
+            }
             for (final RenderBox child in looseVChildren) {
               child.layout(
                 BoxConstraints(
@@ -2249,14 +2216,18 @@ class RowToColumnRenderObject extends RenderBox
             }
           }
         } else {
-          print(
-            '$keyText: looseVChildren is empty.  rigid children have already been laid out.',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: looseVChildren is empty.  rigid children have already been laid out.',
+            );
+          }
         }
 
-        print(
-          '$keyText: takenHeight: $takenHeight, columnLargestChildWidth: $columnLargestChildWidth',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: takenHeight: $takenHeight, columnLargestChildWidth: $columnLargestChildWidth',
+          );
+        }
 
         renderObjectHeight = takenHeight;
 
@@ -2265,30 +2236,42 @@ class RowToColumnRenderObject extends RenderBox
           renderObjectHeight,
         );
 
-        print('$keyText: size: $size');
+        if (kDebugMode) {
+          print('$keyText: size: $size');
+        }
       } else {
-        print(
-          '$keyText: effectiveColumnMainAxisSize is max, which means that maxHeight is finite.  Also, there may be expanded children.',
-        );
+        if (kDebugMode) {
+          print(
+            '$keyText: effectiveColumnMainAxisSize is max, which means that maxHeight is finite.  Also, there may be expanded children.',
+          );
+        }
 
         renderObjectHeight = constraints.maxHeight;
         takenHeight = columnHeightRequiredByRigidChildren;
-        print(
-          '$keyText: before checking for flexible children, takenHeight: $takenHeight and renderObjectHeight/constraints.maxHeight: $renderObjectHeight',
-        );
-        if (flexibleVChildren().isNotEmpty) {
+        if (kDebugMode) {
           print(
-            '$keyText: flexibleVChildren is NOT empty.  Since rigid children were already laid out, we will now just lay out the flexible children with the algorithm',
+            '$keyText: before checking for flexible children, takenHeight: $takenHeight and renderObjectHeight/constraints.maxHeight: $renderObjectHeight',
           );
+        }
+        if (flexibleVChildren().isNotEmpty) {
+          if (kDebugMode) {
+            print(
+              '$keyText: flexibleVChildren is NOT empty.  Since rigid children were already laid out, we will now just lay out the flexible children with the algorithm',
+            );
+          }
 
           if (takenHeight < constraints.maxHeight) {
-            print(
-              '$keyText: after laying out rigid children, and given MainAxisSize.max, there is remaining height allocatable to flexbile children',
-            );
-            if (looseVChildren.isNotEmpty) {
+            if (kDebugMode) {
               print(
-                '$keyText: there are more than zero loose children, so the full looping algorithm must be used',
+                '$keyText: after laying out rigid children, and given MainAxisSize.max, there is remaining height allocatable to flexbile children',
               );
+            }
+            if (looseVChildren.isNotEmpty) {
+              if (kDebugMode) {
+                print(
+                  '$keyText: there are more than zero loose children, so the full looping algorithm must be used',
+                );
+              }
               List<RenderBox> flexibleVChildrenRequiringLayout =
                   flexibleVChildren();
               int nextIterationTotalFlexV = totalFlexV;
@@ -2341,9 +2324,11 @@ class RowToColumnRenderObject extends RenderBox
                 );
               }
             } else {
-              print(
-                '$keyText: there are no loose children, only expanded, so the looping algorithm is not necessary',
-              );
+              if (kDebugMode) {
+                print(
+                  '$keyText: there are no loose children, only expanded, so the looping algorithm is not necessary',
+                );
+              }
               final double remainingHeight = max(
                 0,
                 constraints.maxHeight - takenHeight,
@@ -2371,9 +2356,11 @@ class RowToColumnRenderObject extends RenderBox
               }
             }
           } else {
-            print(
-              '$keyText: after laying out rigid children, there is no space left for flexible children.  They will now be laid out with 0 height.',
-            );
+            if (kDebugMode) {
+              print(
+                '$keyText: after laying out rigid children, there is no space left for flexible children.  They will now be laid out with 0 height.',
+              );
+            }
             for (final RenderBox child in flexibleVChildren()) {
               child.layout(
                 BoxConstraints(
@@ -2390,20 +2377,26 @@ class RowToColumnRenderObject extends RenderBox
               );
             }
           }
-          print(
-            '$keyText: finished laying out flexible children.  now, takenHeight: $takenHeight',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: finished laying out flexible children.  now, takenHeight: $takenHeight',
+            );
+          }
         } else {
-          print(
-            '$keyText: flexibleVChildren IS EMPTY.  Since rigid children were already laid out, no more layouts required.',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: flexibleVChildren IS EMPTY.  Since rigid children were already laid out, no more layouts required.',
+            );
+          }
         }
 
         size = constraints.constrainDimensions(
           columnLargestChildWidth,
           renderObjectHeight,
         );
-        print('$keyText: size: $size');
+        if (kDebugMode) {
+          print('$keyText: size: $size');
+        }
       }
 
       /// Now that all children have a set size (particularly height), proceed by setting offsets.
@@ -2415,17 +2408,21 @@ class RowToColumnRenderObject extends RenderBox
         effectiveColumnMainAxisAlignment = MainAxisAlignment.start;
       }
 
-      print(
-        'about to start setting offsets.  columnMainAxisAlignment: $columnMainAxisAlignment, effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-      );
+      if (kDebugMode) {
+        print(
+          'about to start setting offsets.  columnMainAxisAlignment: $columnMainAxisAlignment, effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+        );
+      }
 
       double runningDy = 0;
 
       switch (effectiveColumnMainAxisAlignment) {
         case MainAxisAlignment.start:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = firstChild;
           while (child != null) {
             final RowToColumnRenderParentData childParentData =
@@ -2435,15 +2432,19 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy += child.size.height + columnSpacing;
             child = childParentData.nextSibling;
           }
           break;
         case MainAxisAlignment.end:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = lastChild;
           while (child != null) {
             final RowToColumnRenderParentData childParentData =
@@ -2454,15 +2455,19 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               renderObjectHeight - runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy += columnSpacing;
             child = childParentData.previousSibling;
           }
           break;
         case MainAxisAlignment.center:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = firstChild;
           runningDy = (renderObjectHeight - takenHeight) / 2;
           while (child != null) {
@@ -2473,15 +2478,19 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy += child.size.height + columnSpacing;
             child = childParentData.nextSibling;
           }
           break;
         case MainAxisAlignment.spaceBetween:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectHeight - takenHeight) / (qtyAllChildren - 1);
@@ -2493,16 +2502,20 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy +=
                 child.size.height + columnSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
           break;
         case MainAxisAlignment.spaceAround:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectHeight - takenHeight) / (qtyAllChildren);
@@ -2515,16 +2528,20 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy +=
                 child.size.height + columnSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
           break;
         case MainAxisAlignment.spaceEvenly:
-          print(
-            '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
-          );
+          if (kDebugMode) {
+            print(
+              '$keyText: effectiveColumnMainAxisAlignment: $effectiveColumnMainAxisAlignment',
+            );
+          }
           child = firstChild;
           final double nominalSpaceAllocation =
               (renderObjectHeight - takenHeight) / (qtyAllChildren + 1);
@@ -2537,16 +2554,20 @@ class RowToColumnRenderObject extends RenderBox
               calcX(child.size.width, columnLargestChildWidth),
               runningDy,
             );
-            print('just set child offset.dy: ${childParentData.offset.dy}');
+            if (kDebugMode) {
+              print('just set child offset.dy: ${childParentData.offset.dy}');
+            }
             runningDy +=
                 child.size.height + columnSpacing + nominalSpaceAllocation;
             child = childParentData.nextSibling;
           }
           break;
       }
-      print(
-        '$keyText: just finished setting offsets, and now finished performLayout, as a column',
-      );
+      if (kDebugMode) {
+        print(
+          '$keyText: just finished setting offsets, and now finished performLayout, as a column',
+        );
+      }
     }
   }
 
@@ -2731,6 +2752,10 @@ class CelestialCoordinates {
 // At the top of this page is this line: import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 extension Vector2ToOffset on Vector2 {
+  Offset get toOffset => Offset(x, y);
+}
+
+extension Vector3ToOffset on Vector3 {
   Offset get toOffset => Offset(x, y);
 }
 

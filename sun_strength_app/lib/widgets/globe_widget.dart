@@ -11,8 +11,174 @@ import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';
 
+class GlobeVizHolder extends StatefulWidget {
+  const GlobeVizHolder({super.key});
+
+  @override
+  State<GlobeVizHolder> createState() => _GlobeVizHolderState();
+}
+
+class _GlobeVizHolderState extends State<GlobeVizHolder> {
+  // double nextX = 0;
+  // double nextAngle = 0; // 1. Store the cumulative rotation of your 3D world
+  static final v.Quaternion rotY = v.Quaternion.axisAngle(
+    v.Vector3(0, 1, 0),
+    pi / 6,
+  );
+  static final v.Quaternion rotX = v.Quaternion.axisAngle(
+    v.Vector3(1, 0, 0),
+    pi / 6,
+  );
+  v.Quaternion _canvasOrientation = v.Quaternion.identity();
+  // v.Quaternion _canvasOrientation = ((rotX * rotY) * rotY).normalized();
+  late v.Quaternion _startOrientation;
+  v.Vector3? vecStart;
+  int rotationIndex = 0;
+
+  v.Quaternion get __canvasOrientation => _canvasOrientation;
+
+  set __canvasOrientation(v.Quaternion input) {
+    if (input == __canvasOrientation) {
+      print('in __canvasOrientation setter, input is the same');
+      return;
+    }
+    final v.Quaternion clone = __canvasOrientation.clone();
+    setState(() {
+      _canvasOrientation = input;
+    });
+    print(
+      'finished __canvasOrientation setter with a new value.  was: $clone, now $_canvasOrientation',
+    );
+  }
+
+  // void rotateThroughRotations() {
+  //   print(
+  //     'starting rotateThroughRotations, rotationIndex: $rotationIndex, __canvasOrientation: $__canvasOrientation',
+  //   );
+  //   switch (rotationIndex) {
+  //     case 0:
+  //       __canvasOrientation = rotY;
+  //       rotationIndex++;
+  //       break;
+  //     case 1:
+  //       __canvasOrientation = rotX * rotY;
+  //       rotationIndex++;
+  //       break;
+  //     case 2:
+  //       __canvasOrientation = rotX * rotY * rotY;
+  //       rotationIndex++;
+  //       break;
+  //     case 3:
+  //       __canvasOrientation = v.Quaternion.identity();
+  //       rotationIndex = 0;
+  //       break;
+  //   }
+  //   print(
+  //     'ending rotateThroughRotations, rotationIndex: $rotationIndex, __canvasOrientation: $__canvasOrientation',
+  //   );
+  // }
+
+  // These state variables store information about the current drag event.
+  // Every time a new drag starts, these are overwritten.
+  Offset? _dragStartPointHidden;
+  Offset? get _dragStartPoint => _dragStartPointHidden;
+  set _dragStartPoint(Offset? input) {
+    if (input == _dragStartPoint) return;
+    _dragStartPointHidden = input;
+    if (_canvasSize != null && _dragStartPointHidden != null) {
+      vecStart = _projectToSphere(input!, _canvasSize!);
+    }
+  }
+
+  Size? _canvasSizeHidden;
+  Size? get _canvasSize => _canvasSizeHidden;
+  set _canvasSize(Size? input) {
+    if (input == _canvasSize || input == null) return;
+    _canvasSizeHidden = input;
+    if (_canvasSizeHidden != null && _dragStartPoint != null) {
+      vecStart = _projectToSphere(_dragStartPoint!, input);
+    }
+  }
+
+  /// Helper: Map 2D screen coordinate to 3D unit vector on your virtual sphere
+  v.Vector3 _projectToSphere(Offset localPosition, Size canvasSize) {
+    // Standardize coordinates so center of canvas is (0,0) and radius is 1.0
+    final double x =
+        (2.0 * localPosition.dx - canvasSize.width) / canvasSize.width;
+    final double y =
+        (2.0 * localPosition.dy - canvasSize.height) /
+        canvasSize.height; // Invert Y
+
+    final double lengthSquared = x * x + y * y;
+
+    if (lengthSquared <= 1.0) {
+      // Point is inside the sphere
+      return v.Vector3(x, y, -sqrt(1.0 - lengthSquared));
+    } else {
+      // Point is outside the sphere, project to closest edge
+      final double length = sqrt(lengthSquared);
+      return v.Vector3(x / length, y / length, 0.0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _canvasSize = Size(constraints.maxWidth, 800);
+        print('_canvasSize: $_canvasSize');
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          // onTap: rotateThroughRotations,
+          onTap: () => print('triggered onTap'),
+          onPanStart: (details) {
+            print('running onPanStart');
+            _dragStartPoint = details.localPosition;
+            _startOrientation = __canvasOrientation.clone();
+          },
+          onPanUpdate: (details) {
+            print('running onPanUpdate');
+            if (_dragStartPoint == null || vecStart == null) return;
+
+            final Offset currentPoint = details.localPosition;
+            final v.Vector3 vecCurrent = _projectToSphere(
+              currentPoint,
+              _canvasSize!,
+            );
+
+            // Calculate rotation directly from the start point to the current point
+            final v.Quaternion deltaRotation = v.Quaternion.fromTwoVectors(
+              vecStart!,
+              vecCurrent,
+            );
+
+            print(
+              'inside onPanUpdate.  About to set a new value for __canvasOrientation.  Current value: $__canvasOrientation',
+            );
+            // Pre-multiply to rotate relative to the camera/screen space
+            __canvasOrientation = (deltaRotation * _startOrientation)
+                .normalized();
+            // __canvasOrientation = (_startOrientation * deltaRotation)
+            // .normalized();
+
+            print('inside onPanUpdate.  New value: $__canvasOrientation');
+          },
+          onPanEnd: (_) {
+            _dragStartPoint = null;
+          },
+          onPanCancel: () {
+            _dragStartPoint = null;
+          },
+          child: GlobeWidget(canvasOrientation: __canvasOrientation),
+        );
+      },
+    );
+  }
+}
+
 class GlobeWidget extends StatelessWidget {
-  const GlobeWidget({super.key});
+  const GlobeWidget({super.key, required this.canvasOrientation});
+  final v.Quaternion canvasOrientation;
 
   @override
   Widget build(BuildContext context) {
@@ -21,42 +187,45 @@ class GlobeWidget extends StatelessWidget {
           savedAppSettingsNotifier.value?.colorScheme,
       shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
       builder: (context, colorScheme, child) {
-        return Consumer<DayDataNot>(
-          builder: (context, dayDataNotifier, _) {
-            final int finalIndex = dayDataNotifier.value.length - 1;
-            final int firstDaylightIndex = dayDataNotifier.value.indexWhere(
-              (element) => element.solarElevationAngle > 0.0001,
-            );
-            final int lastDaylightIndex = dayDataNotifier.value.lastIndexWhere(
-              (element) => element.solarElevationAngle > 0.0001,
-            );
-            final List<OrbSolValues> visibleSunOnlyData = dayDataNotifier.value
-                .sublist(
-                  max(firstDaylightIndex - 1, 0),
-                  min(lastDaylightIndex + 1, finalIndex),
-                );
-            final List<GlobeInputData> angleMaps = visibleSunOnlyData
-                .map(
-                  (e) => (
-                    angleMaps: CelestialCoordinates(
-                      alpha: e.solarElevationAngle,
-                      theta: e.solarAzimuthAngle,
+        return AspectRatio(
+          aspectRatio: 1.0,
+          child: Consumer<DayDataNot>(
+            builder: (context, dayDataNotifier, _) {
+              final int finalIndex = dayDataNotifier.value.length - 1;
+              final int firstDaylightIndex = dayDataNotifier.value.indexWhere(
+                (element) => element.solarElevationAngle > 0.0001,
+              );
+              final int lastDaylightIndex = dayDataNotifier.value
+                  .lastIndexWhere(
+                    (element) => element.solarElevationAngle > 0.0001,
+                  );
+              final List<OrbSolValues> visibleSunOnlyData = dayDataNotifier
+                  .value
+                  .sublist(
+                    max(firstDaylightIndex - 1, 0),
+                    min(lastDaylightIndex + 1, finalIndex),
+                  );
+              final List<GlobeInputData> angleMaps = visibleSunOnlyData
+                  .map(
+                    (e) => (
+                      angleMaps: CelestialCoordinates(
+                        alpha: e.solarElevationAngle,
+                        theta: e.solarAzimuthAngle,
+                      ),
+                      solarStrengths: e.solarStrengthsLocalRelativeToGlobalMax,
                     ),
-                    solarStrengths: e.solarStrengthsLocalRelativeToGlobalMax,
-                  ),
-                )
-                .toList();
-            return AspectRatio(
-              aspectRatio: 1.0,
-              child: CustomPaint(
+                  )
+                  .toList();
+              return CustomPaint(
                 size: Size.infinite,
                 painter: GlobePainter(
                   inputData: angleMaps,
                   colormap: colorScheme?.$2,
+                  canvasRot: canvasOrientation,
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -82,10 +251,15 @@ final _angleMapsEquality = ListEquality<GlobeInputData>(
 );
 
 class GlobePainter extends CustomPainter {
-  const GlobePainter({required this.inputData, this.colormap});
+  const GlobePainter({
+    required this.inputData,
+    this.colormap,
+    required this.canvasRot,
+  });
 
   final List<GlobeInputData> inputData;
   final Colormap? colormap;
+  final v.Quaternion canvasRot;
 
   static TextPainter textPainterCompassPoint(String text) => TextPainter(
     text: TextSpan(
@@ -168,24 +342,17 @@ class GlobePainter extends CustomPainter {
         false,
         colormap,
       );
-      print(
-        'solar path coloring, i: $i, first solarStrength: ${globeIntermediateDataList[i].globeInputData.solarStrengths}, firstColorVector: $firstColorVector, first color: ${firstColorVector.toColor}',
-      );
       final v.Vector4 secondColorVector = colorValuesFromMap(
         globeIntermediateDataList[i + 1].globeInputData.solarStrengths,
         false,
         colormap,
       );
-      print(
-        'solar path coloring, i + 1: ${i + 1}, second solarStrength: ${globeIntermediateDataList[i + 1].globeInputData.solarStrengths}, secondColorVector: $secondColorVector, second color: ${secondColorVector.toColor}',
-      );
-      final Paint thisPaint = Paint.from(basePaintWithoutShader)      
+      final Paint thisPaint = Paint.from(basePaintWithoutShader)
         ..shader = ui.Gradient.linear(p1, p2, [
           firstColorVector.toColor,
           secondColorVector.toColor,
         ]);
-        print('thisPaint points: p1: $p1, p2: $p2');
-        print('thisPath.getBounds(): ${thisPath.getBounds()}, thisPath.computeMetrics: ${thisPath.computeMetrics()}');
+
       output.add((thisPath, thisPaint));
     }
     return output;
@@ -215,17 +382,98 @@ class GlobePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GlobePainter oldDelegate) =>
-      !_angleMapsEquality.equals(oldDelegate.inputData, inputData) || colormap != oldDelegate.colormap;
+      !_angleMapsEquality.equals(oldDelegate.inputData, inputData) ||
+      colormap != oldDelegate.colormap;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bottomHalfCirclePaint = Paint()
-      ..color = Colors.green.shade900
+    final double globeD0 = size.height;
+    final double globeR0 = globeD0 / 2;
+    final Offset centerOffset = Offset(globeD0 / 2, globeD0 / 2);
+    final Rect fullRect = Rect.fromLTWH(-globeR0, -globeR0, globeD0, globeD0);
+
+    final grassPaintFill = Paint()
+      ..color = Colors.green
       ..style = PaintingStyle.fill;
 
-    final topHalfCirclePaint = Paint()
+    final grassPaintLine = Paint.from(grassPaintFill)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+
+    final dirtPaint = Paint()
+      ..color = Color.fromARGB(255, 113, 76, 50)
+      ..style = PaintingStyle.fill;
+
+    final skyPaint = Paint()
       ..color = Colors.blue.shade300
       ..style = PaintingStyle.fill;
+
+    final v.Vector3 groundNormal = canvasRot.conjugated().rotate(v.Vector3(0, -1, 0));
+
+    // 2. Major radius is always R; minor radius is |n.z| * R
+    final double majorRadius = globeR0;
+    final double minorRadius = groundNormal.z.abs() * globeR0;
+    final bool outOfScreen = groundNormal.z < 0;
+
+    // 3. Major axis is perpendicular to the 2D normal (n.x, n.y)
+    // (If n.x and n.y are both 0, atan2 returns 0, which works cleanly)
+    final double tiltAngle = atan2(groundNormal.y, groundNormal.x) + pi / 2;
+
+    v.Vector3 xEnd = canvasRot.conjugated().rotate(v.Vector3(globeR0, 0, 0));
+    v.Vector3 yEnd = canvasRot.conjugated().rotate(v.Vector3(0, globeR0, 0));
+    v.Vector3 zEnd = canvasRot.conjugated().rotate(v.Vector3(0, 0, globeR0));
+    Paint axisPaint(Color strokeColor) => Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..color = strokeColor;
+    canvas.save();
+    canvas.translate(centerOffset.dx, centerOffset.dy);
+    canvas.rotate(tiltAngle);
+    canvas.drawArc(fullRect, 0, pi, true, dirtPaint);
+    canvas.drawArc(fullRect, 0, -pi, true, skyPaint);
+    // 4. Draw the ellipse
+    if (minorRadius != 0) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: majorRadius * 2,
+          height: minorRadius * 2,
+        ),
+        outOfScreen ? grassPaintFill : dirtPaint,
+      );
+    } else {
+      canvas.drawLine(Offset(-globeR0, 0), Offset(globeR0, 0), grassPaintLine);
+    }
+    canvas.restore();
+
+    canvas.drawLine(
+      centerOffset,
+      centerOffset + xEnd.toOffset,
+      axisPaint(
+        xEnd.z <= 0 ? Colors.red : Color.lerp(Colors.red, Colors.black, 0.5)!,
+      ),
+    );
+    canvas.drawLine(
+      centerOffset,
+      centerOffset + yEnd.toOffset,
+      axisPaint(
+        yEnd.z <= 0 ? Colors.yellow : Color.lerp(Colors.yellow, Colors.black, 0.5)!,
+      ),
+    );
+    canvas.drawLine(
+      centerOffset,
+      centerOffset + zEnd.toOffset,
+      axisPaint(
+        zEnd.z <= 0 ? Colors.cyan : Color.lerp(Colors.cyan, Colors.black, 0.5)!,
+      ),
+    );
+
+    print('xEnd: $xEnd, red');
+    print('yEnd: $yEnd, yellow');
+    print('zEnd: $zEnd, cyan');
+    print('canvasRot: $canvasRot');
+
+    return;
 
     final groundOvalPaint = Paint()
       ..color = Colors.green
@@ -235,95 +483,86 @@ class GlobePainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-
-    final double vertDiam = size.height;
-    final double horDiam = size.width;
-    final Offset centerOffset = Offset(horDiam / 2, vertDiam / 2);
-    final Rect fullRect = Rect.fromLTWH(0, 0, horDiam, vertDiam);
     final Rect groundRect = Rect.fromCenter(
       center: centerOffset,
-      width: horDiam,
-      height: vertDiam * sin(xRotAngle),
+      width: globeD0,
+      height: globeD0 * sin(xRotAngle),
     );
     final double verticalGapNoonToTop =
         (1 - sqrt(1 - pow(xRotAngle, 2))) *
-        (vertDiam /
-            2); // Technically, this is vertDiam / 2 * (1 - sqrt(1 - (vertDiam/3 / vertDiam)^2)).  I have hardcoded this is to save performance.  If groundRect everchanges height, this will be incorrect.
+        (globeD0 /
+            2); // Technically, this is diameter / 2 * (1 - sqrt(1 - (diameter/3 / diameter)^2)).  I have hardcoded this is to save performance.  If groundRect everchanges height, this will be incorrect.
     final Rect noonRect = Rect.fromCenter(
       center: centerOffset,
-      width: horDiam,
-      height: vertDiam - 2 * verticalGapNoonToTop,
+      width: globeD0,
+      height: globeD0 - 2 * verticalGapNoonToTop,
     );
 
-    canvas.drawArc(fullRect, 0, pi, true, bottomHalfCirclePaint);
-    canvas.drawArc(fullRect, 0, -pi, true, topHalfCirclePaint);
-    canvas.drawOval(groundRect, groundOvalPaint);
-    canvas.drawArc(noonRect, 0, -pi, false, noonOvalPaint);
-    canvas.drawLine(
-      centerOffset.translate(0, -(vertDiam / 2 - verticalGapNoonToTop)),
-      centerOffset,
-      noonOvalPaint,
-    );
-    final TextPainter textPainterN = textPainterCompassPoint('N');
-    final TextPainter textPainterS = textPainterCompassPoint('S');
-    final TextPainter textPainterE = textPainterCompassPoint('E');
-    final TextPainter textPainterW = textPainterCompassPoint('W');
-    textPainterN.layout();
-    textPainterS.layout();
-    textPainterE.layout();
-    textPainterW.layout();
-    final double minorToMajorRatio = groundRect.height / groundRect.width;
-    drawTransformedText(
-      textPainterN,
-      canvas,
-      Offset(
-        horDiam / 2 * textBufferCoefficientNS,
-        vertDiam / 2 + (textPainterN.width * textWidthScale) / 2,
-      ),
-    );
-    drawTransformedText(
-      textPainterS,
-      canvas,
+    // canvas.drawOval(groundRect, groundOvalPaint);
+    // canvas.drawArc(noonRect, 0, -pi, false, noonOvalPaint);
+    // canvas.drawLine(
+    //   centerOffset.translate(0, -(diameter / 2 - verticalGapNoonToTop)),
+    //   centerOffset,
+    //   noonOvalPaint,
+    // );
+    // final TextPainter textPainterN = textPainterCompassPoint('N');
+    // final TextPainter textPainterS = textPainterCompassPoint('S');
+    // final TextPainter textPainterE = textPainterCompassPoint('E');
+    // final TextPainter textPainterW = textPainterCompassPoint('W');
+    // textPainterN.layout();
+    // textPainterS.layout();
+    // textPainterE.layout();
+    // textPainterW.layout();
+    // final double minorToMajorRatio = groundRect.height / groundRect.width;
+    // drawTransformedText(
+    //   textPainterN,
+    //   canvas,
+    //   Offset(
+    //     horDiam / 2 * textBufferCoefficientNS,
+    //     diameter / 2 + (textPainterN.width * textWidthScale) / 2,
+    //   ),
+    // );
+    // drawTransformedText(
+    //   textPainterS,
+    //   canvas,
 
-      Offset(
-        horDiam - horDiam / 2 * textBufferCoefficientNS - textPainterS.height,
-        vertDiam / 2 + (textPainterS.width * textWidthScale) / 2,
-      ),
-    );
-    drawTransformedText(
-      textPainterE,
-      canvas,
+    //   Offset(
+    //     horDiam - horDiam / 2 * textBufferCoefficientNS - textPainterS.height,
+    //     diameter / 2 + (textPainterS.width * textWidthScale) / 2,
+    //   ),
+    // );
+    // drawTransformedText(
+    //   textPainterE,
+    //   canvas,
 
-      Offset(
-        horDiam / 2 - textPainterE.height / 2,
-        centerOffset.dy +
-            textWidthScale * textPainterE.width -
-            groundRect.height / 2 +
-            minorToMajorRatio * textBufferCoefficientNS * (vertDiam / 2),
-      ),
-    );
-    print(
-      'groundRect.center: ${groundRect.center}, groundRect.width: ${groundRect.width}, groundRect.height: ${groundRect.height}',
-    );
-    drawTransformedText(
-      textPainterW,
-      canvas,
+    //   Offset(
+    //     horDiam / 2 - textPainterE.height / 2,
+    //     centerOffset.dy +
+    //         textWidthScale * textPainterE.width -
+    //         groundRect.height / 2 +
+    //         minorToMajorRatio * textBufferCoefficientNS * (diameter / 2),
+    //   ),
+    // );
 
-      Offset(
-        horDiam / 2 - textPainterE.height / 2,
-        centerOffset.dy +
-            groundRect.height / 2 -
-            minorToMajorRatio * textBufferCoefficientNS * (vertDiam / 2),
-      ),
-    );
-    canvas.save();
-    canvas.translate(0, 0);
-    // It is probably not right to use both the horDiam and the vertDiam.  Check this out later.
-    canvas.scale(horDiam / 2, vertDiam / 2);
-    // canvas.drawPath(solarTrail, pathPaint(horDiam / 2));
-    for (final (Path path, Paint paint) in solarPaths(horDiam / 2)) {
-      canvas.drawPath(path, paint);
-    }
-    canvas.restore();
+    // drawTransformedText(
+    //   textPainterW,
+    //   canvas,
+
+    //   Offset(
+    //     horDiam / 2 - textPainterE.height / 2,
+    //     centerOffset.dy +
+    //         groundRect.height / 2 -
+    //         minorToMajorRatio * textBufferCoefficientNS * (diameter / 2),
+    //   ),
+    // );
+    // canvas.save();
+    // canvas.translate(0, 0);
+    // // It is probably not right to use both the horDiam and the diameter.  Check this out later.
+    // canvas.scale(horDiam / 2, diameter / 2);
+    // // canvas.drawPath(solarTrail, pathPaint(horDiam / 2));
+    // for (final (Path path, Paint paint) in solarPaths(horDiam / 2)) {
+    //   canvas.drawPath(path, paint);
+    // }
+    // canvas.restore();
   }
 }

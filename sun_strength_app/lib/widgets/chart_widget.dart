@@ -260,7 +260,9 @@ class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
     // Start with the ideal position next to the cursor
     double x = hoverBoxPosition.dx;
     double y = hoverBoxPosition.dy;
-    print('inside getPositionForChild, x: $x, y: $y');
+    if (kDebugMode) {
+      print('inside getPositionForChild, x: $x, y: $y');
+    }
 
     // Clamp to the right edge (prevent overflowing the screen)
     // If the tooltip's right edge goes past the screen width, lock it to the max allowed X.
