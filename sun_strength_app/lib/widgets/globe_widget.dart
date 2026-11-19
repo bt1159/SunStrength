@@ -29,8 +29,8 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
     v.Vector3(1, 0, 0),
     pi / 6,
   );
-  v.Quaternion _canvasOrientation = v.Quaternion.identity();
-  // v.Quaternion _canvasOrientation = ((rotX * rotY) * rotY).normalized();
+  // v.Quaternion _canvasOrientation = v.Quaternion.identity();
+  v.Quaternion _canvasOrientation = ((rotX * rotY) * rotY).normalized();
   late v.Quaternion _startOrientation;
   v.Vector3? vecStart;
   int rotationIndex = 0;
@@ -50,33 +50,6 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
       'finished __canvasOrientation setter with a new value.  was: $clone, now $_canvasOrientation',
     );
   }
-
-  // void rotateThroughRotations() {
-  //   print(
-  //     'starting rotateThroughRotations, rotationIndex: $rotationIndex, __canvasOrientation: $__canvasOrientation',
-  //   );
-  //   switch (rotationIndex) {
-  //     case 0:
-  //       __canvasOrientation = rotY;
-  //       rotationIndex++;
-  //       break;
-  //     case 1:
-  //       __canvasOrientation = rotX * rotY;
-  //       rotationIndex++;
-  //       break;
-  //     case 2:
-  //       __canvasOrientation = rotX * rotY * rotY;
-  //       rotationIndex++;
-  //       break;
-  //     case 3:
-  //       __canvasOrientation = v.Quaternion.identity();
-  //       rotationIndex = 0;
-  //       break;
-  //   }
-  //   print(
-  //     'ending rotateThroughRotations, rotationIndex: $rotationIndex, __canvasOrientation: $__canvasOrientation',
-  //   );
-  // }
 
   // These state variables store information about the current drag event.
   // Every time a new drag starts, these are overwritten.
@@ -251,30 +224,55 @@ final _angleMapsEquality = ListEquality<GlobeInputData>(
 );
 
 class GlobePainter extends CustomPainter {
-  const GlobePainter({
+  GlobePainter({
     required this.inputData,
     this.colormap,
     required this.canvasRot,
-  });
+  }) : grassNormalTransformed = canvasRot.conjugated().rotate(
+         v.Vector3(0, -1, 0),
+       );
 
   final List<GlobeInputData> inputData;
   final Colormap? colormap;
   final v.Quaternion canvasRot;
+  final v.Vector3 grassNormalTransformed;
 
-  static TextPainter textPainterCompassPoint(String text) => TextPainter(
-    text: TextSpan(
-      text: text,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    textDirection: TextDirection.ltr,
-  );
+  static TextPainter textPainterCompassPoint(String text, Color color) =>
+      TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: color,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
 
   static const double textWidthScale = 0.7;
   static const double textBufferCoefficientNS = 0.1;
+
+  static final grassPaintFill = Paint()
+    ..color = Colors.green
+    ..style = PaintingStyle.fill;
+
+  static final grassPaintLine = Paint.from(grassPaintFill)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.0;
+
+  static final dirtPaint = Paint()
+    ..color = Color.fromARGB(255, 113, 76, 50)
+    ..style = PaintingStyle.fill;
+
+  static final skyPaint = Paint()
+    ..color = Colors.blue.shade300
+    ..style = PaintingStyle.fill;
+
+  static final skyCirclePaint = Paint()
+    ..color = Colors.white
+    ..strokeWidth = 1.0
+    ..style = PaintingStyle.stroke;
 
   static v.Vector3 convertCelestialCoordinatesToXYZ(
     CelestialCoordinates angleMap,
@@ -294,6 +292,81 @@ class GlobePainter extends CustomPainter {
   }
 
   static const double xRotAngle = pi / 12;
+
+  GreatCircleData projectGreatCircle(v.Vector3 unrotatedNormal, double radius) {
+    final v.Vector3 n = canvasRot.conjugated().rotate(
+      unrotatedNormal.normalized(),
+    );
+    final double tiltAngle = atan2(n.y, n.x) + pi / 2;
+
+    return GreatCircleData(
+      minorRadius: n.z.abs() * radius,
+      tiltAngle: tiltAngle,
+      frontFacing: n.z < 0,
+      normalVectorTransformed: n,
+    );
+  }
+
+  void paintSkyGreatCircleThenRestore(
+    v.Vector3 unrotatedNormal,
+    double majorRadius,
+    Canvas canvas,
+    Offset centerOffset,
+  ) {
+    final GreatCircleData greatCircleData = projectGreatCircle(unrotatedNormal, majorRadius);
+
+    final v.Vector3 grassIntersectionVector = grassNormalTransformed
+        .cross(greatCircleData.normalVectorTransformed)
+        .normalized();
+
+    final double cosT = cos(greatCircleData.tiltAngle);
+    final double sinT = sin(greatCircleData.tiltAngle);
+
+    final double northNoonLocalX =
+        grassIntersectionVector.x * cosT + grassIntersectionVector.y * sinT;
+    final double northNoonLocalY =
+        -grassIntersectionVector.x * sinT + grassIntersectionVector.y * cosT;
+
+    final double grassNormalNoonLocalX =
+        grassNormalTransformed.x * cosT + grassNormalTransformed.y * sinT;
+    final double grassNormalNoonLocalY =
+        -grassNormalTransformed.x * sinT + grassNormalTransformed.y * cosT;
+
+    final double minorRatioNoon = greatCircleData.minorRadius / majorRadius;
+    final double startEccentricAnomalyNoon = minorRatioNoon > 1e-6
+        ? atan2(northNoonLocalY / minorRatioNoon, northNoonLocalX)
+        : (northNoonLocalX >= 0 ? 0.0 : pi);
+
+    final double crossNoon =
+        northNoonLocalX * grassNormalNoonLocalY -
+        northNoonLocalY * grassNormalNoonLocalX;
+    final double sweepAngleNoon = crossNoon >= 0 ? pi : -pi;
+
+    canvas.save();
+    canvas.translate(centerOffset.dx, centerOffset.dy);
+    canvas.rotate(greatCircleData.tiltAngle);
+    if (greatCircleData.minorRadius > 1e-3) {
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: majorRadius * 2,
+          height: greatCircleData.minorRadius * 2,
+        ),
+        startEccentricAnomalyNoon,
+        sweepAngleNoon,
+        false,
+        skyCirclePaint,
+      );
+    } else {
+      // Edge-on fallback: line from North to South through Zenith
+      canvas.drawLine(
+        Offset(northNoonLocalX * majorRadius, 0),
+        Offset(-northNoonLocalX * majorRadius, 0),
+        skyCirclePaint,
+      );
+    }
+    canvas.restore();
+  }
 
   List<(Path path, Paint paint)> solarPaths(double scaleValue) {
     // For now, use the daylight only points.  Later, go back and make it start one earlier and end one later.
@@ -358,32 +431,74 @@ class GlobePainter extends CustomPainter {
     return output;
   }
 
-  //   1. Look at Point A, B, C, and D from your data array.
-  // 2. Calculate the two control points for the B-to-C segment using your Catmull-Rom spline logic.
-
-  // 3. Create a `Path` and move to B: `path.moveTo(B.x, B.y)`.
-  // 4. Draw the curve to C: `path.cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, C.x, C.y)`.
-  // 5. Create your `LinearGradient` paint from B to C using your colormap.
-  // 6. Call `canvas.drawPath`.
-
-  static void drawTransformedText(
-    TextPainter textPainter,
+  void drawGroundLabelThenRestore(
     Canvas canvas,
-    Offset position,
+    String text,
+    v.Vector3 unrotatedPos, // e.g., v.Vector3(-globeR0 * 0.85, 0, 0) for North
+    Offset centerOffset,
+    Color color,
   ) {
+    final v.Quaternion q = canvasRot.conjugated();
+
+    // Rotate anchor position and the two local text axes into screen space
+    final v.Vector3 pos = q.rotate(unrotatedPos);
+    final v.Vector3 dU = q.rotate(
+      v.Vector3(0, 0, 1),
+    ); // Local +X (across glyph)
+    final v.Vector3 dV = q.rotate(v.Vector3(1, 0, 0)); // Local +Y (down glyph)
+
+    // Guard against a singular (zero-area) matrix when the ground is nearly edge-on
+    final double det2D = dU.x * dV.y - dU.y * dV.x;
+    if (det2D.abs() < 1e-3) return;
+
+    final TextPainter tp = textPainterCompassPoint(text, color)..layout();
+
+    // Column-major Matrix4 mapping (u, v) -> pos + u * dU + v * dV
+    final Matrix4 transform = Matrix4(
+      dU.x,
+      dU.y,
+      0,
+      0,
+      dV.x,
+      dV.y,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      centerOffset.dx + pos.x,
+      centerOffset.dy + pos.y,
+      0,
+      1,
+    );
+
     canvas.save();
-    canvas.translate(position.dx, position.dy);
-    final transform = Matrix4.rotationZ(-pi / 2)
-      ..scaleByVector3(v.Vector3(textWidthScale, 1.0, 1.0));
     canvas.transform(transform.storage);
-    textPainter.paint(canvas, Offset.zero);
+    // Painting at (-width/2, -height/2) centers the glyph directly on unrotatedPos
+    tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
     canvas.restore();
   }
+
+  // static void drawTransformedText(
+  //   TextPainter textPainter,
+  //   Canvas canvas,
+  //   Offset position,
+  // ) {
+  //   canvas.save();
+  //   canvas.translate(position.dx, position.dy);
+  //   final transform = Matrix4.rotationZ(-pi / 2)
+  //     ..scaleByVector3(v.Vector3(textWidthScale, 1.0, 1.0));
+  //   canvas.transform(transform.storage);
+  //   textPainter.paint(canvas, Offset.zero);
+  //   canvas.restore();
+  // }
 
   @override
   bool shouldRepaint(covariant GlobePainter oldDelegate) =>
       !_angleMapsEquality.equals(oldDelegate.inputData, inputData) ||
-      colormap != oldDelegate.colormap;
+      colormap != oldDelegate.colormap ||
+      oldDelegate.canvasRot != canvasRot;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -392,32 +507,15 @@ class GlobePainter extends CustomPainter {
     final Offset centerOffset = Offset(globeD0 / 2, globeD0 / 2);
     final Rect fullRect = Rect.fromLTWH(-globeR0, -globeR0, globeD0, globeD0);
 
-    final grassPaintFill = Paint()
-      ..color = Colors.green
-      ..style = PaintingStyle.fill;
+    // Note on drawArc.sweepAngle:  The angle used here is NOT the geometric angle from th +X
+    // axis to the last point of the curve (i.e., the true anomaly).  It is instead the angle
+    // of a radial line on a true circle that would pass through the final point (i.e.,
+    // eccentric anomaly).
 
-    final grassPaintLine = Paint.from(grassPaintFill)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
-
-    final dirtPaint = Paint()
-      ..color = Color.fromARGB(255, 113, 76, 50)
-      ..style = PaintingStyle.fill;
-
-    final skyPaint = Paint()
-      ..color = Colors.blue.shade300
-      ..style = PaintingStyle.fill;
-
-    final v.Vector3 groundNormal = canvasRot.conjugated().rotate(v.Vector3(0, -1, 0));
-
-    // 2. Major radius is always R; minor radius is |n.z| * R
-    final double majorRadius = globeR0;
-    final double minorRadius = groundNormal.z.abs() * globeR0;
-    final bool outOfScreen = groundNormal.z < 0;
-
-    // 3. Major axis is perpendicular to the 2D normal (n.x, n.y)
-    // (If n.x and n.y are both 0, atan2 returns 0, which works cleanly)
-    final double tiltAngle = atan2(groundNormal.y, groundNormal.x) + pi / 2;
+    final GreatCircleData grass = projectGreatCircle(
+      v.Vector3(0, -1, 0),
+      globeR0,
+    );
 
     v.Vector3 xEnd = canvasRot.conjugated().rotate(v.Vector3(globeR0, 0, 0));
     v.Vector3 yEnd = canvasRot.conjugated().rotate(v.Vector3(0, globeR0, 0));
@@ -426,85 +524,167 @@ class GlobePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.0
       ..color = strokeColor;
+
+    final bool skySweepAnglePositive =
+        -grassNormalTransformed.x * sin(grass.tiltAngle) +
+            grassNormalTransformed.y * cos(grass.tiltAngle) >=
+        0;
+
+    // Start Painting!!!  Beware of order!!
     canvas.save();
     canvas.translate(centerOffset.dx, centerOffset.dy);
-    canvas.rotate(tiltAngle);
-    canvas.drawArc(fullRect, 0, pi, true, dirtPaint);
-    canvas.drawArc(fullRect, 0, -pi, true, skyPaint);
-    // 4. Draw the ellipse
-    if (minorRadius != 0) {
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset.zero,
-          width: majorRadius * 2,
-          height: minorRadius * 2,
-        ),
-        outOfScreen ? grassPaintFill : dirtPaint,
+    canvas.rotate(grass.tiltAngle);
+    canvas.drawArc(
+      fullRect,
+      0,
+      skySweepAnglePositive ? pi : -pi,
+      true,
+      skyPaint,
+    );
+    canvas.drawArc(
+      fullRect,
+      0,
+      skySweepAnglePositive ? -pi : pi,
+      true,
+      dirtPaint,
+    );
+    if (grass.frontFacing) {
+      if (grass.minorRadius > 1e-3) {
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: globeR0 * 2,
+            height: grass.minorRadius * 2,
+          ),
+          grassPaintFill,
+        );
+      } else {
+        canvas.drawLine(
+          Offset(-globeR0, 0),
+          Offset(globeR0, 0),
+          grassPaintLine,
+        );
+      }
+      canvas.restore();
+      drawGroundLabelThenRestore(
+        canvas,
+        'N',
+        v.Vector3(-0.85 * globeR0, 0, 0),
+        centerOffset,
+        Colors.white,
       );
-    } else {
-      canvas.drawLine(Offset(-globeR0, 0), Offset(globeR0, 0), grassPaintLine);
-    }
-    canvas.restore();
+      drawGroundLabelThenRestore(
+        canvas,
+        'S',
+        v.Vector3(0.85 * globeR0, 0, 0),
+        centerOffset,
+        Colors.white,
+      );
+      drawGroundLabelThenRestore(
+        canvas,
+        'E',
+        v.Vector3(0, 0, 0.85 * globeR0),
+        centerOffset,
+        Colors.white,
+      );
+      drawGroundLabelThenRestore(
+        canvas,
+        'W',
+        v.Vector3(0, 0, -0.85 * globeR0),
+        centerOffset,
+        Colors.white,
+      );
 
-    canvas.drawLine(
-      centerOffset,
-      centerOffset + xEnd.toOffset,
-      axisPaint(
-        xEnd.z <= 0 ? Colors.red : Color.lerp(Colors.red, Colors.black, 0.5)!,
-      ),
-    );
-    canvas.drawLine(
-      centerOffset,
-      centerOffset + yEnd.toOffset,
-      axisPaint(
-        yEnd.z <= 0 ? Colors.yellow : Color.lerp(Colors.yellow, Colors.black, 0.5)!,
-      ),
-    );
-    canvas.drawLine(
-      centerOffset,
-      centerOffset + zEnd.toOffset,
-      axisPaint(
-        zEnd.z <= 0 ? Colors.cyan : Color.lerp(Colors.cyan, Colors.black, 0.5)!,
-      ),
-    );
+      paintSkyGreatCircleThenRestore(v.Vector3(0, 0, 1), globeR0, canvas, centerOffset);      
+      paintSkyGreatCircleThenRestore(v.Vector3(1, 0, 0), globeR0, canvas, centerOffset);
+    } else {
+      // grass is NOT front facing, so draw noon arc first
+      canvas.restore();
+
+      paintSkyGreatCircleThenRestore(v.Vector3(0, 0, 1), globeR0, canvas, centerOffset);
+      paintSkyGreatCircleThenRestore(v.Vector3(1, 0, 0), globeR0, canvas, centerOffset);
+      canvas.save();
+      canvas.translate(centerOffset.dx, centerOffset.dy);
+      canvas.rotate(grass.tiltAngle);
+      if (grass.minorRadius > 1e-3) {
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: globeR0 * 2,
+            height: grass.minorRadius * 2,
+          ),
+          dirtPaint,
+        );
+      } else {
+        canvas.drawLine(Offset(-globeR0, 0), Offset(globeR0, 0), dirtPaint);
+      }
+      canvas.restore();
+      final Color darkBrown = Color.fromARGB(
+        255,
+        113,
+        76,
+        50,
+      ).desaturated(0.5).darkened(0.5);
+      drawGroundLabelThenRestore(
+        canvas,
+        'N',
+        v.Vector3(-0.85 * globeR0, 0, 0),
+        centerOffset,
+        darkBrown,
+      );
+      drawGroundLabelThenRestore(
+        canvas,
+        'S',
+        v.Vector3(0.85 * globeR0, 0, 0),
+        centerOffset,
+        darkBrown,
+      );
+      drawGroundLabelThenRestore(
+        canvas,
+        'E',
+        v.Vector3(0, 0, 0.85 * globeR0),
+        centerOffset,
+        darkBrown,
+      );
+      drawGroundLabelThenRestore(
+        canvas,
+        'W',
+        v.Vector3(0, 0, -0.85 * globeR0),
+        centerOffset,
+        darkBrown,
+      );
+    }
+
+    // canvas.drawLine(
+    //   centerOffset,
+    //   centerOffset + xEnd.toOffset,
+    //   axisPaint(
+    //     xEnd.z <= 0 ? Colors.red : Color.lerp(Colors.red, Colors.black, 0.5)!,
+    //   ),
+    // );
+    // canvas.drawLine(
+    //   centerOffset,
+    //   centerOffset + yEnd.toOffset,
+    //   axisPaint(
+    //     yEnd.z <= 0
+    //         ? Colors.yellow
+    //         : Color.lerp(Colors.yellow, Colors.black, 0.5)!,
+    //   ),
+    // );
+    // canvas.drawLine(
+    //   centerOffset,
+    //   centerOffset + zEnd.toOffset,
+    //   axisPaint(
+    //     zEnd.z <= 0 ? Colors.cyan : Color.lerp(Colors.cyan, Colors.black, 0.5)!,
+    //   ),
+    // );
 
     print('xEnd: $xEnd, red');
     print('yEnd: $yEnd, yellow');
     print('zEnd: $zEnd, cyan');
     print('canvasRot: $canvasRot');
 
-    return;
-
-    final groundOvalPaint = Paint()
-      ..color = Colors.green
-      ..style = PaintingStyle.fill;
-
-    final noonOvalPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    final Rect groundRect = Rect.fromCenter(
-      center: centerOffset,
-      width: globeD0,
-      height: globeD0 * sin(xRotAngle),
-    );
-    final double verticalGapNoonToTop =
-        (1 - sqrt(1 - pow(xRotAngle, 2))) *
-        (globeD0 /
-            2); // Technically, this is diameter / 2 * (1 - sqrt(1 - (diameter/3 / diameter)^2)).  I have hardcoded this is to save performance.  If groundRect everchanges height, this will be incorrect.
-    final Rect noonRect = Rect.fromCenter(
-      center: centerOffset,
-      width: globeD0,
-      height: globeD0 - 2 * verticalGapNoonToTop,
-    );
-
-    // canvas.drawOval(groundRect, groundOvalPaint);
-    // canvas.drawArc(noonRect, 0, -pi, false, noonOvalPaint);
-    // canvas.drawLine(
-    //   centerOffset.translate(0, -(diameter / 2 - verticalGapNoonToTop)),
-    //   centerOffset,
-    //   noonOvalPaint,
-    // );
+    // return;
     // final TextPainter textPainterN = textPainterCompassPoint('N');
     // final TextPainter textPainterS = textPainterCompassPoint('S');
     // final TextPainter textPainterE = textPainterCompassPoint('E');

@@ -2777,3 +2777,37 @@ class AzChartSizeNotifier extends ValueNotifier<AzChartSize> {
 }
 
 typedef AzChartSizeComplete = ({double width, AzChartSize azChartSize});
+
+extension ColorManipulations on Color {
+  /// Method that generates a new color based on this one except with its saturation reduced by [amount]%.  If the original color only has 50%, if deafults are used, it will then have 25%.
+  Color desaturated([double amount = 0.5]) {
+    final HSLColor hsl = HSLColor.fromColor(this);
+    // Clamp ensures saturation stays within the valid 0.0 to 1.0 range
+    final HSLColor desaturated = hsl.withSaturation(
+      (hsl.saturation * (1 - (amount.clamp(0.0, 1.0)))),
+    );
+    return desaturated.toColor();
+  }
+
+  Color darkened([double amount = 0.5]) {
+    final HSLColor hsl = HSLColor.fromColor(this);
+    // Clamp ensures saturation stays within the valid 0.0 to 1.0 range
+    final HSLColor darkened = hsl.withLightness(
+      (hsl.lightness * (1 - (amount.clamp(0.0, 1.0)))),
+    );
+    return darkened.toColor();
+  }
+}
+
+class GreatCircleData {
+  const GreatCircleData({
+    required this.minorRadius,
+    required this.tiltAngle,
+    required this.frontFacing,
+    required this.normalVectorTransformed,
+  });
+  final double minorRadius;
+  final double tiltAngle;
+  final bool frontFacing;
+  final Vector3 normalVectorTransformed;
+}
