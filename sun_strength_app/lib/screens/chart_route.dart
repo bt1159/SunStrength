@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/widgets/yearly_chart.dart';
+import 'package:sun_strength_app/widgets/yearly_chart_window.dart';
 import 'package:sun_strength_app/widgets/azimuth_widget.dart';
 import '../models/orbit_calcs.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';

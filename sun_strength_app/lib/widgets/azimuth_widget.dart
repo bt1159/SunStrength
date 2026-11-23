@@ -41,24 +41,38 @@ class AzimuthChartWindow extends StatelessWidget {
                           onPressed:
                               azChartSizeNotifier.value == AzChartSize.small
                               ? null
-                              : () => azChartSizeNotifier.value =
-                                    AzChartSize.small,
+                              : () {
+                                  azChartSizeNotifier.value = AzChartSize.small;
+
+                                  print(
+                                    'changing C<AzChartSizeNotifier>, value: ${azChartSizeNotifier.value.name}',
+                                  );
+                                },
                           child: Text('S'),
                         ),
                         ElevatedButton(
                           onPressed:
                               azChartSizeNotifier.value == AzChartSize.medium
                               ? null
-                              : () => azChartSizeNotifier.value =
-                                    AzChartSize.medium,
+                              : () {
+                                  azChartSizeNotifier.value =
+                                      AzChartSize.medium;
+                                  print(
+                                    'changing C<AzChartSizeNotifier>, value: ${azChartSizeNotifier.value.name}',
+                                  );
+                                },
                           child: Text('M'),
                         ),
                         ElevatedButton(
                           onPressed:
                               azChartSizeNotifier.value == AzChartSize.large
                               ? null
-                              : () => azChartSizeNotifier.value =
-                                    AzChartSize.large,
+                              : () {
+                                  azChartSizeNotifier.value = AzChartSize.large;
+                                  print(
+                                    'changing C<AzChartSizeNotifier>, value: ${azChartSizeNotifier.value.name}',
+                                  );
+                                },
                           child: Text('L'),
                         ),
                       ],
@@ -78,7 +92,6 @@ class AzimuthChartWindow extends StatelessWidget {
               },
             ),
             Container(
-              // width: double.infinity,
               alignment: Alignment.center,
               child: const GlobeVizHolder(),
               // const BirdsEyeWidget(),

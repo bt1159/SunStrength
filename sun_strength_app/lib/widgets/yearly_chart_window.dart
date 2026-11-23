@@ -4,7 +4,7 @@ import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/screens/location_selection_route.dart';
-import 'package:sun_strength_app/widgets/chart_widget.dart';
+import 'package:sun_strength_app/widgets/yearly_chart_widget.dart';
 import 'package:sun_strength_app/widgets/color_scale_widget.dart';
 
 class YearlyChartWindow extends StatelessWidget {

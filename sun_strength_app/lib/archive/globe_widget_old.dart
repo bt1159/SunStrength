@@ -38,9 +38,9 @@ class GlobeWidget extends StatelessWidget {
             final List<GlobeInputData> angleMaps = visibleSunOnlyData
                 .map(
                   (e) => (
-                    angleMaps: CelestialCoordinates(
-                      alpha: e.solarElevationAngle,
-                      theta: e.solarAzimuthAngle,
+                    angleMaps: CelestialAngles(
+                      elevation: e.solarElevationAngle,
+                      azimuth: e.solarAzimuthAngle,
                     ),
                     solarStrengths: e.solarStrengthsLocalRelativeToGlobalMax,
                   ),
@@ -64,7 +64,7 @@ class GlobeWidget extends StatelessWidget {
 }
 
 typedef GlobeInputData = ({
-  CelestialCoordinates angleMaps,
+  CelestialAngles angleMaps,
   double solarStrengths,
 });
 typedef GlobeIntermediateData = ({
@@ -78,7 +78,7 @@ extension EqualityTest on List<GlobeInputData> {
 }
 
 final _angleMapsEquality = ListEquality<GlobeInputData>(
-  EqualityBy<GlobeInputData, CelestialCoordinates>((p0) => p0.angleMaps),
+  EqualityBy<GlobeInputData, CelestialAngles>((p0) => p0.angleMaps),
 );
 
 class GlobePainter extends CustomPainter {
@@ -103,13 +103,13 @@ class GlobePainter extends CustomPainter {
   static const double textBufferCoefficientNS = 0.1;
 
   static v.Vector3 convertCelestialCoordinatesToXYZ(
-    CelestialCoordinates angleMap,
+    CelestialAngles angleMap,
   ) {
     final double xIntermediate =
-        cos(angleMap.alpha) * cos((angleMap.theta) - pi);
-    final double yIntermediate = sin(angleMap.alpha);
+        cos(angleMap.elevation) * cos((angleMap.azimuth) - pi);
+    final double yIntermediate = sin(angleMap.elevation);
     final double zIntermediate =
-        cos(angleMap.alpha) * sin((angleMap.theta) - pi);
+        cos(angleMap.elevation) * sin((angleMap.azimuth) - pi);
     return v.Vector3(xIntermediate, yIntermediate, zIntermediate);
   }
 

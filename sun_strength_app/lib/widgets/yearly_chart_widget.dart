@@ -33,7 +33,6 @@ class YearlyChart extends StatefulWidget {
 class _YearlyChartState extends State<YearlyChart> {
   int ticks = DateTime.now().millisecondsSinceEpoch;
   late final ValueNotifier<TooltipInfo?> _tooltipNotifier;
-  static const Offset toolTipFormattingOffset = Offset(0, 40);
 
   /// This method's purpose is two-fold: 1) update the value of [_tooltipNotifier] and return the single day's [OrbSolValues], which is then sent to azimuth chart if this chart is clicked.
   List<OrbSolValues> _handleChartHover(
@@ -72,7 +71,7 @@ class _YearlyChartState extends State<YearlyChart> {
       timeZoneName = '';
     }
     _tooltipNotifier.value = (
-      hoverBoxPosition: chartTextLocalPosition + toolTipFormattingOffset,
+      hoverBoxPosition: chartTextLocalPosition + MouseFollowingTooltipDelegate.toolTipFormattingOffset,
       tooltipText12:
           '${DateFormat('d MMM yyyy h:mm a').format(hoverDateTimeRaw)} $timeZoneName\nStrength: ${(value * 100).toStringAsFixed(0)}%',
       tooltipText24:
@@ -185,6 +184,12 @@ class _YearlyChartState extends State<YearlyChart> {
                 if (tooltipInfo != null) {
                   return Positioned.fill(
                     child: CustomSingleChildLayout(
+                      // CustomSingleChildLayout & an extended SingleChildLayoutDelegate are used 
+                      // to allow the tooltip's location to be calculated based on its size.  
+                      // Stock Widgets don't usually accomodate this.  Using this pait, however, 
+                      // lets you layout the child, get its size, and then set its position.  
+                      // This is all possible in a custom render widget & object, but using this 
+                      // pair avoids all the boilerplate.
                       delegate: MouseFollowingTooltipDelegate(
                         hoverBoxPosition: tooltipInfo.hoverBoxPosition,
                       ),
@@ -240,62 +245,6 @@ class _YearlyChartState extends State<YearlyChart> {
         ),
       ],
     );
-  }
-}
-
-class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
-  final Offset hoverBoxPosition;
-
-  MouseFollowingTooltipDelegate({required this.hoverBoxPosition});
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    // Converts tight constraints (forced size) into loose constraints (0 to max size),
-    // allowing the tooltip Container to shrink to exactly the size of its text.
-    return constraints.loosen();
-  }
-
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    // Start with the ideal position next to the cursor
-    double x = hoverBoxPosition.dx;
-    double y = hoverBoxPosition.dy;
-    if (kDebugMode) {
-      print('inside getPositionForChild, x: $x, y: $y');
-    }
-
-    // Clamp to the right edge (prevent overflowing the screen)
-    // If the tooltip's right edge goes past the screen width, lock it to the max allowed X.
-    if (x + childSize.width > size.width) {
-      x = size.width - childSize.width;
-    }
-
-    // Clamp to the left edge (just in case)
-    if (x < 0) {
-      x = 0;
-    }
-
-    _YearlyChartState.toolTipFormattingOffset.dy;
-    // Clamp to the bottom edge
-    if (y + childSize.height > size.height) {
-      y =
-          hoverBoxPosition.dy -
-          _YearlyChartState.toolTipFormattingOffset.dy -
-          childSize.height;
-    }
-
-    print('inside getPositionForChild, x: $x, y: $y');
-
-    print(
-      'inside getPositionForChild, size.width: ${size.width}, size.height: ${size.height}',
-    );
-    return Offset(x, y);
-  }
-
-  @override
-  bool shouldRelayout(MouseFollowingTooltipDelegate oldDelegate) {
-    // Only recalculate layout if the mouse has actually moved
-    return oldDelegate.hoverBoxPosition != hoverBoxPosition;
   }
 }
 

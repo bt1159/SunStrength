@@ -474,8 +474,11 @@ List<(List<double>, List<Color>)> myColorSchemesDiscrete({
 /// J2000
 final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
 
+/// {@template OrbSolValues}
 /// The final solar strength and all the supporting orbital values for a single moment
+/// {@endtemplate}
 class OrbSolValues {
+  /// {@macro OrbSolValues}
   const OrbSolValues({
     required this.tzDateTime,
     required this.hOffsetFromJ2000,
@@ -547,6 +550,43 @@ class OrbSolValues {
   final double solarElevationAngle;
   final double solarAzimuthAngle;
   final double solarStrengthsLocalRelativeToGlobalMax;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is OrbSolValues) {
+      return other.tzDateTime == tzDateTime &&
+          other.hOffsetFromJ2000 == hOffsetFromJ2000 &&
+          other.earthRotationAngle == earthRotationAngle &&
+          other.meanAnomaly == meanAnomaly &&
+          other.eccentricAnomaly == eccentricAnomaly &&
+          other.trueAnomaly == trueAnomaly &&
+          other.orbitalRadiusMag == orbitalRadiusMag &&
+          other.orbitalRadius == orbitalRadius &&
+          other.earthRadius == earthRadius &&
+          other.solarElevationAngle == solarElevationAngle &&
+          other.solarAzimuthAngle == solarAzimuthAngle &&
+          other.solarStrengthsLocalRelativeToGlobalMax ==
+              solarStrengthsLocalRelativeToGlobalMax;
+    } else {
+      return false;
+    }
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    tzDateTime,
+    hOffsetFromJ2000,
+    earthRotationAngle,
+    meanAnomaly,
+    eccentricAnomaly,
+    trueAnomaly,
+    orbitalRadiusMag,
+    orbitalRadius,
+    earthRadius,
+    solarElevationAngle,
+    solarAzimuthAngle,
+    solarStrengthsLocalRelativeToGlobalMax,
+  ]);
 }
 
 /// {@template ImagePainter}
@@ -2725,27 +2765,27 @@ extension RenderBoxToString on RenderBox {
       'RenderBox: runtimeType: $runtimeType, constraints: $constraints, attached: $attached, Parent data dirty/null: ${parentData == null}';
 }
 
-class CelestialCoordinates {
-  const CelestialCoordinates({required this.alpha, required this.theta});
+class CelestialAngles {
+  const CelestialAngles({required this.elevation, required this.azimuth});
 
-  final double alpha;
-  final double theta;
+  final double elevation;
+  final double azimuth;
 
   @override
   bool operator ==(Object other) {
-    if (other is CelestialCoordinates) {
-      return other.alpha == alpha && other.theta == theta;
+    if (other is CelestialAngles) {
+      return other.elevation == elevation && other.azimuth == azimuth;
     } else {
       return false;
     }
   }
 
   @override
-  int get hashCode => Object.hash(alpha, theta);
+  int get hashCode => Object.hash(elevation, azimuth);
 
   @override
   String toString() {
-    return 'AngleMap(alpha: $alpha, theta: $theta)';
+    return 'AngleMap(alpha: $elevation, theta: $azimuth)';
   }
 }
 
@@ -2811,3 +2851,69 @@ class GreatCircleData {
   final bool frontFacing;
   final Vector3 normalVectorTransformed;
 }
+
+extension PathDrawingSugar on Canvas {
+  void drawPathFromRecord((Path path, Paint paint) input) {
+    drawPath(input.$1, input.$2);
+  }
+}
+
+
+class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
+  final Offset hoverBoxPosition;
+  static const Offset toolTipFormattingOffset = Offset(0, 40);
+
+  MouseFollowingTooltipDelegate({required this.hoverBoxPosition});
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    // Converts tight constraints (forced size) into loose constraints (0 to max size),
+    // allowing the tooltip Container to shrink to exactly the size of its text.
+    return constraints.loosen();
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    // Start with the ideal position next to the cursor
+    double x = hoverBoxPosition.dx;
+    double y = hoverBoxPosition.dy;
+    if (kDebugMode) {
+      print('inside getPositionForChild, x: $x, y: $y');
+    }
+
+    // Clamp to the right edge (prevent overflowing the screen)
+    // If the tooltip's right edge goes past the screen width, lock it to the max allowed X.
+    if (x + childSize.width > size.width) {
+      x = size.width - childSize.width;
+    }
+
+    // Clamp to the left edge (just in case)
+    if (x < 0) {
+      x = 0;
+    }
+
+    toolTipFormattingOffset.dy;
+    // Clamp to the bottom edge
+    if (y + childSize.height > size.height) {
+      y =
+          hoverBoxPosition.dy -
+          toolTipFormattingOffset.dy -
+          childSize.height;
+    }
+
+    print('inside getPositionForChild, x: $x, y: $y');
+
+    print(
+      'inside getPositionForChild, size.width: ${size.width}, size.height: ${size.height}',
+    );
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(MouseFollowingTooltipDelegate oldDelegate) {
+    // Only recalculate layout if the mouse has actually moved
+    return oldDelegate.hoverBoxPosition != hoverBoxPosition;
+  }
+}
+
+
