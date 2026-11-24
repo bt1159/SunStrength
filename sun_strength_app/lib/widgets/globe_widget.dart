@@ -785,8 +785,8 @@ class GlobePainter extends CustomPainter {
               .clamp(0, 1);
       
       double deltaAz = solarPoints[1].data.solarAzimuthAngle - solarPoints[0].data.solarAzimuthAngle;
-      if (dAz > pi) dAz -= 2 * pi;
-      if (dAz < -pi) dAz += 2 * pi;
+      if (deltaAz > pi) deltaAz -= 2 * pi;
+      if (deltaAz < -pi) deltaAz += 2 * pi;
       final double p1Azimuth = solarPoints[0].data.solarAzimuthAngle + deltaAz * elFractionPastP0;
 
 
@@ -919,8 +919,8 @@ class GlobePainter extends CustomPainter {
 
       
       double deltaAz = solarPoints[lastIndexOverall - 1].data.solarAzimuthAngle - solarPoints[lastIndexOverall].data.solarAzimuthAngle;
-      if (dAz > pi) dAz -= 2 * pi;
-      if (dAz < -pi) dAz += 2 * pi;
+      if (deltaAz > pi) deltaAz -= 2 * pi;
+      if (deltaAz < -pi) deltaAz += 2 * pi;
       final double p2Azimuth = solarPoints[lastIndexOverall].data.solarAzimuthAngle + deltaAz * elFractionBeforeP3;
 
 
