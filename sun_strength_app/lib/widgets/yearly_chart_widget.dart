@@ -56,7 +56,7 @@ class _YearlyChartState extends State<YearlyChart> {
     // Look up data parameters safely.  First index is day, then time
     final List<OrbSolValues> osSingleDay = orbitAndSolarValuesList.sublist(
       dayIndex * 96,
-      (dayIndex + 1) * 96,
+      (dayIndex + 1) * 96 + 1,  //I am adding one here so that a day's data contains the data from today at midnight until (and including) tomorrow at midnight.
     );
     final double value =
         osSingleDay[timeIndex].solarStrengthsLocalRelativeToGlobalMax;

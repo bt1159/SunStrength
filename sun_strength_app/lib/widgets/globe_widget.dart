@@ -1,6 +1,8 @@
 // Fix: If I want polar places to have full 24 hours, I will need to pass them more than one day OR they need to use the first as the last etc. so that it can wrap around.
 // Fix: In order to get the solar path to the horizon, take the last/first positive strength point.  Then, for the path that will get intercepted, find the point on the horizon by using elevation = 0 and linear interpolated azimuth.  That will be close enough.
 // ADD DOTS FOR EACH HOUR.  LABELS?  YES!
+// I think I actually have the colors for 24 hour and to the horizon mostly solved, expect that I didn't make the same changes for the hover, and I am using hover to check my math.
+// To be clear, there is still a gap, and I don't know why.
 
 import 'dart:core';
 import 'dart:math';
@@ -10,6 +12,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:timezone/timezone.dart' as tz;
 // import 'package:vector_math/vector_math.dart' hide Colors;
 import 'package:vector_math/vector_math_64.dart' as v;
 import 'package:color_map/color_map.dart';
@@ -104,48 +107,38 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
         return; // Cursor is over the brown ground underside
       }
     }
-    final points = projectSolarPoints(
-      visibleSunOnlyData: visibleSunOnlyData,
-      globeR0: globeR0,
+    final List<SolarPoint> points = GlobePainter.solarPointsGenerator(
+      inputData: visibleSunOnlyData,
+      globeRadius: globeR0,
       centerOffset: centerOffset,
+      canvasRot: __canvasOrientation,
     );
+
+    final List<tz.TZDateTime> pointDateTimes = points
+        .map((e) => e.data.tzDateTime)
+        .toList();
+    print('in _evaluateHoverAt, pointDateTimes: $pointDateTimes');
+    print(
+      'in _evaluateHoverAt, pointDateTimes.length: ${pointDateTimes.length}',
+    );
+
     final ({OrbSolValues data, Offset anchorPos, double t})? hit =
         hitTestSolarPath(cursor: localPos, points: points);
     sendHitToToolTipInfo(hit);
   }
 
-  List<ProjectedSolarPoint> projectSolarPoints({
-    required List<OrbSolValues> visibleSunOnlyData,
-    required double globeR0,
-    required Offset centerOffset,
-  }) {
-    return visibleSunOnlyData.map((OrbSolValues element) {
-      final v.Vector3 raw = GlobePainter.convertCelestialAnglesToVector(
-        elevation: element.solarElevationAngle,
-        azimuth: element.solarAzimuthAngle,
-      );
-      final v.Vector3 rotated = __canvasOrientation
-          .conjugated()
-          .rotate(v.Vector3(raw.x, raw.y, raw.z))
-          .scaled(globeR0);
-      final Offset screenPos = centerOffset + Offset(rotated.x, rotated.y);
-
-      return (screenPos: screenPos, data: element);
-    }).toList();
-  }
-
   ({OrbSolValues data, Offset anchorPos, double t})? hitTestSolarPath({
     required Offset cursor,
-    required List<ProjectedSolarPoint> points,
+    required List<SolarPoint> points,
     double maxDistancePx = 14.0,
   }) {
-    if (points.length < 4) return null;
+    if (points.length < 2) return null;
 
     double bestDist = maxDistancePx;
     ({OrbSolValues data, Offset anchorPos, double t})? bestHit;
 
     // Match the exact segment range drawn by solarPaths()
-    for (int i = 1; i < points.length - 2; i++) {
+    for (int i = 0; i < points.length - 1; i++) {
       final Offset a = points[i].screenPos;
       final Offset b = points[i + 1].screenPos;
 
@@ -191,12 +184,12 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
         tooltipText12:
             '${DateFormat('d MMM yyyy h:mm a').format(hit.data.tzDateTime)} ${hit.data.tzDateTime.timeZoneName}\n'
             'Strength: ${(hit.data.solarStrengthsLocalRelativeToGlobalMax * 100).toStringAsFixed(0)}%\n'
-            'Elevation: ${v.degrees(hit.data.solarElevationAngle).toStringAsFixed(0)}\u00B0\n'            
+            'Elevation: ${v.degrees(hit.data.solarElevationAngle).toStringAsFixed(0)}\u00B0\n'
             'Direction: ${v.degrees(hit.data.solarAzimuthAngle).toStringAsFixed(0)}\u00B0',
         tooltipText24:
             '${DateFormat('d MMM yyyy HH:mm').format(hit.data.tzDateTime)} ${hit.data.tzDateTime.timeZoneName}\n'
             'Strength: ${(hit.data.solarStrengthsLocalRelativeToGlobalMax * 100).toStringAsFixed(0)}%\n'
-            'Elevation: ${v.degrees(hit.data.solarElevationAngle).toStringAsFixed(0)}\u00B0\n'            
+            'Elevation: ${v.degrees(hit.data.solarElevationAngle).toStringAsFixed(0)}\u00B0\n'
             'Direction: ${v.degrees(hit.data.solarAzimuthAngle).toStringAsFixed(0)}\u00B0',
       );
     }
@@ -248,7 +241,24 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
       builder: (context, colorScheme, child) {
         return Consumer<DayDataNot>(
           builder: (context, dayDataNotifier, _) {
-            final int finalIndex = dayDataNotifier.value.length - 1;
+            final List<double> strengths = dayDataNotifier.value
+                .map((e) => e.solarStrengthsLocalRelativeToGlobalMax)
+                .toList();
+            final List<tz.TZDateTime> datetimes = dayDataNotifier.value
+                .map((e) => e.tzDateTime)
+                .toList();
+            final List<double> elevations = dayDataNotifier.value
+                .map((e) => e.solarElevationAngle)
+                .toList();
+            final List<double> azimuths = dayDataNotifier.value
+                .map((e) => e.solarAzimuthAngle)
+                .toList();
+            print('inside _GlobalVizHolderState');
+            print('number of points: ${dayDataNotifier.value.length}');
+            print('strengths: $strengths');
+            print('datetimes: $datetimes');
+            print('elevations: $elevations');
+            print('azimuths: $azimuths');
             final int firstDaylightIndex = dayDataNotifier.value.indexWhere(
               (element) => element.solarElevationAngle > 0.0001,
             );
@@ -258,8 +268,12 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
             final List<OrbSolValues> visibleSunOnlyData = dayDataNotifier.value
                 .sublist(
                   max(firstDaylightIndex - 1, 0),
-                  min(lastDaylightIndex + 1, finalIndex),
+                  min(lastDaylightIndex + 1, dayDataNotifier.value.length),
                 );
+            print(
+              'visibleSunOnlyData uses firstDaylightIndex - 1: ${firstDaylightIndex - 1} and lastDaylightIndex + 1: ${lastDaylightIndex + 1}',
+            );
+            print('visibleSunOnlyData.length: ${visibleSunOnlyData.length}');
             return Consumer<AzChartSizeNotifier>(
               builder: (context, azChartSizeNotifier, _) {
                 print(
@@ -490,9 +504,9 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
   }
 }
 
-typedef ProjectedSolarPoint = ({Offset screenPos, OrbSolValues data});
+typedef SolarPoint = ({Offset screenPos, OrbSolValues data});
 
-typedef SolarPathDetails = List<(Path path, Paint paint)>;
+typedef SolarPaths = List<(Path path, Paint paint)>;
 
 class GlobePainter extends CustomPainter {
   GlobePainter({
@@ -502,7 +516,9 @@ class GlobePainter extends CustomPainter {
     required this.appBackgroundColor,
   }) : grassNormalTransformed = canvasRot.conjugated().rotate(
          v.Vector3(0, -1, 0),
-       );
+       ) {
+    print('constructing GlobePainter, inputData.length: ${inputData.length}');
+  }
 
   final List<OrbSolValues> inputData;
   final Colormap? colormap;
@@ -570,7 +586,7 @@ class GlobePainter extends CustomPainter {
     ..strokeWidth = 0.0
     ..style = PaintingStyle.fill;
 
-  static List<ProjectedSolarPoint> solarPathConfigurationListGenerator({
+  static List<SolarPoint> solarPointsGenerator({
     required List<OrbSolValues> inputData,
     required v.Quaternion canvasRot,
     required double globeRadius,
@@ -673,79 +689,27 @@ class GlobePainter extends CustomPainter {
     canvas.restore();
   }
 
-  SolarPathDetails solarPathsGenerator(double globeRadius, centerOffset) {
-    final List<(Path path, Paint paint)> output = <(Path path, Paint paint)>[];
-
-    final List<ProjectedSolarPoint> solarPathConfigurationList =
-        solarPathConfigurationListGenerator(
-          centerOffset: centerOffset,
-          canvasRot: canvasRot,
-          globeRadius: globeRadius,
-          inputData: inputData,
-        );
-
-    Paint basePaintWithoutGradient = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = solarPathWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    // Tension factor (0.0 = sharp linear, 0.5 = natural Catmull-Rom curve)
-    const double tension = 0.5;
-
-    for (int i = 1; i < solarPathConfigurationList.length - 2; i++) {
-      final Path thisPath = Path();
-      final Offset p0 = solarPathConfigurationList[i - 1].screenPos;
-      final Offset p1 = solarPathConfigurationList[i].screenPos;
-      final Offset p2 = solarPathConfigurationList[i + 1].screenPos;
-      final Offset p3 = solarPathConfigurationList[i + 2].screenPos;
-
-      // Calculate control points based on surrounding vectors
-      final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
-      final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
-
-      thisPath.moveTo(p1.dx, p1.dy);
-      thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
-      final v.Vector4 firstColorVector = colorValuesFromMap(
-        solarPathConfigurationList[i]
-            .data
-            .solarStrengthsLocalRelativeToGlobalMax,
-        false,
-        colormap,
-      );
-      final v.Vector4 secondColorVector = colorValuesFromMap(
-        solarPathConfigurationList[i + 1]
-            .data
-            .solarStrengthsLocalRelativeToGlobalMax,
-        false,
-        colormap,
-      );
-      final Paint thisPaint = Paint.from(basePaintWithoutGradient)
-        ..shader = ui.Gradient.linear(p1, p2, [
-          firstColorVector.toColor,
-          secondColorVector.toColor,
-        ]);
-
-      output.add((thisPath, thisPaint));
-      if (i == (solarPathConfigurationList.length / 2).toInt()) {
-        print('checking solar path: p1: $p1, p2: $p2');
-      }
-    }
-    return output;
-  }
-
-  (SolarPathDetails solarPathDetails, List<Offset> solarHourlyPoints)
-  solarPathsGenerator2(double globeRadius, centerOffset) {
-    final SolarPathDetails output1 = <(Path path, Paint paint)>[];
+  (SolarPaths solarPathDetails, List<Offset> solarHourlyPoints)
+  solarPathsGenerator(double globeRadius, centerOffset) {
+    final SolarPaths output1 = <(Path path, Paint paint)>[];
     final List<Offset> output2 = <Offset>[];
+    if (inputData.length < 3) {
+    return (output1, output2);
+    }
 
-    final List<ProjectedSolarPoint> solarPathConfigurationList =
-        solarPathConfigurationListGenerator(
-          centerOffset: centerOffset,
-          canvasRot: canvasRot,
-          globeRadius: globeRadius,
-          inputData: inputData,
-        );
+    final List<SolarPoint> solarPoints = solarPointsGenerator(
+      centerOffset: centerOffset,
+      canvasRot: canvasRot,
+      globeRadius: globeRadius,
+      inputData: inputData,
+    );
+    final List<tz.TZDateTime> pointDateTimes = solarPoints
+        .map((e) => e.data.tzDateTime)
+        .toList();
+    print('in GlobePainter.paint, pointDateTimes: $pointDateTimes');
+    print(
+      'in GlobePainter.paint, pointDateTimes.length: ${pointDateTimes.length}',
+    );
 
     Paint basePaintWithoutGradient = Paint()
       ..style = PaintingStyle.stroke
@@ -756,20 +720,33 @@ class GlobePainter extends CustomPainter {
     // Tension factor (0.0 = sharp linear, 0.5 = natural Catmull-Rom curve)
     const double tension = 0.5;
 
-    for (int i = 1; i < solarPathConfigurationList.length - 1; i++) {
-      final int minute =
-          solarPathConfigurationList[i].data.tzDateTime.minute;
+    final int lastIndexOverall = solarPoints.length - 1;
+    final int indexFirstLight;
+    final int indexLastLight;
+    if (solarPoints.first.data.solarElevationAngle > 0.0001) {
+      indexFirstLight = 0;
+    } else {
+      indexFirstLight = 1;
+    }
+    if (solarPoints.last.data.solarElevationAngle > 0.0001) {
+      indexLastLight = lastIndexOverall;
+    } else {
+      indexLastLight = lastIndexOverall - 1;
+    }
+    if (indexFirstLight == 0) {
+      // p1 is first point
+      // create p0 by extrapolation
+
+      // 24 hour daylight
+      final int minute = solarPoints[0].data.tzDateTime.minute;
       if (minute == 0) {
-        output2.add(solarPathConfigurationList[i].screenPos);
-      }
-      if (i == solarPathConfigurationList.length - 2) {
-        continue;
+        output2.add(solarPoints[0].screenPos);
       }
       final Path thisPath = Path();
-      final Offset p0 = solarPathConfigurationList[i - 1].screenPos;
-      final Offset p1 = solarPathConfigurationList[i].screenPos;
-      final Offset p2 = solarPathConfigurationList[i + 1].screenPos;
-      final Offset p3 = solarPathConfigurationList[i + 2].screenPos;
+      final Offset p1 = solarPoints[0].screenPos;
+      final Offset p2 = solarPoints[1].screenPos;
+      final Offset p3 = solarPoints[2].screenPos;
+      final Offset p0 = Offset(2 * p1.dx - p2.dx, 2 * p1.dy - p2.dy);
 
       // Calculate control points based on surrounding vectors
       final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
@@ -778,16 +755,12 @@ class GlobePainter extends CustomPainter {
       thisPath.moveTo(p1.dx, p1.dy);
       thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
       final v.Vector4 firstColorVector = colorValuesFromMap(
-        solarPathConfigurationList[i]
-            .data
-            .solarStrengthsLocalRelativeToGlobalMax,
+        solarPoints[0].data.solarStrengthsLocalRelativeToGlobalMax,
         false,
         colormap,
       );
       final v.Vector4 secondColorVector = colorValuesFromMap(
-        solarPathConfigurationList[i + 1]
-            .data
-            .solarStrengthsLocalRelativeToGlobalMax,
+        solarPoints[1].data.solarStrengthsLocalRelativeToGlobalMax,
         false,
         colormap,
       );
@@ -798,10 +771,160 @@ class GlobePainter extends CustomPainter {
         ]);
 
       output1.add((thisPath, thisPaint));
-      if (i == (solarPathConfigurationList.length / 2).toInt()) {
-        print('checking solar path: p1: $p1, p2: $p2');
-      }
+    } else {
+      // p0 is the first point
+      // create p1 by interpolating between first two points
+      // normal sunrise between p0 and p1
+      final double azFractionPastP0 =
+          ((0 - solarPoints[0].data.solarElevationAngle) /
+                  (solarPoints[1].data.solarElevationAngle -
+                      solarPoints[0].data.solarElevationAngle))
+              .clamp(0, 1);
+      final Path thisPath = Path();
+      final Offset p0 = solarPoints[0].screenPos;
+      final Offset p2 = solarPoints[1].screenPos;
+      final Offset p3 = solarPoints[2].screenPos;
+      final Offset p1 = Offset.lerp(p0, p2, azFractionPastP0)!;
+
+      // Calculate control points based on surrounding vectors
+      final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
+      final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
+
+      thisPath.moveTo(p1.dx, p1.dy);
+      thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      final v.Vector4 firstColorVector = colorValuesFromMap(
+        solarPoints[0].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final v.Vector4 secondColorVector = colorValuesFromMap(
+        solarPoints[1].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final Paint thisPaint = Paint.from(basePaintWithoutGradient)
+        ..shader = ui.Gradient.linear(p1, p2, [
+          firstColorVector.toColor,
+          secondColorVector.toColor,
+        ]);
+
+      output1.add((thisPath, thisPaint));
     }
+    // After this, no matter the situation, we are ready to create the path from i = 1 to i = 2;
+
+    for (int i = 1; i < lastIndexOverall - 1; i++) {
+      final int minute = solarPoints[i].data.tzDateTime.minute;
+      if (minute == 0) {
+        output2.add(solarPoints[i].screenPos);
+      }
+      final Path thisPath = Path();
+      final Offset p0 = solarPoints[i - 1].screenPos;
+      final Offset p1 = solarPoints[i].screenPos;
+      final Offset p2 = solarPoints[i + 1].screenPos;
+      final Offset p3 = solarPoints[i + 2].screenPos;
+
+      // Calculate control points based on surrounding vectors
+      final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
+      final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
+
+      thisPath.moveTo(p1.dx, p1.dy);
+      thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      final v.Vector4 firstColorVector = colorValuesFromMap(
+        solarPoints[i].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final v.Vector4 secondColorVector = colorValuesFromMap(
+        solarPoints[i + 1].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final Paint thisPaint = Paint.from(basePaintWithoutGradient)
+        ..shader = ui.Gradient.linear(p1, p2, [
+          firstColorVector.toColor,
+          secondColorVector.toColor,
+        ]);
+
+      output1.add((thisPath, thisPaint));
+    }
+
+    if (indexLastLight == lastIndexOverall) {
+      // p2 is last point
+      // create p3 by extrapolation
+      // 24 hour daylight
+      final int minute = solarPoints[lastIndexOverall].data.tzDateTime.minute;
+      if (minute == 0) {
+        output2.add(solarPoints[lastIndexOverall].screenPos);
+      }
+      final Path thisPath = Path();
+      final Offset p0 = solarPoints[lastIndexOverall - 2].screenPos;
+      final Offset p1 = solarPoints[lastIndexOverall - 1].screenPos;
+      final Offset p2 = solarPoints[lastIndexOverall].screenPos;
+      final Offset p3 = Offset(2 * p2.dx - p1.dx, 2 * p2.dy - p1.dy);
+
+      // Calculate control points based on surrounding vectors
+      final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
+      final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
+
+      thisPath.moveTo(p1.dx, p1.dy);
+      thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      final v.Vector4 firstColorVector = colorValuesFromMap(
+        solarPoints[0].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final v.Vector4 secondColorVector = colorValuesFromMap(
+        solarPoints[1].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final Paint thisPaint = Paint.from(basePaintWithoutGradient)
+        ..shader = ui.Gradient.linear(p1, p2, [
+          firstColorVector.toColor,
+          secondColorVector.toColor,
+        ]);
+
+      output1.add((thisPath, thisPaint));
+    } else {
+      // p2 is the last point
+      // create p3 by interpolating between last two points
+      // normal sunset
+      final double azFractionBeforeP3 =
+          ((0 - solarPoints[lastIndexOverall].data.solarElevationAngle) /
+                  (solarPoints[lastIndexOverall - 1].data.solarElevationAngle -
+                      solarPoints[lastIndexOverall].data.solarElevationAngle))
+              .clamp(0, 1);
+      final Path thisPath = Path();
+      final Offset p0 = solarPoints[lastIndexOverall - 2].screenPos;
+      final Offset p1 = solarPoints[lastIndexOverall - 1].screenPos;
+      final Offset p3 = solarPoints[lastIndexOverall].screenPos;
+      final Offset p2 = Offset.lerp(p3, p1, azFractionBeforeP3)!;
+
+      // Calculate control points based on surrounding vectors
+      final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
+      final Offset cp2 = p2 - (p3 - p1) * (tension / 3.0);
+
+      thisPath.moveTo(p1.dx, p1.dy);
+      thisPath.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+      final v.Vector4 firstColorVector = colorValuesFromMap(
+        solarPoints[0].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final v.Vector4 secondColorVector = colorValuesFromMap(
+        solarPoints[1].data.solarStrengthsLocalRelativeToGlobalMax,
+        false,
+        colormap,
+      );
+      final Paint thisPaint = Paint.from(basePaintWithoutGradient)
+        ..shader = ui.Gradient.linear(p1, p2, [
+          firstColorVector.toColor,
+          secondColorVector.toColor,
+        ]);
+
+      output1.add((thisPath, thisPaint));
+    }
+
     return (output1, output2);
   }
 
@@ -1142,12 +1265,16 @@ class GlobePainter extends CustomPainter {
             grassNormalTransformed.y * cos(grass.tiltAngle) >=
         0;
 
-    final SolarPathDetails solarPaths;
+    final SolarPaths solarPaths;
     final List<Offset> solarHourlyPoints;
-    (solarPaths, solarHourlyPoints) = solarPathsGenerator2(
+    if (inputData.length < 3) {
+      solarPaths = <(Path, Paint)>[];
+      solarHourlyPoints = <Offset>[];
+    } else {
+    (solarPaths, solarHourlyPoints) = solarPathsGenerator(
       globeR0,
       centerOffset,
-    );
+    );}
 
     // Start Painting!!!  Beware of order!!
     canvas.save();
@@ -1252,9 +1379,14 @@ class GlobePainter extends CustomPainter {
         centerOffset,
       );
 
+
       solarPaths.forEach(canvas.drawPathFromRecord);
       for (final Offset centerPoint in solarHourlyPoints) {
-        canvas.drawCircle(centerPoint, solarPathWidth/2, solarHourlyPointPaint);
+        canvas.drawCircle(
+          centerPoint,
+          solarPathWidth / 2,
+          solarHourlyPointPaint,
+        );
       }
     } else {
       // grass is NOT front facing, so draw noon arc first
@@ -1275,7 +1407,11 @@ class GlobePainter extends CustomPainter {
 
       solarPaths.forEach(canvas.drawPathFromRecord);
       for (final Offset centerPoint in solarHourlyPoints) {
-        canvas.drawCircle(centerPoint, solarPathWidth/2, solarHourlyPointPaint);
+        canvas.drawCircle(
+          centerPoint,
+          solarPathWidth / 2,
+          solarHourlyPointPaint,
+        );
       }
 
       canvas.save();

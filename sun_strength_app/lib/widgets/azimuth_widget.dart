@@ -81,16 +81,6 @@ class AzimuthChartWindow extends StatelessWidget {
                 ),
               ],
             ),
-            Consumer<DayDataNot>(
-              builder: (context, dayDataNotifier, _) {
-                final tz.TZDateTime hoverDateTimeRaw =
-                    dayDataNotifier.value[12 * 4].tzDateTime;
-                return Text(
-                  intl.DateFormat('d MMM yyyy').format(hoverDateTimeRaw),
-                  style: Theme.of(context).textTheme.titleSmall,
-                );
-              },
-            ),
             Container(
               alignment: Alignment.center,
               child: const GlobeVizHolder(),

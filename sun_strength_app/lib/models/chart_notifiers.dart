@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+
+class OrbSolValuesListNot extends ValueNotifier<List<OrbSolValues>> {
+  OrbSolValuesListNot(super.value, {this.lastK, this.lastcurrentChartSettings});
+
+  double? lastK;
+  ChartSettings? lastcurrentChartSettings;
+}
+
 class DayDataNot extends ValueNotifier<List<OrbSolValues>> {
   DayDataNot(super.value);
 
@@ -55,7 +63,7 @@ class DayDataNot extends ValueNotifier<List<OrbSolValues>> {
       return oldDayDataNotifier
         ..value = orbitAndSolarValuesListNotifier.value.sublist(
           96 * dayIndex,
-          96 * (dayIndex + 1),
+          96 * (dayIndex + 1) + 1, //I am adding one here so that a day's data contains the data from today at midnight until (and including) tomorrow at midnight.
         );
     }
   }

@@ -633,12 +633,6 @@ class ImagePainter extends CustomPainter {
   }
 }
 
-class OrbSolValuesListNot extends ValueNotifier<List<OrbSolValues>> {
-  OrbSolValuesListNot(super.value, {this.lastK, this.lastcurrentChartSettings});
-
-  double? lastK;
-  ChartSettings? lastcurrentChartSettings;
-}
 
 typedef TooltipInfo = ({
   Offset hoverBoxPosition,
