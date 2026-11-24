@@ -3,7 +3,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';

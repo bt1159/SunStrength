@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/screens/location_selection_route.dart';
 import 'screens/chart_route.dart';

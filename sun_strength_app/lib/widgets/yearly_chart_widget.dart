@@ -1,7 +1,7 @@
 import 'dart:core';
 import 'dart:math';
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/errors.dart';

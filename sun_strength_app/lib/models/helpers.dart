@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:color_map/color_map.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2833,8 +2833,8 @@ extension ColorManipulations on Color {
   }
 }
 
-class GreatCircleData {
-  const GreatCircleData({
+class GreatCircleXFormedData {
+  const GreatCircleXFormedData({
     required this.minorRadius,
     required this.tiltAngle,
     required this.frontFacing,
@@ -2847,11 +2847,30 @@ class GreatCircleData {
 }
 
 extension PathDrawingSugar on Canvas {
-  void drawPathFromRecord((Path path, Paint paint) input) {
-    drawPath(input.$1, input.$2);
+  void drawPathFromRecord(SolarPathAndPaint input) {
+    drawPath(input.path, input.paint);
   }
 }
 
+extension type const SolarXFormedPosAndData._(
+  ({Offset screenPos, OrbSolValues data}) _value
+) {
+  const SolarXFormedPosAndData({
+    required Offset screenPos,
+    required OrbSolValues data,
+  }) : _value = (screenPos: screenPos, data: data);
+
+  Offset get screenPos => _value.screenPos;
+  OrbSolValues get data => _value.data;
+
+}
+
+extension type const SolarPathAndPaint._(({Path path, Paint paint}) _value) {
+  const SolarPathAndPaint({required Path path, required Paint paint}) : _value = (path: path, paint: paint);
+
+  Path get path => _value.path;
+  Paint get paint => _value.paint;
+}
 
 class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
   final Offset hoverBoxPosition;
@@ -2910,4 +2929,17 @@ class MouseFollowingTooltipDelegate extends SingleChildLayoutDelegate {
   }
 }
 
+enum CoordinateAxis (
+  final double xValue,
+  final double yValue,
+  final double zValue) { 
+    posX(1,0,0),
+    negX(-1,0,0),
+    posY(0,1,0),
+    negY(0,-1,0),
+    posZ(0,0,1),
+    negZ(0,0,-1);
 
+    Vector3 get normalVector => Vector3(xValue, yValue, zValue);
+
+}
