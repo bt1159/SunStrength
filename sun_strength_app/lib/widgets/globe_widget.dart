@@ -1,15 +1,14 @@
-// Fix: If I want polar places to have full 24 hours, I will need to pass them more than one day OR they need to use the first as the last etc. so that it can wrap around.
-// Fix: In order to get the solar path to the horizon, take the last/first positive strength point.  Then, for the path that will get intercepted, find the point on the horizon by using elevation = 0 and linear interpolated azimuth.  That will be close enough.
-// ADD DOTS FOR EACH HOUR.  LABELS?  YES!
-// I think I actually have the colors for 24 hour and to the horizon mostly solved, expect that I didn't make the same changes for the hover, and I am using hover to check my math.
-// To be clear, there is still a gap, and I don't know why.
+// Fix: ADD LABELS FOR EACH HOUR.
+// FIX: the solar path is still backward
+// FIX: the solar path touches horizon at sunset but not at sunrise
 
 import 'dart:core';
 import 'dart:math';
 // import 'dart:collection';
 import 'dart:ui' as ui show Gradient, TextDirection;
+
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -107,12 +106,13 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
         return; // Cursor is over the brown ground underside
       }
     }
-    final List<SolarPoint> points = GlobePainter.solarPointsGenerator(
-      inputData: visibleSunOnlyData,
-      globeRadius: globeR0,
-      centerOffset: centerOffset,
-      canvasRot: __canvasOrientation,
-    );
+    final List<SolarXFormedPosAndData> points =
+        GlobePainter.solarXFormedPosGenerator(
+          inputData: visibleSunOnlyData,
+          globeRadius: globeR0,
+          centerOffset: centerOffset,
+          canvasRot: __canvasOrientation,
+        );
 
     final List<tz.TZDateTime> pointDateTimes = points
         .map((e) => e.data.tzDateTime)
@@ -129,7 +129,7 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
 
   ({OrbSolValues data, Offset anchorPos, double t})? hitTestSolarPath({
     required Offset cursor,
-    required List<SolarPoint> points,
+    required List<SolarXFormedPosAndData> points,
     double maxDistancePx = 14.0,
   }) {
     if (points.length < 2) return null;
@@ -504,10 +504,6 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
   }
 }
 
-typedef SolarPoint = ({Offset screenPos, OrbSolValues data});
-
-typedef SolarPaths = List<(Path path, Paint paint)>;
-
 class GlobePainter extends CustomPainter {
   GlobePainter({
     required this.inputData,
@@ -525,21 +521,9 @@ class GlobePainter extends CustomPainter {
   final v.Quaternion canvasRot;
   final v.Vector3 grassNormalTransformed;
   final Color appBackgroundColor;
-  final double solarPathWidth = 4.0;
 
-  static TextPainter textPainterCompassPoint(String text, Color color) =>
-      TextPainter(
-        text: TextSpan(
-          text: text,
-          style: TextStyle(
-            color: color,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: ui.TextDirection.ltr,
-      );
-
+  static final double solarPathWidth = 4.0;
+  static final Color compassPointTextColor = Colors.white;
   static const double textWidthScale = 0.7;
   static const double textBufferCoefficientNS = 0.1;
   static const Color grassColor = Colors.green;
@@ -550,7 +534,6 @@ class GlobePainter extends CustomPainter {
   static final Paint grassPaintLine = Paint.from(grassPaintFill)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 4.0;
-
   static final Color dirtColor = Color.fromARGB(255, 113, 76, 50);
   static final Paint dirtPaint = Paint()
     ..color = dirtColor
@@ -565,6 +548,21 @@ class GlobePainter extends CustomPainter {
     ..strokeWidth = 1.0
     ..style = PaintingStyle.stroke;
 
+  static final double ratioCardinalTipRadius = 0.9;
+  static final double ratioCardinalWidth = 0.25;
+  static final double ratioIntercardinalWidth = 0.15;
+  static final double ratioCardinalApparentStrokeWidth = 1.1;
+  static final double ratioIntercardinalApparentStrokeWidth = 0.9;
+  static final Paint solarHourlyPointPaint = Paint()
+    ..color = Colors.white.withAlpha(127)
+    ..strokeWidth = 0.0
+    ..style = PaintingStyle.fill;
+  static final (String, CoordinateAxis) northAxis = ('N', CoordinateAxis.negX);
+  static final (String, CoordinateAxis) southAxis = ('S', CoordinateAxis.posX);
+  static final (String, CoordinateAxis) eastAxis = ('E', CoordinateAxis.posZ);
+  static final (String, CoordinateAxis) westAxis = ('W', CoordinateAxis.negZ);
+  static final double compassPointTextPositionRatio = 0.85;  // How far along the globeRadius to located the compass point label
+
   static v.Vector3 convertCelestialAnglesToVector({
     required double azimuth,
     required double elevation,
@@ -575,18 +573,7 @@ class GlobePainter extends CustomPainter {
     return v.Vector3(x, y, z);
   }
 
-  static final double ratioCardinalTipRadius = 0.9;
-  static final double ratioCardinalWidth = 0.25;
-  static final double ratioIntercardinalWidth = 0.15;
-  static final double ratioCardinalApparentStrokeWidth = 1.1;
-  static final double ratioIntercardinalApparentStrokeWidth = 0.9;
-
-  Paint get solarHourlyPointPaint => Paint()
-    ..color = Colors.white.withAlpha(127)
-    ..strokeWidth = 0.0
-    ..style = PaintingStyle.fill;
-
-  static List<SolarPoint> solarPointsGenerator({
+  static List<SolarXFormedPosAndData> solarXFormedPosGenerator({
     required List<OrbSolValues> inputData,
     required v.Quaternion canvasRot,
     required double globeRadius,
@@ -602,22 +589,24 @@ class GlobePainter extends CustomPainter {
           .rotate(untransformedVector)
           .scaled(globeRadius);
 
-      return (
+      return SolarXFormedPosAndData(
         screenPos: transformedVector.toOffset + centerOffset,
         data: inputDataElement,
       );
     }).toList();
   }
 
-  static const double xRotAngle = pi / 12;
-
-  GreatCircleData projectGreatCircle(v.Vector3 unrotatedNormal, double radius) {
+  static GreatCircleXFormedData xFormGreatCircle({
+    required v.Quaternion canvasRot,
+    required v.Vector3 unrotatedNormal,
+    required double radius,
+  }) {
     final v.Vector3 n = canvasRot.conjugated().rotate(
       unrotatedNormal.normalized(),
     );
     final double tiltAngle = atan2(n.y, n.x) + pi / 2;
 
-    return GreatCircleData(
+    return GreatCircleXFormedData(
       minorRadius: n.z.abs() * radius,
       tiltAngle: tiltAngle,
       frontFacing: n.z < 0,
@@ -625,15 +614,21 @@ class GlobePainter extends CustomPainter {
     );
   }
 
-  void paintSkyGreatCircleThenRestore(
-    v.Vector3 unrotatedNormal,
-    double majorRadius,
-    Canvas canvas,
-    Offset centerOffset,
-  ) {
-    final GreatCircleData greatCircleData = projectGreatCircle(
-      unrotatedNormal,
-      majorRadius,
+  static void paintSkyGreatCircleThenRestore({
+    required v.Quaternion canvasRot,
+    required v.Vector3 unrotatedNormal,
+    required double majorRadius,
+    required Canvas canvas,
+    required Offset centerOffset,
+  }) {
+    final GreatCircleXFormedData greatCircleData = xFormGreatCircle(
+      canvasRot: canvasRot,
+      unrotatedNormal: unrotatedNormal,
+      radius: majorRadius,
+    );
+
+    final v.Vector3 grassNormalTransformed = canvasRot.conjugated().rotate(
+      v.Vector3(0, -1, 0),
     );
 
     final v.Vector3 grassIntersectionVector = grassNormalTransformed
@@ -689,27 +684,34 @@ class GlobePainter extends CustomPainter {
     canvas.restore();
   }
 
-  (SolarPaths solarPathDetails, List<Offset> solarHourlyPoints)
-  solarPathsGenerator(double globeRadius, centerOffset) {
-    final SolarPaths output1 = <(Path path, Paint paint)>[];
+  static (List<SolarPathAndPaint>, List<Offset>) solarPathsGenerator({
+    required double globeRadius,
+    required centerOffset,
+    required List<OrbSolValues> inputData,
+    required v.Quaternion canvasRot,
+    required Colormap? colormap,
+  }) {
+    final List<SolarPathAndPaint> output1 = <SolarPathAndPaint>[];
     final List<Offset> output2 = <Offset>[];
+    
+    // If not enough points in inputData, return empty lists
     if (inputData.length < 3) {
-    return (output1, output2);
+      return (output1, output2);
     }
 
-    final List<SolarPoint> solarPoints = solarPointsGenerator(
+    final List<SolarXFormedPosAndData> solarPoints = solarXFormedPosGenerator(
       centerOffset: centerOffset,
       canvasRot: canvasRot,
       globeRadius: globeRadius,
       inputData: inputData,
     );
-    final List<tz.TZDateTime> pointDateTimes = solarPoints
-        .map((e) => e.data.tzDateTime)
-        .toList();
-    print('in GlobePainter.paint, pointDateTimes: $pointDateTimes');
-    print(
-      'in GlobePainter.paint, pointDateTimes.length: ${pointDateTimes.length}',
-    );
+    // final List<tz.TZDateTime> pointDateTimes = solarPoints
+    //     .map((e) => e.data.tzDateTime)
+    //     .toList();
+    // print('in GlobePainter.paint, pointDateTimes: $pointDateTimes');
+    // print(
+    //   'in GlobePainter.paint, pointDateTimes.length: ${pointDateTimes.length}',
+    // );
 
     Paint basePaintWithoutGradient = Paint()
       ..style = PaintingStyle.stroke
@@ -723,12 +725,12 @@ class GlobePainter extends CustomPainter {
     final int lastIndexOverall = solarPoints.length - 1;
     final int indexFirstLight;
     final int indexLastLight;
-    if (solarPoints.first.data.solarElevationAngle > 0.0001) {
+    if (solarPoints.first.data.solarElevationAngle >= 0.0001) {
       indexFirstLight = 0;
     } else {
       indexFirstLight = 1;
     }
-    if (solarPoints.last.data.solarElevationAngle > 0.0001) {
+    if (solarPoints.last.data.solarElevationAngle >= 0.0001) {
       indexLastLight = lastIndexOverall;
     } else {
       indexLastLight = lastIndexOverall - 1;
@@ -770,12 +772,12 @@ class GlobePainter extends CustomPainter {
           secondColorVector.toColor,
         ]);
 
-      output1.add((thisPath, thisPaint));
+      output1.add(SolarPathAndPaint(path: thisPath, paint: thisPaint));
     } else {
       // p0 is the first point
       // create p1 by interpolating between first two points
       // normal sunrise between p0 and p1
-      final double azFractionPastP0 =
+      final double elFractionPastP0 =
           ((0 - solarPoints[0].data.solarElevationAngle) /
                   (solarPoints[1].data.solarElevationAngle -
                       solarPoints[0].data.solarElevationAngle))
@@ -784,7 +786,7 @@ class GlobePainter extends CustomPainter {
       final Offset p0 = solarPoints[0].screenPos;
       final Offset p2 = solarPoints[1].screenPos;
       final Offset p3 = solarPoints[2].screenPos;
-      final Offset p1 = Offset.lerp(p0, p2, azFractionPastP0)!;
+      final Offset p1 = Offset.lerp(p0, p2, elFractionPastP0)!;
 
       // Calculate control points based on surrounding vectors
       final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
@@ -808,7 +810,7 @@ class GlobePainter extends CustomPainter {
           secondColorVector.toColor,
         ]);
 
-      output1.add((thisPath, thisPaint));
+      output1.add(SolarPathAndPaint(path: thisPath, paint: thisPaint));
     }
     // After this, no matter the situation, we are ready to create the path from i = 1 to i = 2;
 
@@ -845,7 +847,7 @@ class GlobePainter extends CustomPainter {
           secondColorVector.toColor,
         ]);
 
-      output1.add((thisPath, thisPaint));
+      output1.add(SolarPathAndPaint(path: thisPath, paint: thisPaint));
     }
 
     if (indexLastLight == lastIndexOverall) {
@@ -884,12 +886,12 @@ class GlobePainter extends CustomPainter {
           secondColorVector.toColor,
         ]);
 
-      output1.add((thisPath, thisPaint));
+      output1.add(SolarPathAndPaint(path: thisPath, paint: thisPaint));
     } else {
       // p2 is the last point
       // create p3 by interpolating between last two points
       // normal sunset
-      final double azFractionBeforeP3 =
+      final double elFractionBeforeP3 =
           ((0 - solarPoints[lastIndexOverall].data.solarElevationAngle) /
                   (solarPoints[lastIndexOverall - 1].data.solarElevationAngle -
                       solarPoints[lastIndexOverall].data.solarElevationAngle))
@@ -898,7 +900,7 @@ class GlobePainter extends CustomPainter {
       final Offset p0 = solarPoints[lastIndexOverall - 2].screenPos;
       final Offset p1 = solarPoints[lastIndexOverall - 1].screenPos;
       final Offset p3 = solarPoints[lastIndexOverall].screenPos;
-      final Offset p2 = Offset.lerp(p3, p1, azFractionBeforeP3)!;
+      final Offset p2 = Offset.lerp(p3, p1, elFractionBeforeP3)!;
 
       // Calculate control points based on surrounding vectors
       final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
@@ -922,19 +924,21 @@ class GlobePainter extends CustomPainter {
           secondColorVector.toColor,
         ]);
 
-      output1.add((thisPath, thisPaint));
+      output1.add(SolarPathAndPaint(path: thisPath, paint: thisPaint));
     }
 
     return (output1, output2);
   }
 
-  void drawGroundLabelThenRestore(
-    Canvas canvas,
-    String text,
-    v.Vector3 unrotatedPos, // e.g., v.Vector3(-globeR0 * 0.85, 0, 0) for North
-    Offset centerOffset,
-    Color color,
-  ) {
+  static void drawGenericGroundLabelThenRestore({
+    required Canvas canvas,
+    required v.Quaternion canvasRot,
+    required String text,
+    required v.Vector3
+    unrotatedPos, // e.g., v.Vector3(-globeR0 * 0.85, 0, 0) for North
+    required Offset centerOffset,
+    Color? color,
+  }) {
     final v.Quaternion q = canvasRot.conjugated();
 
     // Rotate anchor position and the two local text axes into screen space
@@ -948,7 +952,19 @@ class GlobePainter extends CustomPainter {
     final double det2D = dU.x * dV.y - dU.y * dV.x;
     if (det2D.abs() < 1e-3) return;
 
-    final TextPainter tp = textPainterCompassPoint(text, color)..layout();
+    // final TextPainter tp = textPainterCompassPoint(text, color)..layout();
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color ?? compassPointTextColor,
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
 
     // Column-major Matrix4 mapping (u, v) -> pos + u * dU + v * dV
     final Matrix4 transform = Matrix4(
@@ -976,6 +992,63 @@ class GlobePainter extends CustomPainter {
     tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
     canvas.restore();
   }
+
+  static void drawNorthGroundLabelThenRestore({
+    required Canvas canvas,
+    required v.Quaternion canvasRot,
+    required Offset centerOffset,
+    required double globeRadius,
+    Color? color,
+  }) => drawGenericGroundLabelThenRestore(
+    canvas: canvas,
+    canvasRot: canvasRot,
+    centerOffset: centerOffset,
+    color: color,
+    text: northAxis.$1,
+    unrotatedPos: northAxis.$2.normalVector * globeRadius * compassPointTextPositionRatio,
+  );
+  static void drawSouthGroundLabelThenRestore({
+    required Canvas canvas,
+    required v.Quaternion canvasRot,
+    required Offset centerOffset,
+    required double globeRadius,
+    Color? color,
+  }) => drawGenericGroundLabelThenRestore(
+    canvas: canvas,
+    canvasRot: canvasRot,
+    centerOffset: centerOffset,
+    color: color,
+    text: southAxis.$1,
+    unrotatedPos: southAxis.$2.normalVector * globeRadius * compassPointTextPositionRatio,
+  );
+  static void drawEastGroundLabelThenRestore({
+    required Canvas canvas,
+    required v.Quaternion canvasRot,
+    required Offset centerOffset,
+    required double globeRadius,
+    Color? color,
+  }) => drawGenericGroundLabelThenRestore(
+    canvas: canvas,
+    canvasRot: canvasRot,
+    centerOffset: centerOffset,
+    color: color,
+    text: eastAxis.$1,
+    unrotatedPos: eastAxis.$2.normalVector * globeRadius * compassPointTextPositionRatio,
+  );
+  static void drawWestGroundLabelThenRestore({
+    required Canvas canvas,
+    required v.Quaternion canvasRot,
+    required Offset centerOffset,
+    required double globeRadius,
+    Color? color,
+  }) => drawGenericGroundLabelThenRestore(
+    canvas: canvas,
+    canvasRot: canvasRot,
+    centerOffset: centerOffset,
+    color: color,
+    text: westAxis.$1,
+    unrotatedPos: westAxis.$2.normalVector * globeRadius * compassPointTextPositionRatio,
+  );
 
   static Path pathFromVectorList(
     Iterable<v.Vector3> vectorList,
@@ -1239,7 +1312,6 @@ class GlobePainter extends CustomPainter {
       2 * globeR0,
       2 * globeR0,
     );
-
     final Paint nonCardingalPaint = Paint()
       ..color = grassColor.darkened(0.25)
       ..style = PaintingStyle.fill;
@@ -1255,9 +1327,10 @@ class GlobePainter extends CustomPainter {
     // of a radial line on a true circle that would pass through the final point (i.e.,
     // eccentric anomaly).
 
-    final GreatCircleData grass = projectGreatCircle(
-      v.Vector3(0, -1, 0),
-      globeR0,
+    final GreatCircleXFormedData grass = xFormGreatCircle(
+      canvasRot: canvasRot,
+      unrotatedNormal: v.Vector3(0, -1, 0),
+      radius: globeR0,
     );
 
     final bool skySweepAnglePositive =
@@ -1265,16 +1338,20 @@ class GlobePainter extends CustomPainter {
             grassNormalTransformed.y * cos(grass.tiltAngle) >=
         0;
 
-    final SolarPaths solarPaths;
+    final List<SolarPathAndPaint> solarPaths;
     final List<Offset> solarHourlyPoints;
     if (inputData.length < 3) {
-      solarPaths = <(Path, Paint)>[];
+      solarPaths = <SolarPathAndPaint>[];
       solarHourlyPoints = <Offset>[];
     } else {
-    (solarPaths, solarHourlyPoints) = solarPathsGenerator(
-      globeR0,
-      centerOffset,
-    );}
+      (solarPaths, solarHourlyPoints) = solarPathsGenerator(
+        globeRadius: globeR0,
+        centerOffset: centerOffset,
+        canvasRot: canvasRot,
+        colormap: colormap,
+        inputData: inputData,
+      );
+    }
 
     // Start Painting!!!  Beware of order!!
     canvas.save();
@@ -1337,48 +1414,48 @@ class GlobePainter extends CustomPainter {
         );
         canvas.restore();
       }
-      drawGroundLabelThenRestore(
-        canvas,
-        'N',
-        v.Vector3(-0.85 * globeR0, 0, 0),
-        centerOffset,
-        Colors.white,
+      drawNorthGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'S',
-        v.Vector3(0.85 * globeR0, 0, 0),
-        centerOffset,
-        Colors.white,
+      drawSouthGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'E',
-        v.Vector3(0, 0, 0.85 * globeR0),
-        centerOffset,
-        Colors.white,
+      drawEastGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'W',
-        v.Vector3(0, 0, -0.85 * globeR0),
-        centerOffset,
-        Colors.white,
+      drawWestGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
       );
 
+      // Paint the Celestrial Meridian
       paintSkyGreatCircleThenRestore(
-        v.Vector3(0, 0, 1),
-        globeR0,
-        canvas,
-        centerOffset,
-      );
-      paintSkyGreatCircleThenRestore(
-        v.Vector3(1, 0, 0),
-        globeR0,
-        canvas,
-        centerOffset,
+        canvasRot: canvasRot,
+        unrotatedNormal: v.Vector3(0, 0, 1),
+        majorRadius: globeR0,
+        canvas: canvas,
+        centerOffset: centerOffset,
       );
 
+      // Paint the Prime Vertical
+      paintSkyGreatCircleThenRestore(
+        canvasRot: canvasRot,
+        unrotatedNormal: v.Vector3(1, 0, 0),
+        majorRadius: globeR0,
+        canvas: canvas,
+        centerOffset: centerOffset,
+      );
 
       solarPaths.forEach(canvas.drawPathFromRecord);
       for (final Offset centerPoint in solarHourlyPoints) {
@@ -1392,17 +1469,22 @@ class GlobePainter extends CustomPainter {
       // grass is NOT front facing, so draw noon arc first
       canvas.restore();
 
+      // Paint the Celestrial Meridian
       paintSkyGreatCircleThenRestore(
-        v.Vector3(0, 0, 1),
-        globeR0,
-        canvas,
-        centerOffset,
+        canvasRot: canvasRot,
+        unrotatedNormal: CoordinateAxis.posZ.normalVector,
+        majorRadius: globeR0,
+        canvas: canvas,
+        centerOffset: centerOffset,
       );
+
+      // Paint the Prime Vertical
       paintSkyGreatCircleThenRestore(
-        v.Vector3(1, 0, 0),
-        globeR0,
-        canvas,
-        centerOffset,
+        canvasRot: canvasRot,
+        unrotatedNormal: CoordinateAxis.posX.normalVector,
+        majorRadius: globeR0,
+        canvas: canvas,
+        centerOffset: centerOffset,
       );
 
       solarPaths.forEach(canvas.drawPathFromRecord);
@@ -1430,33 +1512,34 @@ class GlobePainter extends CustomPainter {
         canvas.drawLine(Offset(-globeR0, 0), Offset(globeR0, 0), dirtPaint);
       }
       canvas.restore();
-      drawGroundLabelThenRestore(
-        canvas,
-        'N',
-        v.Vector3(-0.85 * globeR0, 0, 0),
-        centerOffset,
-        darkBrown,
+
+      drawNorthGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
+        color: darkBrown,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'S',
-        v.Vector3(0.85 * globeR0, 0, 0),
-        centerOffset,
-        darkBrown,
+      drawSouthGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
+        color: darkBrown,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'E',
-        v.Vector3(0, 0, 0.85 * globeR0),
-        centerOffset,
-        darkBrown,
+      drawEastGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
+        color: darkBrown,
       );
-      drawGroundLabelThenRestore(
-        canvas,
-        'W',
-        v.Vector3(0, 0, -0.85 * globeR0),
-        centerOffset,
-        darkBrown,
+      drawWestGroundLabelThenRestore(
+        canvas: canvas,
+        canvasRot: canvasRot,
+        centerOffset: centerOffset,
+        globeRadius: globeR0,
+        color: darkBrown,
       );
     }
   }

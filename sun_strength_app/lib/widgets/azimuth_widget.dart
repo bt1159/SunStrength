@@ -1,10 +1,6 @@
 import 'dart:core';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' as intl;
-import 'package:provider/provider.dart';
-import 'package:timezone/timezone.dart' as tz;
+import 'package:material_ui/material_ui.dart';
 import 'package:sun_strength_app/models/helpers.dart';
-import 'package:sun_strength_app/models/chart_notifiers.dart';
 // import 'package:sun_strength_app/widgets/birdseye_widget.dart';
 import 'package:sun_strength_app/widgets/globe_widget.dart';
 

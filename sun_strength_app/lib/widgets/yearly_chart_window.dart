@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
