@@ -70,7 +70,7 @@ class MyApp extends StatelessWidget {
         builder: (context, isInitialized, child) {
           if (!isInitialized) {
             return MaterialApp(
-              title: 'Flutter Demo',
+              title: 'TrueUV',
               debugShowCheckedModeBanner: false,
               theme: ThemeData(
                 colorScheme: .fromSeed(seedColor: Colors.deepPurple),
