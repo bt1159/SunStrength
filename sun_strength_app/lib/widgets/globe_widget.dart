@@ -268,7 +268,7 @@ class _GlobeVizHolderState extends State<GlobeVizHolder> {
             final List<OrbSolValues> visibleSunOnlyData = dayDataNotifier.value
                 .sublist(
                   max(firstDaylightIndex - 1, 0),
-                  min(lastDaylightIndex + 1, dayDataNotifier.value.length),
+                  min(lastDaylightIndex + 2, dayDataNotifier.value.length),
                 );
             print(
               'visibleSunOnlyData uses firstDaylightIndex - 1: ${firstDaylightIndex - 1} and lastDaylightIndex + 1: ${lastDaylightIndex + 1}',
