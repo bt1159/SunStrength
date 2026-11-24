@@ -777,16 +777,35 @@ class GlobePainter extends CustomPainter {
       // p0 is the first point
       // create p1 by interpolating between first two points
       // normal sunrise between p0 and p1
+      final double p1Elevation = 0;
       final double elFractionPastP0 =
-          ((0 - solarPoints[0].data.solarElevationAngle) /
+          ((p1Elevation - solarPoints[0].data.solarElevationAngle) /
                   (solarPoints[1].data.solarElevationAngle -
                       solarPoints[0].data.solarElevationAngle))
               .clamp(0, 1);
+      
+      double deltaAz = solarPoints[1].data.solarAzimuthAngle - solarPoints[0].data.solarAzimuthAngle;
+      if (dAz > pi) dAz -= 2 * pi;
+      if (dAz < -pi) dAz += 2 * pi;
+      final double p1Azimuth = solarPoints[0].data.solarAzimuthAngle + deltaAz * elFractionPastP0;
+
+
+      final v.Vector3 untransformedP1 = convertCelestialAnglesToVector(
+        elevation: p1Elevation,
+        azimuth: p1Azimuth,
+      );
+      final v.Vector3 transformedP1 = canvasRot
+          .conjugated()
+          .rotate(untransformedP1)
+          .scaled(globeRadius);
+
+      
+      
       final Path thisPath = Path();
       final Offset p0 = solarPoints[0].screenPos;
       final Offset p2 = solarPoints[1].screenPos;
       final Offset p3 = solarPoints[2].screenPos;
-      final Offset p1 = Offset.lerp(p0, p2, elFractionPastP0)!;
+      final Offset p1 = transformedP1.toOffset + centerOffset;
 
       // Calculate control points based on surrounding vectors
       final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
@@ -890,17 +909,37 @@ class GlobePainter extends CustomPainter {
     } else {
       // p2 is the last point
       // create p3 by interpolating between last two points
-      // normal sunset
+      // normal sunsetfinal double p1Elevation = 0;
+      final double p2Elevation = 0;
       final double elFractionBeforeP3 =
           ((0 - solarPoints[lastIndexOverall].data.solarElevationAngle) /
                   (solarPoints[lastIndexOverall - 1].data.solarElevationAngle -
                       solarPoints[lastIndexOverall].data.solarElevationAngle))
               .clamp(0, 1);
+
+      
+      double deltaAz = solarPoints[lastIndexOverall - 1].data.solarAzimuthAngle - solarPoints[lastIndexOverall].data.solarAzimuthAngle;
+      if (dAz > pi) dAz -= 2 * pi;
+      if (dAz < -pi) dAz += 2 * pi;
+      final double p2Azimuth = solarPoints[lastIndexOverall].data.solarAzimuthAngle + deltaAz * elFractionBeforeP3;
+
+
+      final v.Vector3 untransformedP2 = convertCelestialAnglesToVector(
+        elevation: p2Elevation,
+        azimuth: p2Azimuth,
+      );
+      final v.Vector3 transformedP2 = canvasRot
+          .conjugated()
+          .rotate(untransformedP2)
+          .scaled(globeRadius);
+
+
+      
       final Path thisPath = Path();
       final Offset p0 = solarPoints[lastIndexOverall - 2].screenPos;
       final Offset p1 = solarPoints[lastIndexOverall - 1].screenPos;
       final Offset p3 = solarPoints[lastIndexOverall].screenPos;
-      final Offset p2 = Offset.lerp(p3, p1, elFractionBeforeP3)!;
+      final Offset p2 = transformedP2.toOffset + centerOffset;
 
       // Calculate control points based on surrounding vectors
       final Offset cp1 = p1 + (p2 - p0) * (tension / 3.0);
