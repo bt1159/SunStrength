@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:vector_math/vector_math_64.dart';
@@ -280,11 +279,11 @@ double calculateSolarElevationAngle({
 /// clockwise direction to the location of the sun projected onto the Earth's
 /// surface (i.e., the compass direction towards the sun).
 ///
-/// * [orbitalRadiusVector]: The instantaneous 3D vector from the center of the 
+/// * [orbitalRadiusVector]: The instantaneous 3D vector from the center of the
 /// Sun to the center of the Earth.
-/// * [earthRadiusVector]: The instantaneous 3D vector from the center of the 
-/// Earth to the observer.  The magnititude is always equal to the radius of the 
-/// Earth, but vector also encodes the relative location of the observer and the 
+/// * [earthRadiusVector]: The instantaneous 3D vector from the center of the
+/// Earth to the observer.  The magnititude is always equal to the radius of the
+/// Earth, but vector also encodes the relative location of the observer and the
 /// Earth.
 double calculateSolarAzimuthAngle({
   required double latRad,
@@ -298,35 +297,30 @@ double calculateSolarAzimuthAngle({
   /// Vector from center of Earth to the Sun
   final Vector3 opNeg = -orbitalRadiusVector;
 
-  /// Vector
+  /// Vector from the observer to the North Pole.  Note: This full 3D vector is
+  /// not particularly useful since it is NOT tangent to the surface of the
+  /// Earth.  To be an observer's actual North direction vector, this vector
+  /// needs to be projected onto the observer's tangent plane to the surface.
   final Vector3 rN = reNorthPole - earthRadiusVector;
+
+  /// Vector from the observer, tangent to the surface of the Earth, pointing
+  /// North.  This is the correct vector to use to measure azimuth.
   final Vector3 rNTang =
       rN -
       earthRadiusVector * earthRadiusVector.dot(rN) / pow(rEarth, 2).toDouble();
-  final double cosAlpha =
-      (rEarth * opNeg.dot(rNTang)) /
-      (sqrt(
-            pow(rEarth, 2) * pow(orbitalRadiusMagnitude, 2) -
-                pow(earthRadiusVector.dot(opNeg), 2),
-          ) *
-          rNTang.length);
-  final double alphaRaw = acos(cosAlpha.clamp(-1.0, 1.0));
 
-  // Since cosine is symmetrical about x = 0, if we stopped here and used
-  // alphaRaw, we would only get results between 0 and 180.  Instead, we use
-  // sign to determine whether the angle should be 0 to 180 or 180 to 360.
-  final double sign =
-      earthRadiusVector.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
-      earthRadiusVector.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
-      earthRadiusVector.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
-  final double alpha;
-  if (sign < 0) {
-    alpha = 2 * pi - alphaRaw;
-  } else {
-    alpha = alphaRaw;
+  final Vector3 observerNorthAxis = rNTang.normalized();
+  final Vector3 observerUpAxis = earthRadiusVector.normalized();
+  final Vector3 observerEastAxis = observerNorthAxis.cross(observerUpAxis);
+
+  final double opNegNorthComponent = opNeg.dot(observerNorthAxis);
+  final double opNegEastComponent = opNeg.dot(observerEastAxis);
+  // atan2(y, x) with (East, North) naturally gives clockwise angle from North in [-pi, pi]
+  double azimuth = atan2(opNegEastComponent, opNegNorthComponent);
+  if (azimuth < 0) {
+    azimuth += 2 * pi;
   }
-
-  return alpha;
+  return azimuth;
 }
 
 double calculateSolarStrengthRelativeToGlobalMax({
