@@ -102,30 +102,22 @@ class PinnedChartPageHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 800),
-        child: SizedBox(
-          width: double.infinity,
-          child: Consumer<ChartSettingsNot>(
-            builder: (context, chartSettingsNot, child) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    chartSettingsNot.value!.location.name,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Text(
-                    chartSettingsNot.value!.year.toString(),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
+    return Consumer<ChartSettingsNot>(
+      builder: (context, chartSettingsNot, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              chartSettingsNot.value!.location.name,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            Text(
+              chartSettingsNot.value!.year.toString(),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -139,7 +131,8 @@ class ScrollableChartPageContent extends StatelessWidget {
       child: SingleChildScrollView(
         child: RowToColumnRenderWidget(
           key: ValueKey('Column of two widgets in chart'),
-          rowSpacing: 40,
+          rowSpacing: 100,
+          rowMainAxisAlignment: MainAxisAlignment.center,
           columnCrossAxisAlignment: CrossAxisAlignment.stretch,
           columnSpacing: 10,
           children: [

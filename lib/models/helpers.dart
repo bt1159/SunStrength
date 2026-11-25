@@ -429,19 +429,6 @@ abstract class ColorMapPicker {
       .$2;
 }
 
-// TODO: Is this the same as the formula in orbit_calcs calculateSolarStrengthRelativeToGlobalMax?
-double solarStrengthLocalRelativeToGlobalMax({
-  required double k,
-  required double h,
-  required double theta,
-}) => exp(
-  k *
-      (1 -
-          exp(-h / 8.5) /
-              (cos(pi / 2 - theta) +
-                  0.50572 * pow(6.07995 + degrees(theta), -1.6364))),
-).clamp(0.0, 1.0);
-
 typedef MyColorScheme = (String name, Colormap colormap);
 typedef MyColorSchemes = List<MyColorScheme>;
 final MyColorSchemes colorSchemes = [
@@ -449,27 +436,6 @@ final MyColorSchemes colorSchemes = [
   ('gist_heat', Colormaps.gist_heat),
   ('hot', Colormaps.hot),
 ];
-List<(List<double>, List<Color>)> myColorSchemesDiscrete({
-  required double k,
-  required double h,
-}) => List.generate(colorSchemes.length, (index) {
-  final List<double> thetas = List.generate(
-    15,
-    (innerIndex) => (1 - innerIndex / 14) * (pi / 2),
-  );
-  final List<double> radii = thetas.map((theta) => cos(theta)).toList();
-  final List<Vector4> colorVectors = thetas
-      .map(
-        (theta) => colorValuesFromMap(
-          solarStrengthLocalRelativeToGlobalMax(k: k, h: h, theta: theta),
-          false,
-          colorSchemes[index].$2,
-        ),
-      )
-      .toList();
-  final List<Color> colors = colorVectors.map((e) => e.toColor).toList();
-  return (radii, colors);
-});
 
 /// J2000
 final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
@@ -632,7 +598,6 @@ class ImagePainter extends CustomPainter {
     return oldDelegate.image != image;
   }
 }
-
 
 typedef TooltipInfo = ({
   Offset hoverBoxPosition,

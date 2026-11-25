@@ -1,13 +1,18 @@
 import 'dart:ui';
 import 'dart:math';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:sun_strength_app/models/main_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:sun_strength_app/models/chart_notifiers.dart';
+import 'package:sun_strength_app/models/orbit_calcs.dart';
+
 import 'dart:core';
+
 import 'package:intl/intl.dart' as intl;
 import 'package:provider/provider.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 class BirdsEyeWidget extends StatelessWidget {
   const BirdsEyeWidget({super.key});
@@ -49,82 +54,89 @@ class BirdsEyeWidget extends StatelessWidget {
           selector: (_, savedAppSettingsNotifier) =>
               savedAppSettingsNotifier.value?.colorScheme,
           shouldRebuild: (previous, next) => previous?.$1 != next?.$1,
-          builder: (context, myColorScheme, _) => Selector<SavedSettingsNot, bool>(
-            selector: (_, savedAppSettingsNotifier) =>
-                savedAppSettingsNotifier.value?.twelveHour ?? true,
-            builder: (context, twelveHour, _) => Selector<ChartSettingsNot, double>(
-              selector: (_, currentChartSettingsNotifier) =>
-                  currentChartSettingsNotifier
-                      .value
-                      ?.location
-                      .latLng
-                      .latitude ??
-                  0,
-              builder: (context, latitude, _) {
-                return Consumer<KNot>(
-                  builder: (context, kNotifier, _) {
-                    return Padding(
-                      padding: const EdgeInsets.all(40.0),
-                      child: Consumer<AzChartSizeNotifier>(
-                        builder: (context, azChartSizeNotifier, _) {
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double targetWidth;
-                              switch (azChartSizeNotifier.value) {
-                                case AzChartSize.small:
-                                  targetWidth = max(
-                                    200.0,
-                                    constraints.maxWidth / 4,
+          builder: (context, myColorScheme, _) =>
+              Selector<SavedSettingsNot, bool>(
+                selector: (_, savedAppSettingsNotifier) =>
+                    savedAppSettingsNotifier.value?.twelveHour ?? true,
+                builder: (context, twelveHour, _) =>
+                    Selector<ChartSettingsNot, double>(
+                      selector: (_, currentChartSettingsNotifier) =>
+                          currentChartSettingsNotifier
+                              .value
+                              ?.location
+                              .latLng
+                              .latitude ??
+                          0,
+                      builder: (context, latitude, _) {
+                        return Consumer<KNot>(
+                          builder: (context, kNotifier, _) {
+                            return Padding(
+                              padding: const EdgeInsets.all(40.0),
+                              child: Consumer<AzChartSizeNotifier>(
+                                builder: (context, azChartSizeNotifier, _) {
+                                  return LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final double targetWidth;
+                                      switch (azChartSizeNotifier.value) {
+                                        case AzChartSize.small:
+                                          targetWidth = max(
+                                            200.0,
+                                            constraints.maxWidth / 4,
+                                          );
+                                          break;
+                                        case AzChartSize.medium:
+                                          targetWidth =
+                                              (max(
+                                                    200.0,
+                                                    constraints.maxWidth / 4,
+                                                  ) +
+                                                  constraints.maxWidth) /
+                                              2;
+                                          break;
+                                        case AzChartSize.large:
+                                          targetWidth = constraints.maxWidth;
+                                          break;
+                                      }
+                                      return ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: targetWidth,
+                                        ),
+                                        child: AspectRatio(
+                                          aspectRatio: 1.0,
+                                          child: CustomPaint(
+                                            painter: BirdsEyePainter(
+                                              twelveHour: twelveHour,
+                                              lat: latitude,
+                                              azimuthChartData:
+                                                  azimuthChartData,
+                                              colorScheme:
+                                                  myColorScheme ??
+                                                  constMyColorScheme,
+                                              appBackgroundColor: Theme.of(
+                                                context,
+                                              ).colorScheme.surface,
+                                              k: kNotifier.value,
+                                              h:
+                                                  context
+                                                      .read<ChartSettingsNot>()
+                                                      .value
+                                                      ?.h ??
+                                                  0,
+                                              // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   );
-                                  break;
-                                case AzChartSize.medium:
-                                  targetWidth =
-                                      (max(200.0, constraints.maxWidth / 4) +
-                                          constraints.maxWidth) /
-                                      2;
-                                  break;
-                                case AzChartSize.large:
-                                  targetWidth = constraints.maxWidth;
-                                  break;
-                              }
-                              return ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: targetWidth,
-                                ),
-                                child: AspectRatio(
-                                  aspectRatio: 1.0,
-                                  child: CustomPaint(
-                                    painter: BirdsEyePainter(
-                                      twelveHour: twelveHour,
-                                      lat: latitude,
-                                      azimuthChartData: azimuthChartData,
-                                      colorScheme:
-                                          myColorScheme ?? constMyColorScheme,
-                                      appBackgroundColor: Theme.of(
-                                        context,
-                                      ).colorScheme.surface,
-                                      k: kNotifier.value,
-                                      h:
-                                          context
-                                              .read<ChartSettingsNot>()
-                                              .value
-                                              ?.h ??
-                                          0,
-                                      // We can safely use context.read here because the only time h will change is if the location changes, and that will automatically rebuild the entire thing.
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+              ),
         );
       },
     );
@@ -494,13 +506,11 @@ class BirdsEyePainter extends CustomPainter {
       final String hourText;
 
       if (twelveHour) {
-        hourText = intl.DateFormat(
-          'h:mm a',
-        ).format(hourMarkerCenterPoint.tzDateTime);
+        hourText = intl.DateFormat('h:mm a')
+            .format(hourMarkerCenterPoint.tzDateTime);
       } else {
-        hourText = intl.DateFormat(
-          'HH:mm',
-        ).format(hourMarkerCenterPoint.tzDateTime);
+        hourText = intl.DateFormat('HH:mm')
+            .format(hourMarkerCenterPoint.tzDateTime);
       }
 
       final double latAboveEq = lat >= 0 ? 1 : -1;
@@ -588,22 +598,37 @@ class BirdsEyePainter extends CustomPainter {
       (element) => element.$1 == colorScheme.$1,
     );
 
-    final List<(List<double>, List<Color>)> myColorSchemesDiscreteSpecific =
-        myColorSchemesDiscrete(k: k, h: h);
+    final List<double> elevationAngleStops = List.generate(
+      15,
+      (innerIndex) => (1 - innerIndex / 14) * (pi / 2),
+    );
+
+    final List<double> radiusStops = elevationAngleStops
+        .map((theta) => cos(theta))
+        .toList();
+    final List<Vector4> colorVectors = elevationAngleStops
+        .map(
+          (elevationAngle) => colorValuesFromMap(
+            calculateSolarStrengthRelativeToGlobalMax(
+              k: k,
+              h: h,
+              solarElevationAngle: elevationAngle,
+            ),
+            false,
+            colorSchemes[colorSchemeIndex].$2,
+          ),
+        )
+        .toList();
+
+    final List<Color> colors = colorVectors.map((e) => e.toColor).toList();
+    
 
     final RadialGradient solarGradient = RadialGradient(
       center: Alignment.center,
       radius: 0.5, // Relative to the Rect provided in createShader
-      colors: myColorSchemesDiscreteSpecific[colorSchemeIndex].$2,
-      stops: myColorSchemesDiscreteSpecific[colorSchemeIndex].$1,
+      colors: colors,
+      stops: radiusStops,
     );
-
-    // print(
-    //   'calculating solarGradient, colors: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$2}',
-    // );
-    // print(
-    //   'calculating solarGradient, stops: ${myColorSchemesDiscreteSpecific[colorSchemeIndex].$1}',
-    // );
 
     final List<Offset> correctedPoints = points
         .map((e) => (e) * boundingCircleRadius + centerOffset)

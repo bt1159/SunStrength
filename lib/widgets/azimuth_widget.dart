@@ -1,5 +1,8 @@
 import 'dart:core';
+
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sun_strength_app/models/chart_notifiers.dart';
 import 'package:sun_strength_app/models/helpers.dart';
 // import 'package:sun_strength_app/widgets/birdseye_widget.dart';
 import 'package:sun_strength_app/widgets/globe_widget.dart';
@@ -23,9 +26,24 @@ class AzimuthChartWindow extends StatelessWidget {
               rowCrossAxisAlignment: CrossAxisAlignment.center,
               columnCrossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Sun strength and location on a single day',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sun strength and location on a single day',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    C<DayDataNot>(
+                      builder: (context, dayDataNot, _) {
+                        return Text(
+                          DateFormat('d MMM yyyy').format(dayDataNot.value.first.tzDateTime),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontStyle: FontStyle.italic),
+                        );
+                      },
+                      
+                    ),
+                  ],
                 ),
                 C<AzChartSizeNotifier>(
                   builder: (context, azChartSizeNotifier, _) {
