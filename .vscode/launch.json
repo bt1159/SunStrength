@@ -4,22 +4,22 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "Flutter Web (chrome)",            
+            "name": "sun_strength_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "sun_strength_app (profile mode)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "chrome"
-        },{
-            "name": "Flutter Web (edge)",            
+            "flutterMode": "profile"
+        },
+        {
+            "name": "sun_strength_app (release mode)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "edge"
-        },{
-            "name": "Flutter Web (Remote Tunnel)",            
-            "request": "launch",
-            "type": "dart",
-            "deviceId": "web-server"
+            "flutterMode": "release"
         }
     ]
 }
