@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:sun_strength_app/models/helpers.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:vector_math/vector_math_64.dart';
@@ -53,9 +54,6 @@ const double yearLength = 365.242190402;
 const double h1 = 0;
 final num maxRelativeSolarStrengthAtEquator = pow(0.7, pow(1, 0.678));
 
-// /// J2000
-// final tz.TZDateTime date0J2000 = tz.TZDateTime.utc(2000, 1, 1, 12, 0, 0);
-
 /// Vector from center of the Earth to the North Pole.  Used to calculate solar azimuth angle.
 final Vector3 reNorthPole = Vector3(rEarth * sin(tilt), 0, rEarth * cos(tilt));
 
@@ -67,8 +65,6 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
   required tz.Location timeZone,
   required int year,
 }) {
-  final DateTime t0 = DateTime.now();
-
   /// The convention should be that lat and lon are in degrees while latRad and lonRad are in radians
   final double latRad = radians(lat.toDouble());
 
@@ -78,15 +74,10 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
   /// Midnight Jan first in the year provided and the timezone provided.
   final tz.TZDateTime dateTime0 = tz.TZDateTime(timeZone, year, 1, 1, 0, 0, 0);
 
-
   /// Number of days in the year provided (i.e., is it a leap year)
   final int nDays = isLeapYear(year) ? 366 : 365;
 
-  // print(
-  //   'inside calculateOrbitAndSolarValuesIterable(), nDays: $nDays, timeZone: ${timeZone.name}, year: $year, dateTime0: $dateTime0, other dateTime: ${dateTime0.copyWith(year: dateTime0.year + 1)}',
-  // );
-
-  /// Number of hours between J2000 and dateTIme0
+  /// Number of hours between J2000 and dateTime0
   final int initialHOffsetFromJ2000 = dateTime0.difference(date0J2000).inHours;
 
   /// List of offsets in hours from J2000 for each 15-minute interval of the year provided
@@ -95,16 +86,15 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
     (i) => initialHOffsetFromJ2000 + i / 4,
   );
 
-  
-  // print(
-  //   'inside calculateOrbitAndSolarValuesIterable(), hOffsetsFromJ2000: $hOffsetsFromJ2000',
-  // );
-
   /// A custom class containing all relevant data for all of the hour offsets
   final Iterable<OrbSolValues> output = hOffsetsFromJ2000.map((
     hOffsetFromJ2000,
   ) {
-    final tz.TZDateTime tzDateTime = calculateTZDateTime(dateTime0, initialHOffsetFromJ2000, hOffsetFromJ2000);
+    final tz.TZDateTime tzDateTime = calculateTZDateTime(
+      dateTime0,
+      initialHOffsetFromJ2000,
+      hOffsetFromJ2000,
+    );
     final double earthRotationAngle = calculateERA(hOffsetFromJ2000);
     final double meanAnomaly = calculateMeanAnomaly(hOffsetFromJ2000);
     final double eccentricAnomaly = calculateEccentricAnomaly(meanAnomaly);
@@ -130,9 +120,9 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
       lonRad: lonRad,
       earthRotationAngle: earthRotationAngle,
       trueAnomaly: trueAnomaly,
-      orbitalRadiusMag: orbitalRadiusMag,
-      orbitalRadius: orbitalRadius,
-      earthRadius: earthRadius,
+      orbitalRadiusMagnitude: orbitalRadiusMag,
+      orbitalRadiusVector: orbitalRadius,
+      earthRadiusVector: earthRadius,
     );
     final double solarStrengthsLocalRelativeToGlobalMax =
         calculateSolarStrengthRelativeToGlobalMax(
@@ -158,10 +148,6 @@ Iterable<OrbSolValues> calculateOrbSolValuesIter({
     );
     return output;
   });
-  final DateTime tFinal = DateTime.now();
-  print(
-    'just did all the orbit calcs, which took ${tFinal.difference(t0).inMilliseconds} milliseconds',
-  );
 
   return output;
 }
@@ -186,14 +172,26 @@ Iterable<OrbSolValues> recalculateOrbSolValuesIterNewK({
   return newValues;
 }
 
-tz.TZDateTime calculateTZDateTime(tz.TZDateTime dateTime0, int initialHOffsetFromJ2000, double hOffsetFromJ2000, ) {
+tz.TZDateTime calculateTZDateTime(
+  tz.TZDateTime dateTime0,
+  int initialHOffsetFromJ2000,
+  double hOffsetFromJ2000,
+) {
   final double thisHOffset = hOffsetFromJ2000 - initialHOffsetFromJ2000;
   final int thisHOffsetHours = thisHOffset.toInt();
-  final int thisHOffsetMinutes = ((thisHOffset - thisHOffsetHours) * 60).toInt();
-  final int thisHOffsetSeconds = ((thisHOffset - thisHOffsetHours - (thisHOffsetMinutes / 60)) * 3600).toInt();
-  return dateTime0.add(Duration(hours: thisHOffsetHours, minutes: thisHOffsetMinutes, seconds: thisHOffsetSeconds));
+  final int thisHOffsetMinutes = ((thisHOffset - thisHOffsetHours) * 60)
+      .toInt();
+  final int thisHOffsetSeconds =
+      ((thisHOffset - thisHOffsetHours - (thisHOffsetMinutes / 60)) * 3600)
+          .toInt();
+  return dateTime0.add(
+    Duration(
+      hours: thisHOffsetHours,
+      minutes: thisHOffsetMinutes,
+      seconds: thisHOffsetSeconds,
+    ),
+  );
 }
-
 
 double calculateERA(double hOffsetFromJ2000) =>
     (2 * pi * (yearLength + 1) / yearLength * (hOffsetFromJ2000 / 24) +
@@ -277,24 +275,39 @@ double calculateSolarElevationAngle({
   return theta;
 }
 
+/// Method that calculates the azimiuth angle of the sun, in other words, the
+/// angle around an observer's location, somewhere on Earth, from North in a
+/// clockwise direction to the location of the sun projected onto the Earth's
+/// surface (i.e., the compass direction towards the sun).
+///
+/// * [orbitalRadiusVector]: The instantaneous 3D vector from the center of the 
+/// Sun to the center of the Earth.
+/// * [earthRadiusVector]: The instantaneous 3D vector from the center of the 
+/// Earth to the observer.  The magnititude is always equal to the radius of the 
+/// Earth, but vector also encodes the relative location of the observer and the 
+/// Earth.
 double calculateSolarAzimuthAngle({
   required double latRad,
   required double lonRad,
   required double earthRotationAngle,
   required double trueAnomaly,
-  required double orbitalRadiusMag,
-  required Vector3 orbitalRadius,
-  required Vector3 earthRadius,
+  required double orbitalRadiusMagnitude,
+  required Vector3 orbitalRadiusVector,
+  required Vector3 earthRadiusVector,
 }) {
-  final Vector3 opNeg = -orbitalRadius;
-  final Vector3 rN = reNorthPole - earthRadius;
+  /// Vector from center of Earth to the Sun
+  final Vector3 opNeg = -orbitalRadiusVector;
+
+  /// Vector
+  final Vector3 rN = reNorthPole - earthRadiusVector;
   final Vector3 rNTang =
-      rN - earthRadius * earthRadius.dot(rN) / pow(rEarth, 2).toDouble();
+      rN -
+      earthRadiusVector * earthRadiusVector.dot(rN) / pow(rEarth, 2).toDouble();
   final double cosAlpha =
       (rEarth * opNeg.dot(rNTang)) /
       (sqrt(
-            pow(rEarth, 2) * pow(orbitalRadiusMag, 2) -
-                pow(earthRadius.dot(opNeg), 2),
+            pow(rEarth, 2) * pow(orbitalRadiusMagnitude, 2) -
+                pow(earthRadiusVector.dot(opNeg), 2),
           ) *
           rNTang.length);
   final double alphaRaw = acos(cosAlpha.clamp(-1.0, 1.0));
@@ -303,9 +316,9 @@ double calculateSolarAzimuthAngle({
   // alphaRaw, we would only get results between 0 and 180.  Instead, we use
   // sign to determine whether the angle should be 0 to 180 or 180 to 360.
   final double sign =
-      earthRadius.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
-      earthRadius.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
-      earthRadius.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
+      earthRadiusVector.x * (rNTang.y * opNeg.z - rNTang.z * opNeg.y) +
+      earthRadiusVector.y * (rNTang.z * opNeg.x - rNTang.x * opNeg.z) +
+      earthRadiusVector.z * (rNTang.x * opNeg.y - rNTang.y * opNeg.x);
   final double alpha;
   if (sign < 0) {
     alpha = 2 * pi - alphaRaw;

@@ -3,7 +3,6 @@
 
 import 'dart:core';
 import 'dart:math';
-// import 'dart:collection';
 import 'dart:ui' as ui show Gradient, TextDirection;
 
 import 'package:collection/collection.dart';
