@@ -1109,23 +1109,16 @@ class RowToColumnRenderObject extends RenderBox
         > {
   /// {@macro RowToColumnRenderObject}
   RowToColumnRenderObject({
-    required MainAxisAlignment rowMainAxisAlignment,
-    required MainAxisSize rowMainAxisSize,
-    required CrossAxisAlignment rowCrossAxisAlignment,
-    required MainAxisAlignment columnMainAxisAlignment,
-    required MainAxisSize columnMainAxisSize,
-    required CrossAxisAlignment columnCrossAxisAlignment,
-    required double rowSpacing,
-    required double columnSpacing,
+    required this._rowMainAxisAlignment,
+    required this._rowMainAxisSize,
+    required this._rowCrossAxisAlignment,
+    required this._columnMainAxisAlignment,
+    required this._columnMainAxisSize,
+    required this._columnCrossAxisAlignment,
+    required this._rowSpacing,
+    required this._columnSpacing,
     this.keyText,
-  }) : _rowMainAxisSize = rowMainAxisSize,
-       _rowCrossAxisAlignment = rowCrossAxisAlignment,
-       _columnMainAxisAlignment = columnMainAxisAlignment,
-       _columnMainAxisSize = columnMainAxisSize,
-       _columnCrossAxisAlignment = columnCrossAxisAlignment,
-       _rowSpacing = rowSpacing,
-       _columnSpacing = columnSpacing,
-       _rowMainAxisAlignment = rowMainAxisAlignment;
+  });
 
   String? keyText;
 

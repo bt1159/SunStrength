@@ -1,6 +1,5 @@
 // Fix: ADD LABELS FOR EACH HOUR.
 // FIX: the solar path is still backward
-// FIX: the solar path touches horizon at sunset but not at sunrise
 
 import 'dart:core';
 import 'dart:math';

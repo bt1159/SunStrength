@@ -133,8 +133,7 @@ class ColorScaleRenderObjectWidget extends SingleChildRenderObjectWidget {
 
 class ColorScaleRenderObject extends RenderBox
     with RenderObjectWithChildMixin<RenderBox>, DebugOverflowIndicatorMixin {
-  ColorScaleRenderObject({required TextStyle labelStyle})
-    : _labelStyle = labelStyle;
+  ColorScaleRenderObject({required this._labelStyle});
 
   static const double _barHeight = 20;
   static const double _vertGap = 4;

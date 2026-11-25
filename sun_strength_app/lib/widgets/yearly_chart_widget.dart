@@ -474,12 +474,10 @@ class _ChartRenderObject extends RenderBox
         SlottedContainerRenderObjectMixin<ChartSlot, RenderBox>,
         DebugOverflowIndicatorMixin {
   _ChartRenderObject({
-    required int nXAxisBuckets,
-    required int nYAxisBuckets,
+    required this._nXAxisBuckets,
+    required this._nYAxisBuckets,
     required bool leapYear,
-  }) : _nXAxisBuckets = nXAxisBuckets,
-       _nYAxisBuckets = nYAxisBuckets,
-       _leapYear = leapYear,
+  }) : _leapYear = leapYear,
        _nDays = leapYear ? 366 : 365;
 
   int _nXAxisBuckets;
